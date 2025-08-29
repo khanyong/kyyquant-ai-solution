@@ -58,6 +58,11 @@ function AppQuant() {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [loginOpen, setLoginOpen] = useState(false)
   const [currentTab, setCurrentTab] = useState(0)
+  // Enable demo mode if no backend server is available
+  const [demoMode] = useState(() => {
+    // In production (Vercel), always use demo mode if no backend
+    return !import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URL === 'https://api.example.com'
+  })
 
   useEffect(() => {
     checkServerStatus().then(status => {
@@ -79,12 +84,12 @@ function AppQuant() {
       
       <Container maxWidth="xl" sx={{ mt: 3, mb: 3, flexGrow: 1 }}>
         {serverStatus === 'offline' && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            백엔드 서버에 연결할 수 없습니다. 서버를 실행해주세요.
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            데모 모드: 백엔드 서버를 사용할 수 없어 모의 데이터를 사용합니다.
           </Alert>
         )}
 
-        {!isConnected ? (
+        {!isConnected && !demoMode ? (
           <Paper sx={{ p: 6, textAlign: 'center' }}>
             <Stack spacing={3} alignItems="center">
               <ShowChart sx={{ fontSize: 80, color: 'primary.main' }} />
@@ -100,7 +105,7 @@ function AppQuant() {
                 <Chip icon={<Speed />} label="실시간 신호 모니터링" />
               </Stack>
               <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-                로그인하여 프로그램 매매를 시작하세요
+                데모 모드 - 로그인 없이 플랫폼을 체험해보세요
               </Typography>
             </Stack>
           </Paper>
