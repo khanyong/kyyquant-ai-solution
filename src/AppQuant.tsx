@@ -26,6 +26,7 @@ import StrategyBuilder from './components/StrategyBuilder'
 import BacktestResults from './components/BacktestResults'
 import SignalMonitor from './components/SignalMonitor'
 import PerformanceDashboard from './components/PerformanceDashboard'
+import TradingSettings from './components/TradingSettings'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 import { connectWebSocket } from './services/websocket'
 import { checkServerStatus } from './services/api'
@@ -162,43 +163,7 @@ function AppQuant() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={4}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h5" gutterBottom>설정</Typography>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="h6" gutterBottom>API 설정</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        키움 OpenAPI+ 연결 상태 및 설정
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="h6" gutterBottom>리스크 관리</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        전역 리스크 파라미터 설정
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="h6" gutterBottom>알림 설정</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        신호 발생 시 알림 방법 설정
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="h6" gutterBottom>데이터 관리</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        히스토리컬 데이터 다운로드 및 관리
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                </Grid>
-              </Paper>
+              <TradingSettings />
             </TabPanel>
           </>
         )}

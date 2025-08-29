@@ -27,8 +27,10 @@ import {
   ShowChart,
   AttachMoney,
   Timeline,
-  PlayArrow
+  PlayArrow,
+  DateRange
 } from '@mui/icons-material'
+import { TextField } from '@mui/material'
 import { Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -69,6 +71,10 @@ interface BacktestResult {
 const BacktestResults: React.FC = () => {
   const [selectedStrategy, setSelectedStrategy] = useState('momentum')
   const [period, setPeriod] = useState('1Y')
+  const [customPeriod, setCustomPeriod] = useState({
+    start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  })
   const [isRunning, setIsRunning] = useState(false)
 
   // Mock 백테스트 결과
@@ -165,12 +171,28 @@ const BacktestResults: React.FC = () => {
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Typography variant="h5">
-          <Timeline sx={{ mr: 1, verticalAlign: 'middle' }} />
-          백테스팅 결과
-        </Typography>
+        <Box>
+          <Typography variant="h5">
+            <Timeline sx={{ mr: 1, verticalAlign: 'middle' }} />
+            백테스팅 결과
+          </Typography>
+          {period === '10Y' && (
+            <Chip 
+              icon={<DateRange />} 
+              label="10년 장기 백테스트" 
+              size="small" 
+              color="primary" 
+              sx={{ mt: 1 }}
+            />
+          )}
+          {period === 'CUSTOM' && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              사용자 지정 기간: {customPeriod.start} ~ {customPeriod.end}
+            </Typography>
+          )}
+        </Box>
         
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={2} alignItems="center">
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>전략 선택</InputLabel>
             <Select
@@ -310,6 +332,24 @@ const BacktestResults: React.FC = () => {
                   <TableCell>최대 연속 손실</TableCell>
                   <TableCell align="right">3회</TableCell>
                 </TableRow>
+                {period === '10Y' && (
+                  <>
+                    <TableRow>
+                      <TableCell>연평균 수익률 (CAGR)</TableCell>
+                      <TableCell align="right">14.2%</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>월평균 거래</TableCell>
+                      <TableCell align="right">{Math.floor(mockResult.totalTrades / 120)}회</TableCell>
+                    </TableRow>
+                  </>
+                )}
+                {(period === '5Y' || period === '10Y') && (
+                  <TableRow>
+                    <TableCell>시장 대비 초과수익</TableCell>
+                    <TableCell align="right">+{period === '10Y' ? '82.5' : '45.3'}%</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Paper>
