@@ -57,9 +57,22 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
     }
   }
 
+  const handleDemoStart = () => {
+    // 데모 모드로 바로 시작
+    dispatch(loginSuccess({
+      user: {
+        id: 'demo_user',
+        name: 'Demo User',
+        accounts: ['DEMO12345'],
+      },
+      accounts: ['DEMO12345'],
+    }))
+    onClose()
+  }
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>KyyQuant AI Solution Login</DialogTitle>
+      <DialogTitle>KyyQuant AI Solution \ub85c\uadf8\uc778</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           {error && (
@@ -111,18 +124,27 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
           )}
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          Cancel
-        </Button>
-        <Button
-          onClick={handleLogin}
-          variant="contained"
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
+      <DialogActions sx={{ justifyContent: 'space-between', px: 3 }}>
+        <Button 
+          onClick={handleDemoStart}
+          color="success"
+          variant="outlined"
         >
-          {loading ? 'Connecting...' : 'Login'}
+          데모 시작하기
         </Button>
+        <Box>
+          <Button onClick={onClose} disabled={loading} sx={{ mr: 1 }}>
+            취소
+          </Button>
+          <Button
+            onClick={handleLogin}
+            variant="contained"
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
+          >
+            {loading ? '연결 중...' : '로그인'}
+          </Button>
+        </Box>
       </DialogActions>
     </Dialog>
   )

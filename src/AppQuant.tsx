@@ -9,7 +9,8 @@ import {
   Tab,
   Tabs,
   Chip,
-  Stack
+  Stack,
+  Button
 } from '@mui/material'
 import { 
   Code, 
@@ -58,11 +59,7 @@ function AppQuant() {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [loginOpen, setLoginOpen] = useState(false)
   const [currentTab, setCurrentTab] = useState(0)
-  // Enable demo mode if no backend server is available
-  const [demoMode] = useState(() => {
-    // In production (Vercel), always use demo mode if no backend
-    return !import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URL === 'https://api.example.com'
-  })
+  const [demoMode, setDemoMode] = useState(false)
 
   useEffect(() => {
     checkServerStatus().then(status => {
@@ -89,7 +86,7 @@ function AppQuant() {
           </Alert>
         )}
 
-        {!isConnected && !demoMode ? (
+        {!isConnected ? (
           <Paper sx={{ p: 6, textAlign: 'center' }}>
             <Stack spacing={3} alignItems="center">
               <ShowChart sx={{ fontSize: 80, color: 'primary.main' }} />
@@ -105,7 +102,7 @@ function AppQuant() {
                 <Chip icon={<Speed />} label="실시간 신호 모니터링" />
               </Stack>
               <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-                데모 모드 - 로그인 없이 플랫폼을 체험해보세요
+                로그인하여 프로그램 매매를 시작하세요
               </Typography>
             </Stack>
           </Paper>
