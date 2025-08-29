@@ -1,13 +1,14 @@
 import React, { useEffect, useRef } from 'react'
 import { Box, Typography, Paper, Chip, Stack } from '@mui/material'
-import { createChart, ColorType, IChartApi, ISeriesApi } from 'lightweight-charts'
+import { createChart, ColorType } from 'lightweight-charts'
+import type { IChartApi, ISeriesApi } from 'lightweight-charts'
 import { useAppSelector } from '../hooks/redux'
 
 const StockChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<IChartApi | null>(null)
-  const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
-  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
+  const chartRef = useRef<any>(null)
+  const candlestickSeriesRef = useRef<any>(null)
+  const volumeSeriesRef = useRef<any>(null)
 
   const { selectedStock, realTimeData } = useAppSelector(state => state.market)
 
