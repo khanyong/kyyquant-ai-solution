@@ -28,12 +28,18 @@ import {
   PlayArrow,
   Save,
   Code,
-  TrendingUp
+  TrendingUp,
+  Security,
+  ShowChart,
+  AccountBalance
 } from '@mui/icons-material'
+import { Divider, RadioGroup, Radio, Card, CardContent } from '@mui/material'
 
 // 보조지표 타입
-type IndicatorType = 'RSI' | 'MACD' | 'BB' | 'MA' | 'VOLUME' | 'STOCHASTIC' | 'CCI' | 'ADX'
-type ComparisonOperator = '>' | '<' | '>=' | '<=' | '==' | 'CROSS_UP' | 'CROSS_DOWN'
+type IndicatorType = 'RSI' | 'MACD' | 'BB' | 'MA' | 'VOLUME' | 'STOCHASTIC' | 'CCI' | 'ADX' | 'ICHIMOKU'
+type ComparisonOperator = '>' | '<' | '>=' | '<=' | '==' | 'CROSS_UP' | 'CROSS_DOWN' | 
+  'CLOUD_ABOVE' | 'CLOUD_BELOW' | 'CLOUD_BREAK_UP' | 'CLOUD_BREAK_DOWN' | 
+  'TENKAN_KIJUN_CROSS_UP' | 'TENKAN_KIJUN_CROSS_DOWN'
 type ActionType = 'BUY' | 'SELL' | 'HOLD'
 
 interface TradingCondition {
@@ -57,6 +63,31 @@ interface TradingStrategy {
   trailingStopPercent: number
   positionSize: number
   enabled: boolean
+  // 새로 추가된 기능들
+  timeframe: '일봉' | '주봉' | '월봉' | '60분' | '30분'
+  splitTrading?: {
+    enabled: boolean
+    levels: number
+    percentages: number[]
+  }
+  sectorFilter?: {
+    enabled: boolean
+    sectors: string[]
+    comparison: 'outperform' | 'underperform' | 'correlation'
+  }
+  riskManagement?: {
+    systemCut: boolean
+    maxDailyLoss: number
+    maxDrawdown: number
+    consecutiveLosses: number
+  }
+  universe?: {
+    minMarketCap?: number
+    maxMarketCap?: number
+    minPER?: number
+    maxPER?: number
+    minROE?: number
+  }
 }
 
 const StrategyBuilder: React.FC = () => {
@@ -70,7 +101,31 @@ const StrategyBuilder: React.FC = () => {
     trailingStop: false,
     trailingStopPercent: 2,
     positionSize: 10,
-    enabled: true
+    enabled: true,
+    timeframe: '일봉',
+    splitTrading: {
+      enabled: false,
+      levels: 3,
+      percentages: [40, 30, 30]
+    },
+    sectorFilter: {
+      enabled: false,
+      sectors: [],
+      comparison: 'outperform'
+    },
+    riskManagement: {
+      systemCut: false,
+      maxDailyLoss: 5,
+      maxDrawdown: 10,
+      consecutiveLosses: 3
+    },
+    universe: {
+      minMarketCap: 100,
+      maxMarketCap: 10000,
+      minPER: 5,
+      maxPER: 30,
+      minROE: 5
+    }
   })
 
   const [showCode, setShowCode] = useState(false)
@@ -83,7 +138,8 @@ const StrategyBuilder: React.FC = () => {
     VOLUME: { name: '거래량', params: [], default: [] },
     STOCHASTIC: { name: '스토캐스틱', params: ['%K', '%D'], default: [14, 3] },
     CCI: { name: 'CCI', params: ['기간'], default: [20] },
-    ADX: { name: 'ADX', params: ['기간'], default: [14] }
+    ADX: { name: 'ADX', params: ['기간'], default: [14] },
+    ICHIMOKU: { name: '일목균형표', params: ['전환선', '기준선', '후행스팬'], default: [9, 26, 52] }
   }
 
   const addCondition = (type: 'buy' | 'sell') => {
@@ -209,14 +265,29 @@ POSITION_SIZE = ${strategy.positionSize}%
         </Grid>
 
         <Grid item xs={2}>
-          <TextField
-            size="small"
-            label="파라미터"
-            type="number"
-            value={condition.parameter1}
-            onChange={(e) => updateCondition(type, condition.id, 'parameter1', Number(e.target.value))}
-            fullWidth
-          />
+          {condition.indicator === 'ICHIMOKU' ? (
+            <FormControl size="small" fullWidth>
+              <InputLabel>기간</InputLabel>
+              <Select
+                value={condition.parameter1}
+                onChange={(e) => updateCondition(type, condition.id, 'parameter1', e.target.value)}
+                label="기간"
+              >
+                <MenuItem value={9}>전환선(9)</MenuItem>
+                <MenuItem value={26}>기준선(26)</MenuItem>
+                <MenuItem value={52}>선행스팬(52)</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <TextField
+              size="small"
+              label="파라미터"
+              type="number"
+              value={condition.parameter1}
+              onChange={(e) => updateCondition(type, condition.id, 'parameter1', Number(e.target.value))}
+              fullWidth
+            />
+          )}
         </Grid>
 
         <Grid item xs={2}>
@@ -227,25 +298,61 @@ POSITION_SIZE = ${strategy.positionSize}%
               onChange={(e) => updateCondition(type, condition.id, 'operator', e.target.value)}
               label="조건"
             >
-              <MenuItem value=">">{'>'}</MenuItem>
-              <MenuItem value="<">{'<'}</MenuItem>
-              <MenuItem value=">=">{'>='}</MenuItem>
-              <MenuItem value="<=">{'<='}</MenuItem>
-              <MenuItem value="==">{'='}</MenuItem>
-              <MenuItem value="CROSS_UP">상향돌파</MenuItem>
-              <MenuItem value="CROSS_DOWN">하향돌파</MenuItem>
+              {condition.indicator === 'ICHIMOKU' ? (
+                <>
+                  <MenuItem value="CLOUD_ABOVE">구름대 상단</MenuItem>
+                  <MenuItem value="CLOUD_BELOW">구름대 하단</MenuItem>
+                  <MenuItem value="CLOUD_BREAK_UP">구름대 상향돌파</MenuItem>
+                  <MenuItem value="CLOUD_BREAK_DOWN">구름대 하향돌파</MenuItem>
+                  <MenuItem value="TENKAN_KIJUN_CROSS_UP">전환선{'>'} 기준선</MenuItem>
+                  <MenuItem value="TENKAN_KIJUN_CROSS_DOWN">전환선{'<'}기준선</MenuItem>
+                </>
+              ) : (
+                <>
+                  <MenuItem value=">">{'>'}</MenuItem>
+                  <MenuItem value="<">{'<'}</MenuItem>
+                  <MenuItem value=">=">{'>='}</MenuItem>
+                  <MenuItem value="<=">{'<='}</MenuItem>
+                  <MenuItem value="==">{'='}</MenuItem>
+                  <MenuItem value="CROSS_UP">상향돌파</MenuItem>
+                  <MenuItem value="CROSS_DOWN">하향돌파</MenuItem>
+                </>
+              )}
             </Select>
           </FormControl>
         </Grid>
 
         <Grid item xs={2}>
-          <TextField
-            size="small"
-            label="값"
-            value={condition.value}
-            onChange={(e) => updateCondition(type, condition.id, 'value', e.target.value)}
-            fullWidth
-          />
+          {condition.indicator === 'ICHIMOKU' && 
+           (condition.operator === 'CLOUD_ABOVE' || 
+            condition.operator === 'CLOUD_BELOW' ||
+            condition.operator === 'CLOUD_BREAK_UP' ||
+            condition.operator === 'CLOUD_BREAK_DOWN') ? (
+            <TextField
+              size="small"
+              label="확인봉"
+              type="number"
+              value={condition.value || 1}
+              onChange={(e) => updateCondition(type, condition.id, 'value', e.target.value)}
+              fullWidth
+              helperText="연속"
+            />
+          ) : condition.indicator === 'ICHIMOKU' ? (
+            <TextField
+              size="small"
+              value="-"
+              fullWidth
+              disabled
+            />
+          ) : (
+            <TextField
+              size="small"
+              label="값"
+              value={condition.value}
+              onChange={(e) => updateCondition(type, condition.id, 'value', e.target.value)}
+              fullWidth
+            />
+          )}
         </Grid>
 
         <Grid item xs={1}>
@@ -466,6 +573,58 @@ POSITION_SIZE = ${strategy.positionSize}%
                   )}
                 </Grid>
               </Grid>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              {/* 고급 옵션 */}
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>고급 옵션</Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={strategy.riskManagement?.systemCut || false}
+                        onChange={(e) => setStrategy(prev => ({ 
+                          ...prev, 
+                          riskManagement: { 
+                            ...prev.riskManagement!, 
+                            systemCut: e.target.checked 
+                          }
+                        }))}
+                      />
+                    }
+                    label={
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Security color="error" />
+                        <Typography>시스템 CUT 활성화</Typography>
+                      </Stack>
+                    }
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={strategy.splitTrading?.enabled || false}
+                        onChange={(e) => setStrategy(prev => ({ 
+                          ...prev, 
+                          splitTrading: { 
+                            ...prev.splitTrading!, 
+                            enabled: e.target.checked 
+                          }
+                        }))}
+                      />
+                    }
+                    label={
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <ShowChart color="primary" />
+                        <Typography>분할매매 활성화</Typography>
+                      </Stack>
+                    }
+                  />
+                </Grid>
+              </Grid>
             </Paper>
           </Grid>
 
@@ -481,6 +640,7 @@ POSITION_SIZE = ${strategy.positionSize}%
                 <Chip label="볼린저밴드 돌파" onClick={() => {}} />
                 <Chip label="MACD 다이버전스" onClick={() => {}} />
                 <Chip label="거래량 돌파" onClick={() => {}} />
+                <Chip label="일목균형표 전략" onClick={() => {}} color="primary" />
               </Stack>
             </Alert>
           </Grid>
