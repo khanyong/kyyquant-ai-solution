@@ -3,8 +3,8 @@ import { updateRealTimeData } from '../store/marketSlice'
 import { RealTimeData } from '../types'
 
 let ws: WebSocket | null = null
-let reconnectTimer: NodeJS.Timeout | null = null
-let pingInterval: NodeJS.Timeout | null = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let pingInterval: ReturnType<typeof setInterval> | null = null
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
 

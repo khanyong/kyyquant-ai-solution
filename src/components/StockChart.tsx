@@ -63,8 +63,8 @@ const StockChart: React.FC = () => {
 
     // Sample data (replace with real data)
     const sampleData = generateSampleData()
-    candlestickSeries.setData(sampleData.candlesticks)
-    volumeSeries.setData(sampleData.volumes)
+    candlestickSeries.setData(sampleData.candlesticks as any)
+    volumeSeries.setData(sampleData.volumes as any)
 
     // Handle resize
     const handleResize = () => {
