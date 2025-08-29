@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { Box, Typography, Paper, Chip, Stack } from '@mui/material'
-import { createChart, ColorType } from 'lightweight-charts'
-import type { IChartApi, ISeriesApi } from 'lightweight-charts'
+import * as LightweightCharts from 'lightweight-charts'
 import { useAppSelector } from '../hooks/redux'
 
 const StockChart: React.FC = () => {
@@ -16,9 +15,9 @@ const StockChart: React.FC = () => {
     if (!chartContainerRef.current) return
 
     // Create chart
-    const chart = createChart(chartContainerRef.current, {
+    const chart = LightweightCharts.createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
+        background: { type: LightweightCharts.ColorType.Solid, color: 'transparent' },
         textColor: '#d1d4dc',
       },
       grid: {
