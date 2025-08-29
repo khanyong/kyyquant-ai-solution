@@ -1,0 +1,37 @@
+# Task ID: 5
+# Title: 실시간 대시보드 개발
+# Status: pending
+# Dependencies: 3, 4
+# Priority: high
+# Description: 포트폴리오, 수익률, 거래 내역을 보여주는 실시간 대시보드
+# Details:
+실시간 잔고, 포지션, 수익률 차트, 거래 내역 테이블
+
+# Test Strategy:
+실시간 업데이트 테스트, UI/UX 테스트, 성능 최적화 테스트
+
+# Subtasks:
+## 1. 대시보드 레이아웃 구현 [pending]
+### Dependencies: None
+### Description: 반응형 레이아웃, 네비게이션, 사이드바
+### Details:
+
+
+## 2. 실시간 잔고/포지션 컴포넌트 [pending]
+### Dependencies: None
+### Description: Supabase Realtime 구독, 잔고 카드, 포지션 테이블
+### Details:
+
+
+## 3. 수익률 차트 구현 [pending]
+### Dependencies: None
+### Description: 일별/기간별 수익률 차트, Recharts 통합
+### Details:
+
+
+## 4. 거래 내역 테이블 [pending]
+### Dependencies: None
+### Description: 페이지네이션, 필터링, 정렬 기능
+### Details:
+
+

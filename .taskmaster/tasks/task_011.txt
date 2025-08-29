@@ -1,0 +1,31 @@
+# Task ID: 11
+# Title: 성과 분석 및 리포팅
+# Status: pending
+# Dependencies: 10
+# Priority: medium
+# Description: 거래 성과 분석 및 리포트 생성 시스템
+# Details:
+일별/월별/연별 성과 리포트, 세금 계산
+
+# Test Strategy:
+계산 정확도 테스트, 리포트 생성 테스트
+
+# Subtasks:
+## 1. 성과 지표 계산 [pending]
+### Dependencies: None
+### Description: 수익률, 샤프비율, MDD 등 계산
+### Details:
+
+
+## 2. 리포트 생성 엔진 [pending]
+### Dependencies: None
+### Description: PDF/Excel 리포트 생성
+### Details:
+
+
+## 3. 세금 계산기 [pending]
+### Dependencies: None
+### Description: 양도세 자동 계산
+### Details:
+
+

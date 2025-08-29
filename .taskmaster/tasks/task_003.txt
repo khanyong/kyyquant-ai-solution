@@ -1,0 +1,37 @@
+# Task ID: 3
+# Title: 키움 API 연동 서버 개발
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: 키움증권 OpenAPI와 연동하는 별도 Python 서버 구축
+# Details:
+Python FastAPI 서버, 키움 OpenAPI 래퍼, WebSocket 실시간 데이터 전송
+
+# Test Strategy:
+모의투자 계정 테스트, API 호출 검증, 실시간 데이터 스트리밍 테스트
+
+# Subtasks:
+## 1. FastAPI 서버 구조 설정 [pending]
+### Dependencies: None
+### Description: FastAPI 프로젝트 구조, 환경 설정, 의존성 관리
+### Details:
+
+
+## 2. 키움 OpenAPI 래퍼 구현 [pending]
+### Dependencies: None
+### Description: 로그인, 주문, 조회, 실시간 데이터 수신 래퍼 함수
+### Details:
+
+
+## 3. WebSocket 통신 구현 [pending]
+### Dependencies: None
+### Description: 실시간 시세, 체결 정보, 잔고 업데이트 WebSocket 구현
+### Details:
+
+
+## 4. Railway/Render 배포 설정 [pending]
+### Dependencies: None
+### Description: 서버 배포, 환경변수 설정, 모니터링 구성
+### Details:
+
+

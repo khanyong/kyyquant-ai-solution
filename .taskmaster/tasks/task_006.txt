@@ -1,0 +1,37 @@
+# Task ID: 6
+# Title: 전략 빌더 시스템
+# Status: pending
+# Dependencies: 5
+# Priority: high
+# Description: 보조지표 기반 매매 전략 생성 및 관리 시스템
+# Details:
+드래그앤드롭 전략 빌더, 보조지표 조합, 백테스팅 통합
+
+# Test Strategy:
+전략 생성 테스트, 지표 계산 검증, UI 인터랙션 테스트
+
+# Subtasks:
+## 1. 전략 빌더 UI 구현 [pending]
+### Dependencies: None
+### Description: 드래그앤드롭 인터페이스, 조건 편집기
+### Details:
+
+
+## 2. 보조지표 라이브러리 구현 [pending]
+### Dependencies: None
+### Description: MA, RSI, MACD, Bollinger Bands 등 지표 계산
+### Details:
+
+
+## 3. 전략 저장/관리 기능 [pending]
+### Dependencies: None
+### Description: 전략 CRUD, 템플릿 관리, 공유 기능
+### Details:
+
+
+## 4. 전략 실행 엔진 [pending]
+### Dependencies: None
+### Description: 전략 조건 평가, 매매 신호 생성
+### Details:
+
+

@@ -1,0 +1,31 @@
+# Task ID: 4
+# Title: 사용자 인증 시스템
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Supabase Auth를 활용한 사용자 인증 및 권한 관리
+# Details:
+이메일/소셜 로그인, JWT 토큰 관리, 권한 기반 접근 제어
+
+# Test Strategy:
+인증 플로우 테스트, 보안 취약점 검사, 세션 관리 테스트
+
+# Subtasks:
+## 1. Supabase Auth 설정 [pending]
+### Dependencies: None
+### Description: 이메일 인증, OAuth 제공자 설정
+### Details:
+
+
+## 2. 로그인/회원가입 UI 구현 [pending]
+### Dependencies: None
+### Description: 로그인, 회원가입, 비밀번호 재설정 페이지
+### Details:
+
+
+## 3. 보호된 라우트 구현 [pending]
+### Dependencies: None
+### Description: 미들웨어 설정, 권한 체크, 리다이렉션
+### Details:
+
+

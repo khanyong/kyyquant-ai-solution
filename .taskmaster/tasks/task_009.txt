@@ -1,0 +1,37 @@
+# Task ID: 9
+# Title: AI 포트폴리오 매니저
+# Status: pending
+# Dependencies: 5
+# Priority: medium
+# Description: Claude/ChatGPT API를 활용한 포트폴리오 최적화 시스템
+# Details:
+포트폴리오 분석, 리밸런싱 제안, 시장 환경 분석
+
+# Test Strategy:
+AI 응답 검증, 제안 품질 테스트
+
+# Subtasks:
+## 1. AI API 통합 [pending]
+### Dependencies: None
+### Description: Claude/OpenAI API 연동, 프롬프트 엔지니어링
+### Details:
+
+
+## 2. 포트폴리오 분석 모듈 [pending]
+### Dependencies: None
+### Description: 현재 포트폴리오 상태 분석 및 평가
+### Details:
+
+
+## 3. 리밸런싱 제안 시스템 [pending]
+### Dependencies: None
+### Description: AI 기반 리밸런싱 제안 생성
+### Details:
+
+
+## 4. 시장 환경 모니터링 [pending]
+### Dependencies: None
+### Description: 매크로 지표 분석, 섹터 로테이션 제안
+### Details:
+
+

@@ -1,0 +1,37 @@
+# Task ID: 10
+# Title: 자동 매매 실행 시스템
+# Status: pending
+# Dependencies: 6, 7
+# Priority: high
+# Description: 전략 신호에 따른 자동 주문 실행 시스템
+# Details:
+주문 관리, 리스크 관리, 포지션 사이징
+
+# Test Strategy:
+모의투자 테스트, 주문 실행 검증, 리스크 관리 테스트
+
+# Subtasks:
+## 1. 주문 관리 시스템 [pending]
+### Dependencies: None
+### Description: 매수/매도 주문 생성 및 관리
+### Details:
+
+
+## 2. 리스크 관리 모듈 [pending]
+### Dependencies: None
+### Description: 손절/익절 설정, 최대 손실 제한
+### Details:
+
+
+## 3. 포지션 사이징 [pending]
+### Dependencies: None
+### Description: Kelly Criterion 등 자금 관리
+### Details:
+
+
+## 4. 주문 실행 모니터링 [pending]
+### Dependencies: None
+### Description: 주문 상태 추적, 체결 확인
+### Details:
+
+

@@ -1,0 +1,37 @@
+# Task ID: 1
+# Title: KyyQuant AI Solution 프로젝트 초기 설정
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Next.js, Supabase, Vercel 환경 구성 및 KyyQuant AI Solution 기본 프로젝트 구조 설정
+# Details:
+Next.js 14 App Router 설정, Supabase 프로젝트 생성, GitHub 레포지토리 초기화, Vercel 배포 설정
+
+# Test Strategy:
+환경 설정 검증, 빌드 테스트, 배포 파이프라인 테스트
+
+# Subtasks:
+## 1. Next.js 프로젝트 초기화 [pending]
+### Dependencies: None
+### Description: Next.js 14 with TypeScript, TailwindCSS, shadcn/ui 설정
+### Details:
+
+
+## 2. Supabase 프로젝트 생성 및 연동 [pending]
+### Dependencies: None
+### Description: Supabase 계정 생성, 프로젝트 설정, 환경변수 구성
+### Details:
+
+
+## 3. GitHub 레포지토리 설정 [pending]
+### Dependencies: None
+### Description: 레포지토리 생성, 브랜치 전략 수립, GitHub Actions 설정
+### Details:
+
+
+## 4. Vercel 배포 환경 구성 [pending]
+### Dependencies: None
+### Description: Vercel 프로젝트 연결, 환경변수 설정, 자동 배포 구성
+### Details:
+
+
