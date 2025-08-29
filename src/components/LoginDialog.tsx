@@ -48,10 +48,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
         }))
         onClose()
       } else {
-        setError('로그인에 실패했습니다.')
+        setError('Login failed. Please try again.')
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || '서버 연결에 실패했습니다.')
+      setError(err.response?.data?.detail || 'Server connection failed.')
     } finally {
       setLoading(false)
     }
@@ -59,7 +59,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>키움증권 로그인</DialogTitle>
+      <DialogTitle>KyyQuant AI Solution Login</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           {error && (
@@ -69,13 +69,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
           )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            키움 OpenAPI+가 설치되어 있어야 합니다.
-            계정 정보는 선택사항입니다 (미입력시 키움 로그인창 표시).
+            Welcome to KyyQuant AI Algorithmic Trading Platform.
+            Enter your credentials to access the trading system.
           </Typography>
 
           <TextField
             fullWidth
-            label="계좌번호 (선택)"
+            label="Account Number (Optional)"
             value={accountNo}
             onChange={(e) => setAccountNo(e.target.value)}
             margin="normal"
@@ -84,7 +84,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
           <TextField
             fullWidth
-            label="비밀번호 (선택)"
+            label="Password (Optional)"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -100,20 +100,20 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
                 disabled={loading}
               />
             }
-            label="모의투자 모드"
+            label="Demo Mode"
             sx={{ mt: 2 }}
           />
 
           {!demoMode && (
             <Alert severity="warning" sx={{ mt: 2 }}>
-              실거래 모드입니다. 실제 주문이 실행됩니다!
+              Live Trading Mode. Real orders will be executed!
             </Alert>
           )}
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>
-          취소
+          Cancel
         </Button>
         <Button
           onClick={handleLogin}
@@ -121,7 +121,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
           disabled={loading}
           startIcon={loading ? <CircularProgress size={20} /> : null}
         >
-          {loading ? '연결 중...' : '로그인'}
+          {loading ? 'Connecting...' : 'Login'}
         </Button>
       </DialogActions>
     </Dialog>
