@@ -1,112 +1,165 @@
 # KyyQuant AI Solution
 
-Python Backend (FastAPI) + React Frontend 기반 자동매매 시스템
+🚀 **Algorithmic Trading Platform** - 보조지표 기반 자동매매 시스템
 
-## 시스템 구조
+## 📌 Overview
 
-```
-React Frontend (포트 3000)
-      ↓ REST API / WebSocket
-FastAPI Backend (포트 8000)
-      ↓ COM/ActiveX
-Kiwoom OpenAPI+
-```
+KyyQuant AI Solution은 프로그램 매매에 특화된 알고리즘 트레이딩 플랫폼입니다.
+보조지표를 활용한 매매 조건 설정, 백테스팅, 실시간 신호 모니터링을 제공합니다.
 
-## 사전 준비사항
+## ✨ Features
 
-1. **키움증권 계좌 개설**
-2. **키움 OpenAPI+ 설치** ([키움증권 홈페이지](https://www.kiwoom.com))
-3. **모의투자 신청** (선택사항, 테스트용)
-4. **Python 3.10+** 설치
-5. **Node.js 18+** 설치
+- **📊 전략 빌더**: RSI, MACD, 볼린저밴드 등 다양한 보조지표 조합
+- **📈 백테스팅**: 과거 데이터로 전략 검증 및 성과 분석
+- **⚡ 실시간 신호**: 매수/매도 신호 실시간 모니터링
+- **📉 성과 대시보드**: Sharpe Ratio, MDD, 승률 등 핵심 지표 분석
+- **🔒 리스크 관리**: 손절/익절, 포지션 사이징, 트레일링 스탑
 
-## 설치 방법
+## 🛠 Tech Stack
 
-### 1. 백엔드 설정
+### Backend
+- Python 3.10+
+- FastAPI
+- PyQt5 (키움 OpenAPI+ 연동)
+- Pandas, NumPy
+- WebSocket
+
+### Frontend
+- React 18 + TypeScript
+- Material-UI
+- Redux Toolkit
+- Chart.js
+- Socket.io-client
+
+## 📦 Installation
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- 키움 OpenAPI+ (Windows only)
+
+### Backend Setup
 
 ```bash
-# Python 패키지 설치
+# Install Python dependencies
 pip install -r requirements.txt
 
-# 환경변수 설정
+# Copy environment variables
 cp .env.example .env
-# .env 파일 편집하여 계좌 정보 입력
+# Edit .env file with your configuration
 ```
 
-### 2. 프론트엔드 설정
+### Frontend Setup
 
 ```bash
-# Node 패키지 설치
+# Install Node dependencies
 npm install
+```
 
-# 개발 서버 실행
+## 🚀 Quick Start
+
+### Option 1: Run Both Servers
+
+```bash
+# Windows
+run_servers.bat
+
+# Linux/Mac
+./run_servers.sh
+```
+
+### Option 2: Run Separately
+
+```bash
+# Terminal 1: Backend server
+python api_server.py
+
+# Terminal 2: Frontend server
 npm run dev
 ```
 
-## 실행 방법
+### Access Points
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
 
-### 1. 백엔드 서버 실행
+## 📁 Project Structure
+
+```
+kyyquant-ai-solution/
+├── src/                    # React frontend source
+│   ├── components/         # UI components
+│   ├── services/          # API services
+│   ├── store/            # Redux store
+│   └── types/            # TypeScript types
+├── api_server.py         # FastAPI server
+├── kiwoom_api.py        # Kiwoom OpenAPI+ wrapper
+├── trading_engine.py    # Trading strategies & backtesting
+├── models.py           # Pydantic models
+└── requirements.txt    # Python dependencies
+```
+
+## 📊 Trading Strategies
+
+### Available Indicators
+- RSI (Relative Strength Index)
+- MACD (Moving Average Convergence Divergence)
+- Bollinger Bands
+- Moving Averages (SMA, EMA)
+- Volume Analysis
+- Stochastic Oscillator
+
+### Strategy Examples
+```python
+# RSI Oversold Strategy
+if RSI(14) < 30 and price > SMA(20):
+    signal = BUY
+
+# MACD Crossover Strategy
+if MACD_line crosses above Signal_line:
+    signal = BUY
+```
+
+## 🧪 Testing
 
 ```bash
-# FastAPI 서버 시작
-python main.py
-# 또는
-uvicorn main:app --reload --port 8000
+# Run API tests
+python test_api.py
+
+# Run backtest
+python trading_engine.py
 ```
 
-서버가 http://localhost:8000 에서 실행됩니다.
+## 📝 API Documentation
 
-### 2. 프론트엔드 실행
+Interactive API documentation available at http://localhost:8000/docs
 
-```bash
-npm run dev
-```
+### Key Endpoints
+- `POST /api/login` - User authentication
+- `GET /api/accounts` - Get account list
+- `POST /api/balance` - Get account balance
+- `POST /api/order` - Place order
+- `WS /ws` - WebSocket for real-time data
 
-웹 인터페이스가 http://localhost:3000 에서 실행됩니다.
+## ⚠️ Important Notes
 
-## API 엔드포인트
+1. **Windows Only**: 키움 OpenAPI+ requires Windows OS
+2. **Market Hours**: Real trading only during KRX market hours
+3. **Demo Mode**: Use `DEMO_MODE=true` for testing
+4. **Risk Management**: Always set stop-loss and position limits
 
-### REST API
+## 📄 License
 
-- `GET /` - 서버 상태 확인
-- `GET /health` - 헬스체크
-- `POST /api/login` - 로그인
-- `GET /api/accounts` - 계좌 목록 조회
-- `POST /api/balance` - 계좌 잔고 조회
-- `POST /api/stock-info` - 주식 정보 조회
-- `POST /api/order` - 주문 실행
-- `GET /api/markets/{market}/stocks` - 시장별 종목 조회
+Private - All rights reserved
 
-### WebSocket
+## 🤝 Contributing
 
-- `ws://localhost:8000/ws` - 실시간 데이터 스트리밍
+This is a private repository. For questions or suggestions, please contact the repository owner.
 
-## 주요 파일 설명
+## 📧 Contact
 
-```
-├── main.py              # FastAPI 메인 서버
-├── backend_api.py       # API 엔드포인트 정의
-├── kiwoom_api.py        # 키움 OpenAPI+ 래퍼
-├── requirements.txt     # Python 의존성
-├── package.json         # Node.js 의존성
-├── .env.example         # 환경변수 템플릿
-└── architecture.md      # 시스템 아키텍처 문서
-```
+For support or inquiries, please open an issue in this repository.
 
-## 주의사항
+---
 
-1. **Windows 환경에서만 실행 가능** (키움 OpenAPI+ 제약)
-2. **키움 OpenAPI+ 로그인 필요**
-3. **실거래 시 주의** - DEMO_MODE=false 설정 시 실제 주문 실행
-4. **API 호출 제한** - 초당 5회 제한 준수
-
-## 개발 로드맵
-
-- [x] Phase 1: 백엔드 기본 구조
-- [ ] Phase 2: React 프론트엔드
-- [ ] Phase 3: 자동매매 전략
-- [ ] Phase 4: 백테스팅 시스템
-
-## 라이선스
-
-Private
+**Disclaimer**: This software is for educational purposes. Always test thoroughly before using with real money. The authors are not responsible for any financial losses.
