@@ -121,14 +121,22 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
     setLoading(true)
     setError('')
 
+    console.log('🚀 UI: Starting signup process')
+    console.log('📝 UI: Form data:', { email, name, kiwoomId, passwordLength: password.length })
+
     try {
       const { user, error } = await authService.signUpWithEmail(email, password, name, kiwoomId)
       
+      console.log('📥 UI: Received signup response:', { user: !!user, error: !!error })
+      
       if (error) {
+        console.error('❌ UI: Signup error received:', error)
         if (error.message.includes('already registered')) {
           setError('이미 등록된 이메일입니다')
+        } else if (error.message.includes('Database error')) {
+          setError('데이터베이스 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
         } else {
-          setError(error.message)
+          setError(`회원가입 실패: ${error.message}`)
         }
         return
       }

@@ -9,7 +9,11 @@ export interface AuthResponse {
 export const authService = {
   // 이메일로 회원가입
   async signUpWithEmail(email: string, password: string, name?: string, kiwoomId?: string) {
+    console.log('🔄 Starting signup process for:', email)
+    console.log('📝 Signup data:', { email, name, kiwoomId })
+    
     try {
+      console.log('📡 Calling Supabase auth.signUp...')
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -22,38 +26,70 @@ export const authService = {
         }
       })
 
-      if (error) throw error
+      console.log('📥 Supabase signup response:', { data, error })
 
-      // 프로필 생성 (트리거가 없는 경우 백업용)
+      if (error) {
+        console.error('❌ Supabase signup error:', error)
+        throw error
+      }
+
+      // 프로필 생성 보장 (트리거가 실행되지 않을 경우 대비)
       if (data.user) {
-        console.log('Creating profile for user:', data.user.id)
-        const { data: profileData, error: profileError } = await supabase
+        console.log('🔍 Checking if profile exists for user:', data.user.id)
+        
+        // 잠시 대기 후 프로필 확인 (트리거 실행 시간 고려)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        const { data: existingProfile, error: checkError } = await supabase
           .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email,
-            name: name || email.split('@')[0],
-            kiwoom_account: kiwoomId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
+          .select('id')
+          .eq('id', data.user.id)
+          .single()
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError)
-          console.log('Profile error details:', {
-            code: profileError.code,
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint
-          })
+        if (checkError && checkError.code === 'PGRST116') {
+          // 프로필이 없으면 생성
+          console.log('📝 Profile not found, creating manually for user:', data.user.id)
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email,
+              name: name || email.split('@')[0],
+              kiwoom_account: kiwoomId,
+              email_verified: false,
+              email_verified_at: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+
+          if (profileError) {
+            console.error('❌ Manual profile creation error:', profileError)
+            console.log('📋 Profile error details:', {
+              code: profileError.code,
+              message: profileError.message,
+              details: profileError.details,
+              hint: profileError.hint
+            })
+          } else {
+            console.log('✅ Profile created manually:', profileData)
+          }
+        } else if (existingProfile) {
+          console.log('✅ Profile already exists (created by trigger):', existingProfile)
         } else {
-          console.log('Profile created successfully:', profileData)
+          console.error('❌ Unexpected error checking profile:', checkError)
         }
       }
 
+      console.log('✅ Signup completed successfully for user:', data.user?.id)
       return { user: data.user, error: null }
     } catch (error) {
+      console.error('💥 Signup process failed with exception:', error)
+      console.error('📋 Error details:', {
+        name: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack
+      })
       return { user: null, error: error as Error }
     }
   },
