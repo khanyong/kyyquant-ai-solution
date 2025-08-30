@@ -9,8 +9,8 @@ import {
   CircularProgress
 } from '@mui/material'
 import { TrendingUp, TrendingDown } from '@mui/icons-material'
-import { useAppDispatch } from '../hooks/redux'
-import { updateMarketIndices } from '../store/marketSlice'
+import { useAppDispatch } from '../../hooks/redux'
+import { updateMarketIndices } from '../../store/marketSlice'
 
 interface MarketData {
   kospi: { value: number; change: number; changeRate: number }

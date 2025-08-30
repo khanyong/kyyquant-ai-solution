@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { Box, Typography, Paper, Chip, Stack } from '@mui/material'
 import * as LightweightCharts from 'lightweight-charts'
-import { useAppSelector } from '../hooks/redux'
+import { useAppSelector } from '../../hooks/redux'
 
 const StockChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null)

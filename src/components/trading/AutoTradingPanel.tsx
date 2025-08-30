@@ -41,13 +41,35 @@ import {
   registerStrategy,
   unregisterStrategy,
   exampleStrategies
-} from '../services/autoTrading'
+} from '../../services/autoTrading'
 
-const AutoTradingPanel: React.FC = () => {
+interface AutoTradingPanelProps {
+  strategies?: any[]
+}
+
+const AutoTradingPanel: React.FC<AutoTradingPanelProps> = ({ strategies: externalStrategies }) => {
   const [autoTradingEnabled, setAutoTradingEnabled] = useState(false)
   const [strategies, setStrategies] = useState<TradingStrategy[]>(exampleStrategies)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingStrategy, setEditingStrategy] = useState<TradingStrategy | null>(null)
+  
+  // 외부에서 전달된 전략이 있으면 추가
+  React.useEffect(() => {
+    if (externalStrategies && externalStrategies.length > 0) {
+      const newStrategies = externalStrategies.map((s, index) => ({
+        id: `external-${Date.now()}-${index}`,
+        name: s.name || '전략빌더 전략',
+        description: s.description || '전략빌더에서 생성된 전략',
+        type: 'technical' as const,
+        enabled: true,
+        parameters: {
+          symbol: s.symbol || 'AUTO',
+          ...s
+        }
+      }))
+      setStrategies(prev => [...prev, ...newStrategies])
+    }
+  }, [externalStrategies])
 
   const handleAutoTradingToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
     const enabled = event.target.checked

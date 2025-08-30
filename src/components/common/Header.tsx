@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { 
   AppBar, 
   Toolbar, 
@@ -9,16 +9,20 @@ import {
   IconButton,
   Select,
   MenuItem,
-  FormControl
+  FormControl,
+  Link
 } from '@mui/material'
 import { 
   TrendingUp, 
   AccountBalance, 
   Logout,
-  Settings
+  Settings,
+  Map
 } from '@mui/icons-material'
-import { useAppSelector, useAppDispatch } from '../hooks/redux'
-import { logout, selectAccount } from '../store/authSlice'
+import { useAppSelector, useAppDispatch } from '../../hooks/redux'
+import { logout, selectAccount } from '../../store/authSlice'
+import { authService } from '../../services/auth'
+import RoadmapDialog from './RoadmapDialog'
 
 interface HeaderProps {
   onLoginClick: () => void
@@ -27,8 +31,10 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
   const dispatch = useAppDispatch()
   const { isConnected, user, accounts, selectedAccount } = useAppSelector(state => state.auth)
+  const [roadmapOpen, setRoadmapOpen] = useState(false)
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await authService.signOut()
     dispatch(logout())
   }
 
@@ -37,12 +43,39 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
   }
 
   return (
-    <AppBar position="static" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-      <Toolbar>
-        <TrendingUp sx={{ mr: 2 }} />
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          KyyQuant AI Solution
-        </Typography>
+    <>
+      <AppBar position="static" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Toolbar>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            flexGrow: 1,
+            cursor: 'pointer',
+            '&:hover': {
+              opacity: 0.8
+            }
+          }}
+          onClick={() => window.location.href = '/'}
+        >
+          <TrendingUp sx={{ mr: 2 }} />
+          <Typography variant="h6" component="div">
+            KyyQuant AI Solution
+          </Typography>
+        </Box>
+
+        {/* 개발 로드맵 버튼 - 개발 중에만 표시 */}
+        {process.env.NODE_ENV === 'development' && (
+          <Button
+            color="warning"
+            variant="outlined"
+            startIcon={<Map />}
+            onClick={() => setRoadmapOpen(true)}
+            sx={{ mr: 2 }}
+          >
+            개발진행 로드맵
+          </Button>
+        )}
 
         {isConnected ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -91,6 +124,13 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
         )}
       </Toolbar>
     </AppBar>
+    
+    {/* 로드맵 다이얼로그 */}
+    <RoadmapDialog 
+      open={roadmapOpen} 
+      onClose={() => setRoadmapOpen(false)} 
+    />
+    </>
   )
 }
 

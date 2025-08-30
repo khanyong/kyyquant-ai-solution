@@ -13,9 +13,9 @@ import {
   Chip
 } from '@mui/material'
 import { ShoppingCart, Sell } from '@mui/icons-material'
-import { useAppSelector, useAppDispatch } from '../hooks/redux'
-import { placeOrder } from '../services/api'
-import { addToHistory, setError } from '../store/orderSlice'
+import { useAppSelector, useAppDispatch } from '../../hooks/redux'
+import { placeOrder } from '../../services/api'
+import { addToHistory, setError } from '../../store/orderSlice'
 
 const OrderPanel: React.FC = () => {
   const dispatch = useAppDispatch()

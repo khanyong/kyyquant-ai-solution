@@ -15,9 +15,9 @@ import {
   CircularProgress
 } from '@mui/material'
 import { Refresh } from '@mui/icons-material'
-import { useAppSelector, useAppDispatch } from '../hooks/redux'
-import { setPortfolio, setLoading } from '../store/portfolioSlice'
-import { getBalance } from '../services/api'
+import { useAppSelector, useAppDispatch } from '../../hooks/redux'
+import { setPortfolio, setLoading } from '../../store/portfolioSlice'
+import { getBalance } from '../../services/api'
 
 const PortfolioPanel: React.FC = () => {
   const dispatch = useAppDispatch()
