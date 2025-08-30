@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Container,
@@ -10,7 +11,8 @@ import {
   Grid,
   Card,
   CardContent,
-  Divider
+  Divider,
+  Button
 } from '@mui/material'
 import {
   AdminPanelSettings,
@@ -18,10 +20,13 @@ import {
   Assessment,
   Settings,
   Security,
-  Dashboard
+  Dashboard,
+  Home,
+  ArrowBack
 } from '@mui/icons-material'
 import { supabase } from '../lib/supabase'
 import AdminApprovalPanel from '../components/admin/AdminApprovalPanel'
+import AdminUserManager from '../components/admin/AdminUserManager'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -54,6 +59,7 @@ interface Stats {
 }
 
 const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate()
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [currentTab, setCurrentTab] = useState(0)
@@ -170,10 +176,30 @@ const AdminDashboard: React.FC = () => {
   return (
     <Container maxWidth="xl">
       <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AdminPanelSettings sx={{ fontSize: 35 }} />
-          Admin Dashboard
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AdminPanelSettings sx={{ fontSize: 35 }} />
+            Admin Dashboard
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<Home />}
+              onClick={() => navigate('/')}
+              size="large"
+            >
+              메인으로
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate(-1)}
+              size="large"
+            >
+              뒤로가기
+            </Button>
+          </Box>
+        </Box>
         
         {/* Statistics Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -246,32 +272,43 @@ const AdminDashboard: React.FC = () => {
               <Tab 
                 icon={<People />} 
                 iconPosition="start" 
-                label="User Approvals" 
+                label="사용자 관리" 
                 id="admin-tab-0"
                 aria-controls="admin-tabpanel-0"
+              />
+              <Tab 
+                icon={<AdminPanelSettings />} 
+                iconPosition="start" 
+                label="승인 대기" 
+                id="admin-tab-1"
+                aria-controls="admin-tabpanel-1"
               />
               <Tab 
                 icon={<Assessment />} 
                 iconPosition="start" 
                 label="System Reports" 
-                id="admin-tab-1"
-                aria-controls="admin-tabpanel-1"
+                id="admin-tab-2"
+                aria-controls="admin-tabpanel-2"
               />
               <Tab 
                 icon={<Settings />} 
                 iconPosition="start" 
                 label="System Settings" 
-                id="admin-tab-2"
-                aria-controls="admin-tabpanel-2"
+                id="admin-tab-3"
+                aria-controls="admin-tabpanel-3"
               />
             </Tabs>
           </Box>
 
           <TabPanel value={currentTab} index={0}>
-            <AdminApprovalPanel />
+            <AdminUserManager />
           </TabPanel>
 
           <TabPanel value={currentTab} index={1}>
+            <AdminApprovalPanel />
+          </TabPanel>
+
+          <TabPanel value={currentTab} index={2}>
             <Box>
               <Typography variant="h6" gutterBottom>
                 System Reports
@@ -282,7 +319,7 @@ const AdminDashboard: React.FC = () => {
             </Box>
           </TabPanel>
 
-          <TabPanel value={currentTab} index={2}>
+          <TabPanel value={currentTab} index={3}>
             <Box>
               <Typography variant="h6" gutterBottom>
                 System Settings

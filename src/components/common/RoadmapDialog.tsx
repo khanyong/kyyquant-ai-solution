@@ -184,7 +184,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Security />,
-      period: '2024.08.28 - 2024.08.29',
+      period: '2024.08.28 - 2024.08.31',
       description: 'Supabase Auth를 활용한 완전한 인증/인가 시스템 구축',
       subtasks: [
         {
@@ -235,6 +235,18 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
             '관리자 전용 UI 컴포넌트',
             '권한별 메뉴 표시/숨김',
             'API 레벨 권한 검증'
+          ]
+        },
+        {
+          title: '✅ 회원가입 프로세스 디버깅 및 수정 (2024.08.31)',
+          details: [
+            'auth.users 트리거 함수 재작성 (SECURITY DEFINER 권한 추가)',
+            'user_roles 테이블 RLS 정책 완화하여 회원가입 허용',
+            'profiles 테이블 생성 문제 해결',
+            'handle_new_user 트리거 함수 최적화',
+            '프로필 생성 실패 시 수동 생성 로직 구현',
+            '상세 디버깅 로그 추가로 문제 추적 개선',
+            '회원가입 절차 문서화 작성'
           ]
         }
       ]
