@@ -56,15 +56,19 @@ const AutoTradingPanel: React.FC<AutoTradingPanelProps> = ({ strategies: externa
   // 외부에서 전달된 전략이 있으면 추가
   React.useEffect(() => {
     if (externalStrategies && externalStrategies.length > 0) {
-      const newStrategies = externalStrategies.map((s, index) => ({
+      const newStrategies: TradingStrategy[] = externalStrategies.map((s, index) => ({
         id: `external-${Date.now()}-${index}`,
         name: s.name || '전략빌더 전략',
-        description: s.description || '전략빌더에서 생성된 전략',
-        type: 'technical' as const,
         enabled: true,
-        parameters: {
-          symbol: s.symbol || 'AUTO',
-          ...s
+        stockCode: s.symbol || 'AUTO',
+        conditions: [{
+          type: 'rsi' as const,
+          value: 30
+        }],
+        action: {
+          type: 'buy' as const,
+          quantity: 100,
+          orderMethod: 'market' as const
         }
       }))
       setStrategies(prev => [...prev, ...newStrategies])

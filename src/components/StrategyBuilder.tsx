@@ -129,6 +129,28 @@ interface Strategy {
     maxDrawdown: number
     trades: number
   }
+  advanced?: {
+    splitTrading?: {
+      enabled: boolean
+      levels: number
+      percentages: number[]
+    }
+    sectorFilter?: {
+      enabled: boolean
+      sectors: string[]
+      comparison: 'outperform' | 'underperform' | 'correlation'
+    }
+    universe?: {
+      minMarketCap?: number
+      maxMarketCap?: number
+      minPER?: number
+      maxPER?: number
+      minPBR?: number
+      maxPBR?: number
+      minROE?: number
+      maxROE?: number
+    }
+  }
 }
 
 const AVAILABLE_INDICATORS = [
@@ -253,7 +275,9 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       id: `${indicatorId}_${Date.now()}`,
       name: indicator.name,
       type: indicator.type as any,
-      params: { ...indicator.defaultParams },
+      params: Object.fromEntries(
+        Object.entries(indicator.defaultParams).map(([key, value]) => [key, value])
+      ) as { [key: string]: string | number },
       enabled: true
     }
 
@@ -726,11 +750,11 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={strategy.advanced?.systemCut || false}
+                      checked={strategy.riskManagement.systemCut || false}
                       onChange={(e) => setStrategy({
                         ...strategy,
-                        advanced: {
-                          ...strategy.advanced,
+                        riskManagement: {
+                          ...strategy.riskManagement,
                           systemCut: e.target.checked
                         }
                       })}

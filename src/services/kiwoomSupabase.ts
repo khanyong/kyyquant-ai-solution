@@ -45,7 +45,9 @@ export class KiwoomSupabaseService {
     try {
       const formattedData = priceDataArray.map(data => ({
         ...data,
-        date: new Date(data.date)
+        date: new Date(data.date),
+        volume: BigInt(data.volume),
+        trading_value: data.trading_value ? BigInt(data.trading_value) : undefined
       }))
       return await dbOperations.insertPriceData(formattedData)
     } catch (error) {
@@ -66,6 +68,7 @@ export class KiwoomSupabaseService {
       return await dbOperations.updateRealtimePrice({
         stock_code: stockCode,
         ...priceInfo,
+        volume: BigInt(priceInfo.volume),
         timestamp: new Date()
       })
     } catch (error) {

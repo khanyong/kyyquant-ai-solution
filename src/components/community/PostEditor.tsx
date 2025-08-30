@@ -126,7 +126,7 @@ const PostEditor: React.FC<PostEditorProps> = ({ boardCode, post, onSave, onCanc
     setTags(tags.filter(tag => tag !== tagToDelete))
   }
 
-  const categories = board?.categories as string[] || []
+  const categories: string[] = []
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -142,7 +142,7 @@ const PostEditor: React.FC<PostEditorProps> = ({ boardCode, post, onSave, onCanc
 
       <Stack spacing={3}>
         {/* 카테고리 선택 */}
-        {board?.use_category && categories.length > 0 && (
+        {false && categories.length > 0 && (
           <FormControl fullWidth>
             <InputLabel>카테고리</InputLabel>
             <Select

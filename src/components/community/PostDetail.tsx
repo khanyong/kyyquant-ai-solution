@@ -315,7 +315,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onEdit }) => {
               startIcon={<ThumbDown />}
               onClick={handleDislike}
             >
-              비추천 {displayPost.dislike_count || 0}
+              비추천 {displayPost.like_count || 0}
             </Button>
           </Stack>
         </Stack>

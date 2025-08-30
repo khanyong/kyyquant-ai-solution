@@ -74,9 +74,9 @@ const TestEmailVerification: React.FC = () => {
       setVerificationStatus({
         userId: user.id,
         email: user.email || '',
-        authConfirmedAt: user.email_confirmed_at,
+        authConfirmedAt: user.email_confirmed_at || null,
         profileVerified: profile?.email_verified || false,
-        profileVerifiedAt: profile?.email_verified_at,
+        profileVerifiedAt: profile?.email_verified_at || null,
         syncStatus
       })
     } catch (err: any) {

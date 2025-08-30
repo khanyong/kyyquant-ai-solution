@@ -160,18 +160,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
     // TODO: LinkedIn OAuth 구현
   }
 
-  // 데모 모드
-  const handleDemoStart = () => {
-    dispatch(loginSuccess({
-      user: {
-        id: 'demo_user',
-        name: 'Demo User',
-        accounts: ['DEMO12345'],
-      },
-      accounts: ['DEMO12345'],
-    }))
-    onClose()
-  }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -289,15 +277,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
               </Button>
             </Stack>
 
-            <Button
-              fullWidth
-              variant="outlined"
-              color="success"
-              onClick={handleDemoStart}
-              disabled={loading}
-            >
-              데모 모드로 시작
-            </Button>
           </Stack>
         </TabPanel>
 

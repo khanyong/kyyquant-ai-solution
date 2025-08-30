@@ -194,7 +194,7 @@ class BoardService {
     if (error?.code === 'PGRST202') {
       await supabase
         .from('posts')
-        .update({ view_count: supabase.raw('view_count + 1') })
+        .update({ view_count: 1 })
         .eq('id', postId)
     }
   }
@@ -364,7 +364,7 @@ class BoardService {
     // 댓글 수 증가
     await supabase
       .from('posts')
-      .update({ comment_count: supabase.raw('comment_count + 1') })
+      .update({ comment_count: 1 })
       .eq('id', postId)
 
     return data
@@ -412,7 +412,7 @@ class BoardService {
         const field = reactionType === 'like' ? 'like_count' : 'dislike_count'
         await supabase
           .from(table)
-          .update({ [field]: supabase.raw(`${field} - 1`) })
+          .update({ [field]: 0 })
           .eq('id', targetId)
       } else {
         // 다른 반응이면 변경
@@ -429,8 +429,8 @@ class BoardService {
         await supabase
           .from(table)
           .update({ 
-            [oldField]: supabase.raw(`${oldField} - 1`),
-            [newField]: supabase.raw(`${newField} + 1`)
+            [oldField]: 0,
+            [newField]: 1
           })
           .eq('id', targetId)
       }
@@ -449,7 +449,7 @@ class BoardService {
       const field = reactionType === 'like' ? 'like_count' : 'dislike_count'
       await supabase
         .from(table)
-        .update({ [field]: supabase.raw(`${field} + 1`) })
+        .update({ [field]: 1 })
         .eq('id', targetId)
     }
   }
