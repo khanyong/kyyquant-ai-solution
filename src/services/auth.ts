@@ -17,7 +17,8 @@ export const authService = {
           data: {
             name: name || email.split('@')[0],
             kiwoom_id: kiwoomId
-          }
+          },
+          emailRedirectTo: 'https://kyyquant-ai-solution.vercel.app/auth/callback'
         }
       })
 
@@ -97,7 +98,7 @@ export const authService = {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: 'https://kyyquant-ai-solution.vercel.app/auth/callback'
         }
       })
 
@@ -114,7 +115,7 @@ export const authService = {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: 'https://kyyquant-ai-solution.vercel.app/auth/callback'
         }
       })
 

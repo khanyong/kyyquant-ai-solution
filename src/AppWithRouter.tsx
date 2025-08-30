@@ -37,6 +37,7 @@ import Community from './components/community/Community'
 import Settings from './pages/Settings'
 import TradingSettings from './pages/TradingSettings'
 import AdminDashboard from './pages/AdminDashboard'
+import AuthCallback from './pages/AuthCallback'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 import { connectWebSocket } from './services/websocket'
 import { checkServerStatus } from './services/api'
@@ -443,6 +444,7 @@ function App() {
         <Route path="/investment-settings" element={<TradingSettings />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
