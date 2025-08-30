@@ -64,18 +64,16 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
           </Typography>
         </Box>
 
-        {/* 개발 로드맵 버튼 - 개발 중에만 표시 */}
-        {process.env.NODE_ENV === 'development' && (
-          <Button
-            color="warning"
-            variant="outlined"
-            startIcon={<Map />}
-            onClick={() => setRoadmapOpen(true)}
-            sx={{ mr: 2 }}
-          >
-            개발진행 로드맵
-          </Button>
-        )}
+        {/* 개발 로드맵 버튼 */}
+        <Button
+          color="warning"
+          variant="outlined"
+          startIcon={<Map />}
+          onClick={() => setRoadmapOpen(true)}
+          sx={{ mr: 2 }}
+        >
+          개발진행 로드맵
+        </Button>
 
         {isConnected ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
