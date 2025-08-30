@@ -37,7 +37,7 @@ import MarketOverview from './components/trading/MarketOverview'
 import Community from './components/community/Community'
 import AdminApprovalPanel from './components/admin/AdminApprovalPanel'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
-import { connectWebSocket } from './services/websocket'
+// import { connectWebSocket } from './services/websocket' // Removed - using Supabase instead
 import { checkServerStatus } from './services/api'
 import { authService } from './services/auth'
 import { loginSuccess, logout } from './store/authSlice'
@@ -87,7 +87,7 @@ function App() {
     })
 
     if (isConnected) {
-      connectWebSocket()
+      // connectWebSocket() // Removed - using Supabase instead
     }
 
     // Supabase Auth 상태 모니터링

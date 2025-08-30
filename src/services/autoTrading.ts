@@ -5,7 +5,7 @@
 
 import { store } from '../store'
 import { placeOrder } from './api'
-import { subscribeToStock } from './websocket'
+import { subscribeToStock } from './supabaseRealtime'
 import { Order, RealTimeData } from '../types'
 
 // 자동매매 전략 타입

@@ -39,8 +39,8 @@ import TradingSettings from './pages/TradingSettings'
 import AdminDashboard from './pages/AdminDashboard'
 import AuthCallback from './pages/AuthCallback'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
-import { connectWebSocket } from './services/websocket'
-import { checkServerStatus } from './services/api'
+// import { connectWebSocket } from './services/websocket' // Removed - using Supabase
+// import { checkServerStatus } from './services/api' // Removed - using Supabase
 import { authService } from './services/auth'
 import { loginSuccess, logout } from './store/authSlice'
 import { supabase } from './lib/supabase'
@@ -103,13 +103,14 @@ function MainApp() {
   }, [user])
 
   useEffect(() => {
-    checkServerStatus().then(status => {
-      setServerStatus(status ? 'online' : 'offline')
-    })
+    // checkServerStatus().then(status => {
+    //   setServerStatus(status ? 'online' : 'offline')
+    // })
+    setServerStatus('online') // Supabase is always online
 
-    if (isConnected) {
-      connectWebSocket()
-    }
+    // if (isConnected) {
+    //   connectWebSocket()
+    // } // Removed - using Supabase Realtime
 
     // Supabase Auth 상태 모니터링
     const { data: authListener } = authService.onAuthStateChange(async (user) => {
