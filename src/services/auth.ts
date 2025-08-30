@@ -24,19 +24,31 @@ export const authService = {
 
       if (error) throw error
 
-      // 프로필 생성
+      // 프로필 생성 (트리거가 없는 경우 백업용)
       if (data.user) {
-        const { error: profileError } = await supabase
+        console.log('Creating profile for user:', data.user.id)
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .insert({
             id: data.user.id,
             email: data.user.email,
             name: name || email.split('@')[0],
-            kiwoom_account: kiwoomId
+            kiwoom_account: kiwoomId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           })
+          .select()
 
-        if (profileError && profileError.code !== '23505') { // 중복 에러 무시
+        if (profileError) {
           console.error('Profile creation error:', profileError)
+          console.log('Profile error details:', {
+            code: profileError.code,
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint
+          })
+        } else {
+          console.log('Profile created successfully:', profileData)
         }
       }
 
