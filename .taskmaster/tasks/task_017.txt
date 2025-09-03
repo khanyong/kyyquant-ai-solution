@@ -1,0 +1,41 @@
+# Task ID: 17
+# Title: Account Information Display System
+# Status: pending
+# Dependencies: 15
+# Priority: medium
+# Description: Comprehensive account information display including balance, returns, holdings, and status
+# Details:
+Show account balance, display investment returns (daily/monthly/yearly), show number of holdings, display account status (normal/restricted/suspended). Provide detailed account analytics and performance metrics.
+
+# Test Strategy:
+Data accuracy tests, real-time update tests, calculation verification for returns, status monitoring tests
+
+# Subtasks:
+## 1. Balance Display Component [pending]
+### Dependencies: None
+### Description: Real-time account balance with currency formatting
+### Details:
+
+
+## 2. Returns Calculator [pending]
+### Dependencies: None
+### Description: Calculate and display daily, monthly, yearly returns
+### Details:
+
+
+## 3. Holdings Counter [pending]
+### Dependencies: None
+### Description: Display total number of holdings and positions
+### Details:
+
+
+## 4. Account Status Indicator [pending]
+### Dependencies: None
+### Description: Show account status (normal, restricted, suspended) with alerts
+### Details:
+
+
+## 5. Performance Metrics Dashboard [pending]
+### Dependencies: None
+### Description: Comprehensive performance analytics per account
+### Details:

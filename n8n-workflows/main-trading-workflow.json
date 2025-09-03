@@ -1,0 +1,379 @@
+{
+  "name": "키움 자동매매 메인 워크플로우",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "dateTime": [
+            {
+              "value1": "={{$now}}",
+              "operation": "after",
+              "value2": "09:00"
+            },
+            {
+              "value1": "={{$now}}",
+              "operation": "before",
+              "value2": "15:30"
+            }
+          ]
+        }
+      },
+      "id": "market-hours-check",
+      "name": "장시간 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public",
+        "table": "strategies",
+        "returnAll": true,
+        "where": {
+          "condition": "AND",
+          "conditions": [
+            {
+              "field": "is_active",
+              "value": true
+            }
+          ]
+        }
+      },
+      "id": "get-active-strategies",
+      "name": "활성 전략 조회",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-strategies",
+      "name": "전략별 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.KIWOOM_API_URL}}/uapi/domestic-stock/v1/quotations/inquire-price-2",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "appkey",
+              "value": "={{$env.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$env.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "FHKST01010100"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "FID_COND_MRKT_DIV_CODE",
+              "value": "J"
+            },
+            {
+              "name": "FID_INPUT_ISCD",
+              "value": "={{$json.target_stocks[0] || '005930'}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-market-data",
+      "name": "시장 데이터 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "python",
+        "pythonCode": "import json\nimport pandas as pd\nfrom datetime import datetime\n\n# 입력 데이터\nstrategy = items[0].json.strategy\nmarket_data = items[0].json.market_data\n\n# 전략 조건 파싱\nconditions = strategy.get('conditions', {})\nentry_conditions = conditions.get('entry', {})\n\n# 기술적 지표 계산 (예시: RSI)\ndef calculate_rsi(prices, period=14):\n    if len(prices) < period:\n        return 50  # 데이터 부족시 중립값\n    \n    deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]\n    gains = [d if d > 0 else 0 for d in deltas]\n    losses = [-d if d < 0 else 0 for d in deltas]\n    \n    avg_gain = sum(gains[-period:]) / period\n    avg_loss = sum(losses[-period:]) / period\n    \n    if avg_loss == 0:\n        return 100\n    \n    rs = avg_gain / avg_loss\n    rsi = 100 - (100 / (1 + rs))\n    return rsi\n\n# 매매 신호 생성\ndef generate_signal(strategy, market_data):\n    current_price = float(market_data.get('output', {}).get('stck_prpr', 0))\n    volume = int(market_data.get('output', {}).get('acml_vol', 0))\n    \n    # RSI 조건 체크 (예시)\n    rsi_condition = entry_conditions.get('rsi', {})\n    if rsi_condition:\n        # 실제로는 과거 가격 데이터를 가져와서 계산\n        # 여기서는 예시로 랜덤값 사용\n        import random\n        current_rsi = random.uniform(25, 75)\n        \n        if rsi_condition.get('operator') == '<' and current_rsi < rsi_condition.get('value'):\n            return {\n                'signal': 'BUY',\n                'stock_code': market_data.get('output', {}).get('iscd'),\n                'price': current_price,\n                'quantity': 10,\n                'reason': f'RSI {current_rsi:.2f} < {rsi_condition.get(\"value\")}',\n                'indicators': {\n                    'rsi': current_rsi,\n                    'volume': volume,\n                    'price': current_price\n                }\n            }\n    \n    return {'signal': 'HOLD', 'reason': 'No conditions met'}\n\n# 신호 생성\nsignal = generate_signal(strategy, market_data)\n\n# 실행 로그 생성\nexecution_log = {\n    'strategy_id': strategy.get('id'),\n    'strategy_name': strategy.get('name'),\n    'execution_time': datetime.now().isoformat(),\n    'signal': signal\n}\n\nreturn [{'json': execution_log}]"
+      },
+      "id": "execute-strategy",
+      "name": "전략 실행 로직",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.signal.signal}}",
+              "operation": "notEqual", 
+              "value2": "HOLD"
+            }
+          ]
+        }
+      },
+      "id": "check-signal",
+      "name": "매매 신호 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.KIWOOM_API_URL}}/uapi/domestic-stock/v1/trading/order-cash",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "appkey",
+              "value": "={{$env.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$env.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "={{$json.signal.signal === 'BUY' ? 'TTTC0802U' : 'TTTC0801U'}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "CANO",
+              "value": "={{$env.KIWOOM_ACCOUNT_NO}}"
+            },
+            {
+              "name": "ACNT_PRDT_CD",
+              "value": "01"
+            },
+            {
+              "name": "PDNO",
+              "value": "={{$json.signal.stock_code}}"
+            },
+            {
+              "name": "ORD_DVSN",
+              "value": "01"
+            },
+            {
+              "name": "ORD_QTY",
+              "value": "={{$json.signal.quantity}}"
+            },
+            {
+              "name": "ORD_UNPR",
+              "value": "={{$json.signal.price}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "place-order",
+      "name": "주문 실행",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1650, 250]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "trading_signals",
+        "columns": {
+          "strategy_id": "={{$json.strategy_id}}",
+          "stock_code": "={{$json.signal.stock_code}}",
+          "signal_type": "={{$json.signal.signal}}",
+          "current_price": "={{$json.signal.price}}",
+          "indicators": "={{JSON.stringify($json.signal.indicators)}}",
+          "order_quantity": "={{$json.signal.quantity}}"
+        },
+        "options": {}
+      },
+      "id": "save-signal",
+      "name": "신호 저장",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1850, 250],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "strategy_executions",
+        "columns": {
+          "strategy_id": "={{$json.strategy_id}}",
+          "status": "completed",
+          "signals_generated": "={{$json.signal.signal !== 'HOLD' ? 1 : 0}}",
+          "execution_log": "={{JSON.stringify($json)}}"
+        },
+        "options": {}
+      },
+      "id": "save-execution-log",
+      "name": "실행 로그 저장",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1650, 400],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "1분마다 실행": {
+      "main": [
+        [
+          {
+            "node": "장시간 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장시간 체크": {
+      "main": [
+        [
+          {
+            "node": "활성 전략 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "활성 전략 조회": {
+      "main": [
+        [
+          {
+            "node": "전략별 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "전략별 처리": {
+      "main": [
+        [
+          {
+            "node": "시장 데이터 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "시장 데이터 조회": {
+      "main": [
+        [
+          {
+            "node": "전략 실행 로직",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "전략 실행 로직": {
+      "main": [
+        [
+          {
+            "node": "매매 신호 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "매매 신호 확인": {
+      "main": [
+        [
+          {
+            "node": "주문 실행",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "실행 로그 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "주문 실행": {
+      "main": [
+        [
+          {
+            "node": "신호 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "trading",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "updatedAt": "2024-01-01T00:00:00.000Z"
+}

@@ -1,0 +1,199 @@
+{
+   "CapAdd" : null,
+   "CapDrop" : null,
+   "cmd" : "",
+   "cmd_v2" : "",
+   "entrypoint" : "",
+   "cpu_priority" : 50,
+   "enable_publish_all_ports" : false,
+   "enable_restart_policy" : true,
+   "enable_service_portal" : false,
+   "enabled" : true,
+   "env_variables" : [
+      {
+         "key" : "PATH",
+         "value" : "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      },
+      {
+         "key" : "NODE_VERSION",
+         "value" : "20.19.0"
+      },
+      {
+         "key" : "YARN_VERSION",
+         "value" : "1.22.22"
+      },
+      {
+         "key" : "NODE_ICU_DATA",
+         "value" : "/usr/local/lib/node_modules/full-icu"
+      },
+      {
+         "key" : "N8N_VERSION",
+         "value" : "1.91.2"
+      },
+      {
+         "key" : "NODE_ENV",
+         "value" : "production"
+      },
+      {
+         "key" : "N8N_RELEASE_TYPE",
+         "value" : "stable"
+      },
+      {
+         "key" : "SHELL",
+         "value" : "/bin/sh"
+      },
+      {
+         "key" : "N8N_BASIC_AUTH_USER",
+         "value" : "khanyong.yoo@gmail.com"
+      },
+      {
+         "key" : "N8N_BASIC_AUTH_PASS",
+         "value" : "NnovqpWXK3Ta2e2XD-mxKm"
+      },
+      {
+         "key" : "N8N_PORT",
+         "value" : "5678"
+      },
+      {
+         "key" : "N8N_SECURE_COOKIE",
+         "value" : "false"
+      },
+      {
+         "key" : "N8N_ENCRYPTION_KEY",
+         "value" : "gshg7fhj3784ghfjdhg34589gdhjg456"
+      },
+      {
+         "key" : "N8N_BASIC_AUTH_ACTIVE",
+         "value" : "true"
+      },
+      {
+         "key" : "N8N_HOST",
+         "value" : "workflow.bll-pro.com"
+      },
+      {
+         "key" : "WEBHOOK_URL",
+         "value" : "https://workflow.bll-pro.com/"
+      },
+      {
+         "key" : "VUE_APP_URL_BASE_API",
+         "value" : "https://workflow.bll-pro.com/"
+      },
+      {
+         "key" : "TZ",
+         "value" : "Asia/Seoul"
+      },
+      {
+         "key" : "N8N_RUNNERS_ENABLED",
+         "value" : "true"
+      },
+      {
+         "key" : "N8N_TIMEZONE",
+         "value" : "Asia/Seoul"
+      },
+      {
+         "key" : "N8N_SCHEDULER_ENABLED",
+         "value" : "true"
+      },
+      {
+         "key" : "N8N_UPLOAD_MAX_SIZE",
+         "value" : "500MB"
+      },
+      {
+         "key" : "N8N_HTTP_TIMEOUT",
+         "value" : "300000"
+      },
+      {
+         "key" : "N8N_MEMORY_LIMIT",
+         "value" : "2GB"
+      },
+      {
+         "key" : "N8N_PROTOCOL",
+         "value" : "https"
+      },
+      {
+         "key" : "KIWOOM_APP_KEY",
+         "value" : "iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk"
+      },
+      {
+         "key" : "KIWOOM_APP_SECRET",
+         "value" : "9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA"
+      },
+      {
+         "key" : "KIWOOM_API_KEY",
+         "value" : "PSbDq6QA3aEfbpnNMuCMmvlPTRQJnQEd0fxh"
+      },
+      {
+         "key" : "KIWOOM_API_URL",
+         "value" : "https://openapi.koreainvestment.com:9443"
+      },
+      {
+         "key" : "KIWOOM_ACCOUNT_NO",
+         "value" : "81101350-01"
+      },
+      {
+         "key" : "SUPABASE_URL",
+         "value" : "https://hznkyaomtrpzcayayayh.supabase.co"
+      },
+      {
+         "key" : "SUPABASE_ANON_KEY",
+         "value" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQxNDgzNzQsImV4cCI6MjA0OTcyNDM3NH0.bjz_gIwX2RmL8fPyxY5LVCsQosUXaSkE7V6-SyGCGzw"
+      },
+      {
+         "key" : "GENERIC_TIMEZONE",
+         "value" : "Asia/Seoul"
+      }
+   ],
+   "exporting" : false,
+   "id" : "4522c391afe96fc2546f7c47fefc7a44d44ee7e06d586663652d11e79163051c",
+   "image" : "n8nio/n8n:latest",
+   "is_ddsm" : false,
+   "is_package" : false,
+   "labels" : {
+      "org.opencontainers.image.description" : "Workflow Automation Tool",
+      "org.opencontainers.image.source" : "https://github.com/n8n-io/n8n",
+      "org.opencontainers.image.title" : "n8n",
+      "org.opencontainers.image.url" : "https://n8n.io",
+      "org.opencontainers.image.version" : "1.91.2"
+   },
+   "links" : [],
+   "memory_limit" : 0,
+   "name" : "n8n",
+   "network" : [
+      {
+         "driver" : "bridge",
+         "name" : "bridge"
+      }
+   ],
+   "network_mode" : "bridge",
+   "port_bindings" : [
+      {
+         "container_port" : 5678,
+         "host_port" : 5678,
+         "type" : "tcp"
+      }
+   ],
+   "privileged" : false,
+   "service_portals" : [],
+   "shortcut" : {
+      "enable_shortcut" : false,
+      "enable_status_page" : false,
+      "enable_web_page" : false,
+      "web_page_url" : ""
+   },
+   "use_host_network" : false,
+   "version" : 2,
+   "volume_bindings" : [
+      {
+         "host_volume_file" : "/docker/n8n",
+         "is_directory" : true,
+         "mount_point" : "/home/node/.n8n",
+         "type" : "rw"
+      },
+      {
+         "host_volume_file" : "/docker/n8n/files",
+         "is_directory" : true,
+         "mount_point" : "/files",
+         "type" : "rw"
+      }
+   ]
+}

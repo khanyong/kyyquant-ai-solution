@@ -1,0 +1,41 @@
+# Task ID: 16
+# Title: Trading Mode Switching System
+# Status: pending
+# Dependencies: 15
+# Priority: high
+# Description: Implement multiple trading modes including DEMO, REAL, PAPER, and BACKTEST modes
+# Details:
+Add DEMO mode for simulation trading, REAL mode for actual trading, PAPER mode for paper trading practice, and BACKTEST mode for historical strategy testing. Each mode should have distinct functionality and safeguards.
+
+# Test Strategy:
+Mode switching tests, simulation accuracy tests, safety checks for real trading mode, data isolation between modes
+
+# Subtasks:
+## 1. DEMO Mode Implementation [pending]
+### Dependencies: None
+### Description: Create simulation trading environment with virtual funds
+### Details:
+
+
+## 2. REAL Mode Implementation [pending]
+### Dependencies: None
+### Description: Enable actual trading with real funds and safety confirmations
+### Details:
+
+
+## 3. PAPER Mode Implementation [pending]
+### Dependencies: None
+### Description: Paper trading with real-time market data but virtual execution
+### Details:
+
+
+## 4. BACKTEST Mode Implementation [pending]
+### Dependencies: None
+### Description: Historical data testing mode for strategy validation
+### Details:
+
+
+## 5. Mode Indicator UI [pending]
+### Dependencies: None
+### Description: Clear visual indicators for current trading mode
+### Details:

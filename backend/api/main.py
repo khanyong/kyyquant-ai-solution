@@ -17,8 +17,8 @@ import uvicorn
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from kiwoom_api import KiwoomAPI
-from backend_api import (
+from scripts.kiwoom.kiwoom_api import KiwoomAPI
+from api.backend_api import (
     LoginRequest, OrderRequest, StockInfoRequest, BalanceRequest,
     broadcast_real_data
 )

@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from models import (
+from database.models import (
     LoginRequest, LoginResponse,
     OrderRequest, OrderResponse,
     StockInfoRequest, StockInfo,

@@ -1,0 +1,41 @@
+# Task ID: 15
+# Title: Multi-Account Management System
+# Status: pending
+# Dependencies: 3, 4
+# Priority: high
+# Description: Implement multiple account selection system for stock, futures/options, and overseas accounts with Kiwoom Securities integration
+# Details:
+Core system for managing multiple trading accounts including stock account, futures/options account, overseas stock account. Display actual account numbers when connected to Kiwoom Securities API. Include account balance and portfolio information display.
+
+# Test Strategy:
+Account switching tests, API integration tests, balance display accuracy tests, multi-account portfolio tests
+
+# Subtasks:
+## 1. Account Selection Dropdown UI [pending]
+### Dependencies: None
+### Description: Create dropdown component to replace current DEMO text with account selector
+### Details:
+
+
+## 2. Kiwoom Account Integration [pending]
+### Dependencies: None
+### Description: Connect to Kiwoom API to fetch real account numbers and details
+### Details:
+
+
+## 3. Account Balance Display [pending]
+### Dependencies: None
+### Description: Show real-time account balance and available funds for each account
+### Details:
+
+
+## 4. Portfolio Information Per Account [pending]
+### Dependencies: None
+### Description: Display holdings and positions specific to each account
+### Details:
+
+
+## 5. Account Type Management [pending]
+### Dependencies: None
+### Description: Handle different account types (stock, futures/options, overseas)
+### Details:

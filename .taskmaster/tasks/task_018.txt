@@ -1,0 +1,35 @@
+# Task ID: 18
+# Title: Quick Account Switching Feature
+# Status: pending
+# Dependencies: 15, 17
+# Priority: medium
+# Description: Implement instant account switching functionality with portfolio and history views
+# Details:
+Enable instant account switching via dropdown without page reload. View portfolio by account with proper data isolation. Check transaction history by account. Maintain user preferences for default account.
+
+# Test Strategy:
+Switching speed tests, data isolation verification, portfolio accuracy tests, transaction history tests
+
+# Subtasks:
+## 1. Instant Switch Implementation [pending]
+### Dependencies: None
+### Description: Switch accounts without page reload using state management
+### Details:
+
+
+## 2. Portfolio View by Account [pending]
+### Dependencies: None
+### Description: Display portfolio specific to selected account
+### Details:
+
+
+## 3. Transaction History Filter [pending]
+### Dependencies: None
+### Description: Filter and display transaction history per account
+### Details:
+
+
+## 4. Account Preference Storage [pending]
+### Dependencies: None
+### Description: Save and restore user's default account preference
+### Details:

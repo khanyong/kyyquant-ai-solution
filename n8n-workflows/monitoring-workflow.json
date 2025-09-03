@@ -1,0 +1,255 @@
+{
+  "name": "거래 모니터링 및 알림",
+  "nodes": [
+    {
+      "parameters": {
+        "events": [
+          {
+            "table": "orders",
+            "event": "INSERT"
+          },
+          {
+            "table": "orders",
+            "event": "UPDATE"
+          }
+        ]
+      },
+      "id": "supabase-trigger",
+      "name": "주문 이벤트 감지",
+      "type": "n8n-nodes-base.supabaseTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.status}}",
+              "operation": "equals",
+              "value2": "EXECUTED"
+            }
+          ]
+        }
+      },
+      "id": "check-execution",
+      "name": "체결 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public", 
+        "table": "strategies",
+        "limit": 1,
+        "where": {
+          "condition": "AND",
+          "conditions": [
+            {
+              "field": "id",
+              "value": "={{$json.strategy_id}}"
+            }
+          ]
+        }
+      },
+      "id": "get-strategy-info",
+      "name": "전략 정보 조회",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [650, 250],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "trading@yourdomain.com",
+        "toEmail": "={{$env.ADMIN_EMAIL}}",
+        "subject": "🔔 자동매매 체결: {{$json.order_type}} {{$json.stock_name}}",
+        "text": "=",
+        "html": "<h2>주문 체결 알림</h2>\n<p><strong>전략:</strong> {{$json.strategy_name}}</p>\n<p><strong>종목:</strong> {{$json.stock_name}} ({{$json.stock_code}})</p>\n<p><strong>주문 유형:</strong> {{$json.order_type}}</p>\n<p><strong>체결 수량:</strong> {{$json.executed_quantity}}주</p>\n<p><strong>체결 가격:</strong> {{$json.executed_price}}원</p>\n<p><strong>체결 시간:</strong> {{$json.executed_time}}</p>\n<hr>\n<p>자동매매 시스템에서 발송된 메일입니다.</p>",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "이메일 알림",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [850, 250],
+      "credentials": {
+        "smtp": {
+          "id": "2",
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "webhookUri": "={{$env.SLACK_WEBHOOK_URL}}",
+        "text": "=",
+        "attachments": [
+          {
+            "color": "={{$json.order_type === 'BUY' ? '#00ff00' : '#ff0000'}}",
+            "title": "자동매매 체결 알림",
+            "fields": {
+              "item": [
+                {
+                  "short": true,
+                  "title": "전략",
+                  "value": "={{$json.strategy_name}}"
+                },
+                {
+                  "short": true,
+                  "title": "종목",
+                  "value": "={{$json.stock_name}}"
+                },
+                {
+                  "short": true,
+                  "title": "주문",
+                  "value": "={{$json.order_type}}"
+                },
+                {
+                  "short": true,
+                  "title": "수량",
+                  "value": "={{$json.executed_quantity}}주"
+                },
+                {
+                  "short": true,
+                  "title": "가격",
+                  "value": "{{$json.executed_price}}원"
+                },
+                {
+                  "short": true,
+                  "title": "시간",
+                  "value": "={{$json.executed_time}}"
+                }
+              ]
+            }
+          }
+        ],
+        "options": {}
+      },
+      "id": "send-slack",
+      "name": "Slack 알림",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [850, 350]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.status}}",
+              "operation": "equals",
+              "value2": "FAILED"
+            }
+          ]
+        }
+      },
+      "id": "check-failure",
+      "name": "실패 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 450]
+    },
+    {
+      "parameters": {
+        "fromEmail": "trading@yourdomain.com",
+        "toEmail": "={{$env.ADMIN_EMAIL}}",
+        "subject": "⚠️ 자동매매 오류: {{$json.error_message}}",
+        "text": "주문 실행 중 오류가 발생했습니다.\n\n전략: {{$json.strategy_name}}\n종목: {{$json.stock_name}}\n오류: {{$json.error_message}}\n시간: {{$json.created_at}}",
+        "options": {
+          "priority": "high"
+        }
+      },
+      "id": "error-notification",
+      "name": "오류 알림",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [650, 450],
+      "credentials": {
+        "smtp": {
+          "id": "2",
+          "name": "SMTP Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "주문 이벤트 감지": {
+      "main": [
+        [
+          {
+            "node": "체결 확인",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "실패 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "체결 확인": {
+      "main": [
+        [
+          {
+            "node": "전략 정보 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "전략 정보 조회": {
+      "main": [
+        [
+          {
+            "node": "이메일 알림",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack 알림",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "실패 확인": {
+      "main": [
+        [
+          {
+            "node": "오류 알림",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": [
+    {
+      "name": "monitoring"
+    }
+  ]
+}

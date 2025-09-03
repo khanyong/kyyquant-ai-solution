@@ -503,10 +503,10 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     {
       id: 8,
       title: '실시간 대시보드 개발',
-      status: 'in-progress',
+      status: 'done',
       priority: 'high',
       icon: <Dashboard />,
-      period: '2024.08.30 - 진행중',
+      period: '2024.08.30 - 2024.09.03',
       description: '실시간 시장 데이터 및 포트폴리오 모니터링 대시보드',
       subtasks: [
         {
@@ -530,7 +530,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         },
         {
-          title: '⏳ 실시간 시세 WebSocket',
+          title: '✅ 실시간 시세 WebSocket',
           details: [
             'WebSocket 연결 관리',
             '실시간 호가 수신',
@@ -540,7 +540,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         },
         {
-          title: '⏳ 실시간 차트',
+          title: '✅ 실시간 차트',
           details: [
             '분봉/일봉 실시간 업데이트',
             'TradingView 차트 통합',
@@ -550,7 +550,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         },
         {
-          title: '⏳ 주문 패널',
+          title: '✅ 주문 패널',
           details: [
             '원클릭 주문 시스템',
             '예약 주문 설정',
@@ -564,10 +564,10 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     {
       id: 9,
       title: '자동매매 시스템',
-      status: 'in-progress',
+      status: 'done',
       priority: 'high',
       icon: <TrendingUp />,
-      period: '2024.08.31 - 진행중',
+      period: '2024.08.31 - 2024.09.03',
       description: '키움 OpenAPI 연동 자동매매 시스템 구축',
       subtasks: [
         {
@@ -591,7 +591,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         },
         {
-          title: '⏳ 키움 API 서버',
+          title: '✅ 키움 API 서버',
           details: [
             'Python FastAPI 서버 구축',
             '키움 OpenAPI 연동',
@@ -601,7 +601,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         },
         {
-          title: '⏳ 실시간 주문 실행',
+          title: '✅ 실시간 주문 실행',
           details: [
             '신호 발생 시 자동 주문',
             '주문 체결 확인',
@@ -611,7 +611,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         },
         {
-          title: '⏳ 포지션 모니터링',
+          title: '✅ 포지션 모니터링',
           details: [
             '실시간 포지션 추적',
             '손익 실시간 계산',
@@ -624,67 +624,180 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 10,
-      title: '실시간 신호 모니터링',
-      status: 'pending',
-      priority: 'medium',
-      icon: <AutoGraph />,
-      period: '2024.09 예정',
-      description: '매매 신호 실시간 감지 및 알림 시스템',
+      title: 'Supabase 데이터 파이프라인 구축',
+      status: 'done',
+      priority: 'high',
+      icon: <Storage />,
+      period: '2024.09.03',
+      description: '키움 OpenAPI → Supabase 완전 자동화 데이터 흐름 구축',
       subtasks: [
         {
-          title: '매매 신호 감지',
+          title: '✅ 데이터베이스 스키마 재구성',
           details: [
-            '전략별 신호 모니터링',
-            '복합 조건 신호 감지',
-            '신호 강도 계산',
-            '신호 유효성 검증',
-            '오류 신호 필터링'
+            'positions 테이블 재생성 (24개 컬럼)',
+            'account_balance 테이블 컬럼 추가',
+            'foreign key 관계 수정 (users → profiles)',
+            'RLS 정책 임시 비활성화 및 테스트',
+            'SQL 마이그레이션 스크립트 작성 (5개)'
           ]
         },
         {
-          title: '신호 알림 시스템',
+          title: '✅ 데이터 흐름 테스트 시스템',
           details: [
-            '실시간 푸시 알림',
-            '이메일 알림',
-            '카카오톡 알림',
-            'SMS 알림 (긴급)',
-            '알림 우선순위 관리'
+            'test_kiwoom_data_flow.py 구현',
+            '7단계 데이터 파이프라인 테스트',
+            'market_data → indicators → signals 흐름',
+            'signals → orders → positions 흐름',
+            '모든 테이블 데이터 저장 검증'
           ]
         },
         {
-          title: '신호 히스토리',
+          title: '✅ 백엔드 파일 구조 정리',
           details: [
-            '과거 신호 기록',
-            '신호 성공률 분석',
-            '신호별 수익률 추적',
-            '패턴 분석',
-            '신호 백테스팅'
-          ]
-        },
-        {
-          title: '신호 필터링',
-          details: [
-            '노이즈 필터링',
-            '중복 신호 제거',
-            '신호 검증 로직',
-            '시장 상황 필터',
-            'VIP 신호 우선순위'
-          ]
-        },
-        {
-          title: '신호 대시보드',
-          details: [
-            '실시간 신호 목록',
-            '신호 차트 시각화',
-            '신호 통계 분석',
-            '종목별 신호 분포',
-            '시간대별 신호 분석'
+            'api/ - API 엔드포인트 분리',
+            'core/ - 핵심 비즈니스 로직',
+            'database/ - DB 연결 관리',
+            'scripts/ - 실행 스크립트',
+            'sql/ - SQL 스크립트 모음'
           ]
         }
       ]
     },
     {
       id: 11,
+      title: 'n8n 워크플로우 시스템 구축',
+      status: 'done',
+      priority: 'high',
+      icon: <AutoGraph />,
+      period: '2024.09.03',
+      description: 'n8n 기반 자동매매 워크플로우 아키텍처 설계',
+      subtasks: [
+        {
+          title: '✅ n8n 연동 시스템',
+          details: [
+            'n8n_connector.py 구현',
+            'n8n_config.py 설정 파일',
+            'NAS n8n 서버 연결 구조',
+            'test_n8n_connection.py 테스트 스크립트',
+            '워크플로우 관리 시스템'
+          ]
+        },
+        {
+          title: '✅ Supabase 모니터링 워크플로우',
+          details: [
+            'supabase-monitoring-workflow.json 생성',
+            '1분마다 활성 전략 체크',
+            '매매 신호 자동 생성',
+            '키움 API 주문 실행',
+            '결과 Supabase 저장'
+          ]
+        },
+        {
+          title: '✅ 자동매매 스케줄러',
+          details: [
+            'auto_trading_scheduler.py 구현',
+            'APScheduler 기반 스케줄링',
+            '장 시간 자동 체크 (09:00-15:30)',
+            '전략별 실행 주기 관리',
+            '포지션 및 계좌 잔고 업데이트'
+          ]
+        }
+      ]
+    },
+    {
+      id: 12,
+      title: '시스템 아키텍처 문서화',
+      status: 'done',
+      priority: 'medium',
+      icon: <Description />,
+      period: '2024.09.03',
+      description: '전체 시스템 구조 및 데이터 흐름 문서화',
+      subtasks: [
+        {
+          title: '✅ SYSTEM_ARCHITECTURE.md',
+          details: [
+            '시스템 구성 요소 설명',
+            '데이터 흐름 다이어그램',
+            '6단계 상세 프로세스 문서화',
+            '모니터링 및 보안 가이드',
+            '시작 방법 단계별 설명'
+          ]
+        },
+        {
+          title: '✅ backend/README.md',
+          details: [
+            '폴더 구조 트리 다이어그램',
+            '모듈별 역할 설명',
+            'API/Core/Database 분리 설명',
+            '실행 방법 문서화',
+            'import 경로 업데이트 스크립트'
+          ]
+        }
+      ]
+    },
+    {
+      id: 13,
+      title: '키움 OpenAPI 실제 연동',
+      status: 'in-progress',
+      priority: 'high',
+      icon: <TrendingUp />,
+      period: '2024.09.04 - 진행중',
+      description: '키움증권 모의투자 계정과 실제 API 연동',
+      subtasks: [
+        {
+          title: '⏳ 키움 OpenAPI 로그인',
+          details: [
+            '모의투자 계정 로그인 구현',
+            'API 키/시크릿 검증',
+            '32비트 Python 환경 설정',
+            'COM 객체 초기화',
+            '자동 로그인 설정'
+          ]
+        },
+        {
+          title: '⏳ 실시간 시세 수신',
+          details: [
+            '실시간 체결 데이터 구독',
+            '실시간 호가 데이터 수신',
+            '관심종목 등록/해제',
+            '시세 이벤트 핸들러',
+            'Supabase market_data 저장'
+          ]
+        },
+        {
+          title: '⏳ 주문 실행 시스템',
+          details: [
+            '매수/매도 주문 API',
+            '정정/취소 주문 처리',
+            '주문 체결 확인',
+            '잔고 조회 및 업데이트',
+            '주문 오류 처리'
+          ]
+        },
+        {
+          title: '⏳ n8n 워크플로우 연동',
+          details: [
+            'NAS n8n 서버 설정',
+            '워크플로우 임포트 및 활성화',
+            'Supabase → n8n → 키움 연결',
+            '실시간 전략 실행 테스트',
+            '에러 핸들링 및 재시도'
+          ]
+        },
+        {
+          title: '⏳ 통합 테스트',
+          details: [
+            '전체 플로우 테스트',
+            '웹 → 전략 생성 → n8n 감지',
+            'n8n → 신호 생성 → 주문 실행',
+            '결과 → Supabase → 웹 표시',
+            '실제 모의투자 검증'
+          ]
+        }
+      ]
+    },
+    {
+      id: 14,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -745,7 +858,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 12,
+      id: 15,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -806,7 +919,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 13,
+      id: 16,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -867,7 +980,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 14,
+      id: 17,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -928,7 +1041,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 15,
+      id: 18,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -989,7 +1102,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 16,
+      id: 19,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',

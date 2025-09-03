@@ -1,0 +1,35 @@
+# Task ID: 19
+# Title: Account Type Visual Indicators
+# Status: pending
+# Dependencies: 15
+# Priority: low
+# Description: Implement visual indicators and icons for different account types
+# Details:
+Add visual indicators: 🏦 Real account, 📊 Paper account, 🧪 Test account, 🤖 Auto-trading account. Create consistent color coding and styling for each account type. Implement tooltips with account details.
+
+# Test Strategy:
+UI consistency tests, accessibility tests, tooltip functionality tests
+
+# Subtasks:
+## 1. Icon System Implementation [pending]
+### Dependencies: None
+### Description: Add icons for each account type (real, paper, test, auto)
+### Details:
+
+
+## 2. Color Coding System [pending]
+### Dependencies: None
+### Description: Implement consistent color scheme for account types
+### Details:
+
+
+## 3. Tooltip Implementation [pending]
+### Dependencies: None
+### Description: Add informative tooltips showing account details on hover
+### Details:
+
+
+## 4. Accessibility Features [pending]
+### Dependencies: None
+### Description: Ensure visual indicators are accessible with proper ARIA labels
+### Details:

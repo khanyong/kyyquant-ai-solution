@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import the Kiwoom API wrapper
-from kiwoom_api import KiwoomAPI
+from scripts.kiwoom.kiwoom_api import KiwoomAPI
 
 # Data models
 class LoginRequest(BaseModel):

@@ -1,0 +1,494 @@
+{
+  "name": "키움 자동매매 워크플로우",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "dateTime": [
+            {
+              "value1": "={{$now.format('HH:mm')}}",
+              "operation": "after",
+              "value2": "09:00"
+            },
+            {
+              "value1": "={{$now.format('HH:mm')}}",
+              "operation": "before",
+              "value2": "15:30"
+            }
+          ]
+        }
+      },
+      "id": "market-hours",
+      "name": "장시간 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "appkey",
+              "value": "iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk"
+            },
+            {
+              "name": "secretkey",
+              "value": "9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-token",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "strategies",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "is_active",
+              "keyValue": true,
+              "condition": "equals"
+            }
+          ]
+        }
+      },
+      "id": "get-strategies",
+      "name": "활성 전략 조회",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 전략별 처리\nconst items = [];\nconst strategies = $input.all();\nconst token = $node['get-token'].json.token;\n\nfor (const strategy of strategies) {\n  const strategyData = strategy.json;\n  \n  // 전략 조건 확인\n  const conditions = strategyData.conditions || {};\n  const entryConditions = conditions.entry || {};\n  \n  // 종목 리스트\n  const targetStocks = strategyData.target_stocks || ['005930']; // 기본: 삼성전자\n  \n  for (const stockCode of targetStocks) {\n    items.push({\n      json: {\n        strategy_id: strategyData.id,\n        strategy_name: strategyData.name,\n        stock_code: stockCode,\n        entry_conditions: entryConditions,\n        exit_conditions: conditions.exit || {},\n        position_size: strategyData.position_size || 10,\n        token: token,\n        timestamp: new Date().toISOString()\n      }\n    });\n  }\n}\n\nreturn items;"
+      },
+      "id": "process-strategies",
+      "name": "전략 처리",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://mockapi.kiwoom.com/uapi/domestic-stock/v1/quotations/inquire-price",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{$json.token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk"
+            },
+            {
+              "name": "appsecret",
+              "value": "9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA"
+            },
+            {
+              "name": "tr_id",
+              "value": "FHKST01010100"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fid_cond_mrkt_div_code",
+              "value": "J"
+            },
+            {
+              "name": "fid_input_iscd",
+              "value": "={{$json.stock_code}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-price",
+      "name": "현재가 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 매매 신호 생성\nconst item = $input.item.json;\nconst priceData = $node['get-price'].json.output || {};\n\nconst currentPrice = parseInt(priceData.stck_prpr || 0);\nconst changeRate = parseFloat(priceData.prdy_ctrt || 0);\nconst volume = parseInt(priceData.acml_vol || 0);\n\n// RSI 예시 (실제로는 계산 필요)\nconst rsi = 30 + Math.random() * 40; // 30-70 사이 랜덤\n\n// 진입 조건 체크\nconst entryConditions = item.entry_conditions;\nlet shouldBuy = false;\nlet signalStrength = 0;\n\n// RSI 조건 체크\nif (entryConditions.rsi) {\n  const rsiCondition = entryConditions.rsi;\n  if (rsiCondition.operator === '<' && rsi < rsiCondition.value) {\n    shouldBuy = true;\n    signalStrength = (rsiCondition.value - rsi) / rsiCondition.value;\n  }\n}\n\n// 신호 생성\nconst signal = {\n  strategy_id: item.strategy_id,\n  strategy_name: item.strategy_name,\n  stock_code: item.stock_code,\n  stock_name: priceData.stck_prpr_name || '',\n  signal_type: shouldBuy ? 'BUY' : 'HOLD',\n  signal_strength: signalStrength,\n  current_price: currentPrice,\n  change_rate: changeRate,\n  volume: volume,\n  indicators: {\n    rsi: rsi\n  },\n  position_size: item.position_size,\n  timestamp: new Date().toISOString()\n};\n\nreturn {\n  json: signal\n};"
+      },
+      "id": "generate-signal",
+      "name": "신호 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.signal_type}}",
+              "operation": "equals",
+              "value2": "BUY"
+            }
+          ]
+        }
+      },
+      "id": "check-signal",
+      "name": "매수 신호 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "trading_signals",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "strategy_id",
+              "fieldValue": "={{$json.strategy_id}}"
+            },
+            {
+              "fieldName": "stock_code",
+              "fieldValue": "={{$json.stock_code}}"
+            },
+            {
+              "fieldName": "stock_name",
+              "fieldValue": "={{$json.stock_name}}"
+            },
+            {
+              "fieldName": "signal_type",
+              "fieldValue": "={{$json.signal_type}}"
+            },
+            {
+              "fieldName": "signal_strength",
+              "fieldValue": "={{$json.signal_strength}}"
+            },
+            {
+              "fieldName": "current_price",
+              "fieldValue": "={{$json.current_price}}"
+            },
+            {
+              "fieldName": "volume",
+              "fieldValue": "={{$json.volume}}"
+            },
+            {
+              "fieldName": "indicators",
+              "fieldValue": "={{JSON.stringify($json.indicators)}}"
+            },
+            {
+              "fieldName": "order_status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "id": "save-signal",
+      "name": "신호 저장",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1850, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/trading/order-cash",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{$json.token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk"
+            },
+            {
+              "name": "appsecret",
+              "value": "9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA"
+            },
+            {
+              "name": "tr_id",
+              "value": "VTTC0802U"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "CANO",
+              "value": "81101350"
+            },
+            {
+              "name": "ACNT_PRDT_CD",
+              "value": "01"
+            },
+            {
+              "name": "PDNO",
+              "value": "={{$json.stock_code}}"
+            },
+            {
+              "name": "ORD_DVSN",
+              "value": "01"
+            },
+            {
+              "name": "ORD_QTY",
+              "value": "1"
+            },
+            {
+              "name": "ORD_UNPR",
+              "value": "={{$json.current_price}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "place-order",
+      "name": "주문 실행",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2050, 200]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "orders",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "signal_id",
+              "fieldValue": "={{$node['save-signal'].json.id}}"
+            },
+            {
+              "fieldName": "strategy_id",
+              "fieldValue": "={{$json.strategy_id}}"
+            },
+            {
+              "fieldName": "stock_code",
+              "fieldValue": "={{$json.stock_code}}"
+            },
+            {
+              "fieldName": "stock_name",
+              "fieldValue": "={{$json.stock_name}}"
+            },
+            {
+              "fieldName": "order_type",
+              "fieldValue": "BUY"
+            },
+            {
+              "fieldName": "quantity",
+              "fieldValue": "1"
+            },
+            {
+              "fieldName": "order_price",
+              "fieldValue": "={{$json.current_price}}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "={{$node['place-order'].json.rt_cd === '0' ? 'EXECUTED' : 'FAILED'}}"
+            }
+          ]
+        }
+      },
+      "id": "save-order",
+      "name": "주문 저장",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2250, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "cron-trigger": {
+      "main": [
+        [
+          {
+            "node": "market-hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "market-hours": {
+      "main": [
+        [
+          {
+            "node": "get-token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-token": {
+      "main": [
+        [
+          {
+            "node": "get-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-strategies": {
+      "main": [
+        [
+          {
+            "node": "process-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "process-strategies": {
+      "main": [
+        [
+          {
+            "node": "get-price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-price": {
+      "main": [
+        [
+          {
+            "node": "generate-signal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate-signal": {
+      "main": [
+        [
+          {
+            "node": "check-signal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-signal": {
+      "main": [
+        [
+          {
+            "node": "save-signal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save-signal": {
+      "main": [
+        [
+          {
+            "node": "place-order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "place-order": {
+      "main": [
+        [
+          {
+            "node": "save-order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "instanceId": "kiwoom-auto-trading"
+  },
+  "tags": []
+}

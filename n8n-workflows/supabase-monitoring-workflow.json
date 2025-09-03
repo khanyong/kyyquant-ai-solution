@@ -1,0 +1,365 @@
+{
+  "name": "Supabase 전략 모니터링 워크플로우",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/strategies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "is_active",
+              "value": "eq.true"
+            },
+            {
+              "name": "select",
+              "value": "*"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_ANON_KEY}}"
+            }
+          ]
+        }
+      },
+      "id": "get-active-strategies",
+      "name": "활성 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-strategies",
+      "name": "전략 있음?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 각 전략별로 처리\nconst strategies = items[0].json;\nconst results = [];\n\nfor (const strategy of strategies) {\n  // 전략 조건 확인\n  const now = new Date();\n  const hour = now.getHours();\n  const minute = now.getMinutes();\n  \n  // 장 시간 체크 (09:00 ~ 15:30)\n  if (hour >= 9 && (hour < 15 || (hour === 15 && minute <= 30))) {\n    // 전략 실행 주기 확인\n    const lastExecuted = strategy.last_executed_at ? new Date(strategy.last_executed_at) : null;\n    const timeDiff = lastExecuted ? (now - lastExecuted) / 1000 / 60 : Infinity; // 분 단위\n    \n    // 실행 주기 (기본 5분)\n    const executionInterval = strategy.execution_interval || 5;\n    \n    if (timeDiff >= executionInterval) {\n      results.push({\n        strategy_id: strategy.id,\n        strategy_name: strategy.name,\n        config: strategy.config,\n        should_execute: true,\n        reason: '실행 주기 도달'\n      });\n    }\n  }\n}\n\nreturn results;"
+      },
+      "id": "process-strategies",
+      "name": "전략 처리",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/market_data",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "stock_code",
+              "value": "in.({{$json.config.target_stocks.join(',')}})"
+            },
+            {
+              "name": "order",
+              "value": "created_at.desc"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            }
+          ]
+        }
+      },
+      "id": "get-market-data",
+      "name": "시장 데이터 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 매매 신호 생성 로직\nconst strategy = items[0].json;\nconst marketData = $node['get-market-data'].json;\n\nconst signals = [];\n\n// 기술적 지표 계산 및 신호 생성\nfor (const stock of marketData) {\n  const config = strategy.config;\n  \n  // RSI 체크\n  if (config.indicators?.rsi?.enabled) {\n    const rsiValue = stock.rsi || 0;\n    const oversoldLevel = config.indicators.rsi.oversold || 30;\n    const overboughtLevel = config.indicators.rsi.overbought || 70;\n    \n    if (rsiValue <= oversoldLevel && config.entry_conditions?.rsi === 'oversold') {\n      signals.push({\n        strategy_id: strategy.strategy_id,\n        stock_code: stock.stock_code,\n        signal_type: 'BUY',\n        price: stock.current_price,\n        signal_strength: 0.8,\n        reason: 'RSI 과매도',\n        timestamp: new Date().toISOString()\n      });\n    } else if (rsiValue >= overboughtLevel && config.exit_conditions?.rsi === 'overbought') {\n      signals.push({\n        strategy_id: strategy.strategy_id,\n        stock_code: stock.stock_code,\n        signal_type: 'SELL',\n        price: stock.current_price,\n        signal_strength: 0.8,\n        reason: 'RSI 과매수',\n        timestamp: new Date().toISOString()\n      });\n    }\n  }\n  \n  // MACD 체크\n  if (config.indicators?.macd?.enabled) {\n    // MACD 로직 추가\n  }\n  \n  // 볼린저 밴드 체크\n  if (config.indicators?.bollinger_bands?.enabled) {\n    // 볼린저 밴드 로직 추가\n  }\n}\n\nreturn signals;"
+      },
+      "id": "generate-signals",
+      "name": "매매 신호 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-signals",
+      "name": "신호 있음?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/trading_signals",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "",
+              "value": "={{$json}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        }
+      },
+      "id": "save-signals",
+      "name": "신호 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1650, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/kiwoom/order",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "",
+              "value": "={{$json}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "execute-order",
+      "name": "키움 주문 실행",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1850, 100]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/strategies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "eq.{{$json.strategy_id}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "last_executed_at",
+              "value": "={{new Date().toISOString()}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            }
+          ]
+        }
+      },
+      "id": "update-strategy",
+      "name": "전략 실행시간 업데이트",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2050, 200]
+    }
+  ],
+  "connections": {
+    "schedule-trigger": {
+      "main": [
+        [
+          {
+            "node": "get-active-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-active-strategies": {
+      "main": [
+        [
+          {
+            "node": "check-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-strategies": {
+      "main": [
+        [
+          {
+            "node": "process-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "process-strategies": {
+      "main": [
+        [
+          {
+            "node": "get-market-data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-market-data": {
+      "main": [
+        [
+          {
+            "node": "generate-signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate-signals": {
+      "main": [
+        [
+          {
+            "node": "check-signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-signals": {
+      "main": [
+        [
+          {
+            "node": "save-signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save-signals": {
+      "main": [
+        [
+          {
+            "node": "execute-order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "execute-order": {
+      "main": [
+        [
+          {
+            "node": "update-strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {}
+}

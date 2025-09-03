@@ -5,7 +5,7 @@
         "id": 1,
         "title": "KyyQuant AI Solution 프로젝트 초기 설정",
         "description": "Next.js, Supabase, Vercel 환경 구성 및 KyyQuant AI Solution 기본 프로젝트 구조 설정",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "complexity": 3,
         "dependencies": [],
@@ -16,25 +16,25 @@
             "id": 1,
             "title": "Next.js 프로젝트 초기화",
             "description": "Next.js 14 with TypeScript, TailwindCSS, shadcn/ui 설정",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 2,
             "title": "Supabase 프로젝트 생성 및 연동",
             "description": "Supabase 계정 생성, 프로젝트 설정, 환경변수 구성",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 3,
             "title": "GitHub 레포지토리 설정",
             "description": "레포지토리 생성, 브랜치 전략 수립, GitHub Actions 설정",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 4,
             "title": "Vercel 배포 환경 구성",
             "description": "Vercel 프로젝트 연결, 환경변수 설정, 자동 배포 구성",
-            "status": "pending"
+            "status": "done"
           }
         ]
       },
@@ -42,7 +42,7 @@
         "id": 2,
         "title": "데이터베이스 스키마 설계",
         "description": "Supabase PostgreSQL 데이터베이스 스키마 설계 및 구현",
-        "status": "pending",
+        "status": "done",
         "priority": "high",
         "complexity": 4,
         "dependencies": [
@@ -55,25 +55,25 @@
             "id": 1,
             "title": "핵심 테이블 스키마 생성",
             "description": "users, accounts, trades, positions 테이블 생성",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 2,
             "title": "전략 관련 테이블 설계",
             "description": "strategies, strategy_conditions, screening_filters 테이블",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 3,
             "title": "성과 추적 테이블 구현",
             "description": "daily_performance, period_performance, account_balance 테이블",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 4,
             "title": "RLS 정책 및 트리거 설정",
             "description": "Row Level Security 정책, 자동 업데이트 트리거 구현",
-            "status": "pending"
+            "status": "done"
           }
         ]
       },
@@ -81,7 +81,7 @@
         "id": 3,
         "title": "키움 API 연동 서버 개발",
         "description": "키움증권 OpenAPI와 연동하는 별도 Python 서버 구축",
-        "status": "pending",
+        "status": "in-progress",
         "priority": "high",
         "complexity": 5,
         "dependencies": [
@@ -94,22 +94,58 @@
             "id": 1,
             "title": "FastAPI 서버 구조 설정",
             "description": "FastAPI 프로젝트 구조, 환경 설정, 의존성 관리",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 2,
             "title": "키움 OpenAPI 래퍼 구현",
             "description": "로그인, 주문, 조회, 실시간 데이터 수신 래퍼 함수",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 3,
-            "title": "WebSocket 통신 구현",
+            "title": "Kiwoom to Supabase 데이터 파이프라인",
+            "description": "Kiwoom API → market_data → technical_indicators → trading_signals → orders → positions 데이터 플로우 구현",
+            "status": "done"
+          },
+          {
+            "id": 4,
+            "title": "데이터베이스 스키마 최적화",
+            "description": "7개 트레이딩 테이블 생성, positions 테이블 재구조화 (24 columns), RLS 정책 및 인덱스 설정",
+            "status": "done"
+          },
+          {
+            "id": 5,
+            "title": "REST API 엔드포인트 구현",
+            "description": "거래 주문, 포지션 조회, 잔고 확인, 시장 데이터 조회 API",
+            "status": "pending"
+          },
+          {
+            "id": 6,
+            "title": "WebSocket 실시간 스트리밍",
             "description": "실시간 시세, 체결 정보, 잔고 업데이트 WebSocket 구현",
             "status": "pending"
           },
           {
-            "id": 4,
+            "id": 7,
+            "title": "Frontend 컴포넌트 개발",
+            "description": "저장된 데이터를 표시할 React 컴포넌트 (차트, 테이블, 대시보드)",
+            "status": "pending"
+          },
+          {
+            "id": 8,
+            "title": "실제 Kiwoom API 통합 테스트",
+            "description": "모의 데이터에서 실제 Kiwoom API로 전환 및 테스트",
+            "status": "pending"
+          },
+          {
+            "id": 9,
+            "title": "자동 매매 로직 구현",
+            "description": "저장된 시그널 기반 자동 주문 실행 시스템",
+            "status": "pending"
+          },
+          {
+            "id": 10,
             "title": "Railway/Render 배포 설정",
             "description": "서버 배포, 환경변수 설정, 모니터링 구성",
             "status": "pending"
@@ -522,11 +558,226 @@
             "status": "pending"
           }
         ]
+      },
+      {
+        "id": 15,
+        "title": "Multi-Account Management System",
+        "description": "Implement multiple account selection system for stock, futures/options, and overseas accounts with Kiwoom Securities integration",
+        "status": "pending",
+        "priority": "high",
+        "complexity": 4,
+        "dependencies": [
+          "3",
+          "4"
+        ],
+        "details": "Core system for managing multiple trading accounts including stock account, futures/options account, overseas stock account. Display actual account numbers when connected to Kiwoom Securities API. Include account balance and portfolio information display.",
+        "testStrategy": "Account switching tests, API integration tests, balance display accuracy tests, multi-account portfolio tests",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Account Selection Dropdown UI",
+            "description": "Create dropdown component to replace current DEMO text with account selector",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Kiwoom Account Integration",
+            "description": "Connect to Kiwoom API to fetch real account numbers and details",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Account Balance Display",
+            "description": "Show real-time account balance and available funds for each account",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Portfolio Information Per Account",
+            "description": "Display holdings and positions specific to each account",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Account Type Management",
+            "description": "Handle different account types (stock, futures/options, overseas)",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Trading Mode Switching System",
+        "description": "Implement multiple trading modes including DEMO, REAL, PAPER, and BACKTEST modes",
+        "status": "pending",
+        "priority": "high",
+        "complexity": 3,
+        "dependencies": [
+          "15"
+        ],
+        "details": "Add DEMO mode for simulation trading, REAL mode for actual trading, PAPER mode for paper trading practice, and BACKTEST mode for historical strategy testing. Each mode should have distinct functionality and safeguards.",
+        "testStrategy": "Mode switching tests, simulation accuracy tests, safety checks for real trading mode, data isolation between modes",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "DEMO Mode Implementation",
+            "description": "Create simulation trading environment with virtual funds",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "REAL Mode Implementation",
+            "description": "Enable actual trading with real funds and safety confirmations",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "PAPER Mode Implementation",
+            "description": "Paper trading with real-time market data but virtual execution",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "BACKTEST Mode Implementation",
+            "description": "Historical data testing mode for strategy validation",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Mode Indicator UI",
+            "description": "Clear visual indicators for current trading mode",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "Account Information Display System",
+        "description": "Comprehensive account information display including balance, returns, holdings, and status",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 3,
+        "dependencies": [
+          "15"
+        ],
+        "details": "Show account balance, display investment returns (daily/monthly/yearly), show number of holdings, display account status (normal/restricted/suspended). Provide detailed account analytics and performance metrics.",
+        "testStrategy": "Data accuracy tests, real-time update tests, calculation verification for returns, status monitoring tests",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Balance Display Component",
+            "description": "Real-time account balance with currency formatting",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Returns Calculator",
+            "description": "Calculate and display daily, monthly, yearly returns",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Holdings Counter",
+            "description": "Display total number of holdings and positions",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Account Status Indicator",
+            "description": "Show account status (normal, restricted, suspended) with alerts",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Performance Metrics Dashboard",
+            "description": "Comprehensive performance analytics per account",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "Quick Account Switching Feature",
+        "description": "Implement instant account switching functionality with portfolio and history views",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 3,
+        "dependencies": [
+          "15",
+          "17"
+        ],
+        "details": "Enable instant account switching via dropdown without page reload. View portfolio by account with proper data isolation. Check transaction history by account. Maintain user preferences for default account.",
+        "testStrategy": "Switching speed tests, data isolation verification, portfolio accuracy tests, transaction history tests",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Instant Switch Implementation",
+            "description": "Switch accounts without page reload using state management",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Portfolio View by Account",
+            "description": "Display portfolio specific to selected account",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Transaction History Filter",
+            "description": "Filter and display transaction history per account",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Account Preference Storage",
+            "description": "Save and restore user's default account preference",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "Account Type Visual Indicators",
+        "description": "Implement visual indicators and icons for different account types",
+        "status": "pending",
+        "priority": "low",
+        "complexity": 2,
+        "dependencies": [
+          "15"
+        ],
+        "details": "Add visual indicators: 🏦 Real account, 📊 Paper account, 🧪 Test account, 🤖 Auto-trading account. Create consistent color coding and styling for each account type. Implement tooltips with account details.",
+        "testStrategy": "UI consistency tests, accessibility tests, tooltip functionality tests",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Icon System Implementation",
+            "description": "Add icons for each account type (real, paper, test, auto)",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Color Coding System",
+            "description": "Implement consistent color scheme for account types",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Tooltip Implementation",
+            "description": "Add informative tooltips showing account details on hover",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Accessibility Features",
+            "description": "Ensure visual indicators are accessible with proper ARIA labels",
+            "status": "pending"
+          }
+        ]
       }
     ],
     "metadata": {
-      "totalTasks": 14,
-      "totalSubtasks": 53,
+      "totalTasks": 19,
+      "totalSubtasks": 76,
       "completedTasks": 0,
       "completedSubtasks": 0,
       "techStack": {
@@ -602,7 +853,10 @@
           ],
           "duration": "2 weeks"
         }
-      ]
+      ],
+      "created": "2025-09-03T12:48:24.628Z",
+      "description": "Tasks for master context",
+      "updated": "2025-09-03T12:52:36.304Z"
     }
   }
 }
