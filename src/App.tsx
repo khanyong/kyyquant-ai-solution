@@ -340,7 +340,7 @@ function App() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={3}>
-              <SignalMonitor signals={[]} strategies={[]} />
+              <SignalMonitor />
             </TabPanel>
 
             <TabPanel value={currentTab} index={4}>
