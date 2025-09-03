@@ -391,7 +391,7 @@ function MainApp() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={3}>
-              <SignalMonitor />
+              <SignalMonitor signals={[]} strategies={[]} />
             </TabPanel>
 
             <TabPanel value={currentTab} index={4}>

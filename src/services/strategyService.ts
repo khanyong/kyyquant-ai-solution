@@ -65,6 +65,8 @@ export interface Position {
   unrealized_pnl_rate: number
   entry_time: string
   is_active: boolean
+  target_price?: number
+  stop_loss_price?: number
 }
 
 export interface StrategyExecution {
