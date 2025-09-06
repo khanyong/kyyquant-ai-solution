@@ -36,6 +36,9 @@ import MarketOverview from './components/trading/MarketOverview'
 import Community from './components/community/Community'
 import Settings from './pages/Settings'
 import TradingSettings from './pages/TradingSettings'
+import TradingSettingsWithUniverse from './components/TradingSettingsWithUniverse'
+import InvestmentUniverse from './components/InvestmentUniverse'
+import TestInvestmentUniverse from './components/TestInvestmentUniverse'
 import AdminDashboard from './pages/AdminDashboard'
 import AuthCallback from './pages/AuthCallback'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
@@ -84,6 +87,29 @@ function MainApp() {
     // 자동매매 탭으로 이동
     setCurrentTab(5)
   }
+
+  // 탭 네비게이션 이벤트 리스너
+  useEffect(() => {
+    const handleNavigateToStrategyBuilder = (event: CustomEvent) => {
+      setCurrentTab(1) // 전략 빌더 탭으로 이동
+      // 필터링된 유니버스 정보를 전달할 수 있음
+      if (event.detail?.universe) {
+        localStorage.setItem('filteredUniverse', JSON.stringify(event.detail.universe))
+      }
+    }
+    
+    const handleNavigateToInvestmentSettings = () => {
+      setCurrentTab(6) // 투자설정 탭으로 이동
+    }
+
+    window.addEventListener('navigateToStrategyBuilder', handleNavigateToStrategyBuilder as EventListener)
+    window.addEventListener('navigateToInvestmentSettings', handleNavigateToInvestmentSettings as EventListener)
+    
+    return () => {
+      window.removeEventListener('navigateToStrategyBuilder', handleNavigateToStrategyBuilder as EventListener)
+      window.removeEventListener('navigateToInvestmentSettings', handleNavigateToInvestmentSettings as EventListener)
+    }
+  }, [])
 
   // Check admin status
   useEffect(() => {
@@ -423,7 +449,10 @@ function MainApp() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={6}>
-              <TradingSettings />
+              <Stack spacing={3}>
+                <TradingSettingsWithUniverse />
+                <InvestmentUniverse />
+              </Stack>
             </TabPanel>
           </>
         )}

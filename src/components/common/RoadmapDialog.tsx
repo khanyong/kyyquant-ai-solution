@@ -43,7 +43,8 @@ import {
   Description,
   Settings,
   ExpandMore,
-  Forum
+  Forum,
+  FilterList
 } from '@mui/icons-material'
 
 interface RoadmapDialogProps {
@@ -737,21 +738,82 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 13,
+      title: '투자 유니버스 필터링 시스템',
+      status: 'done',
+      priority: 'high',
+      icon: <FilterList />,
+      period: '2025.09.05 - 2025.09.06',
+      description: '3,349개 한국 주식 데이터 수집 및 실시간 필터링 시스템 구축',
+      subtasks: [
+        {
+          title: '✅ 키움 OpenAPI 데이터 수집',
+          details: [
+            '3,349개 한국 주식 수집 (KOSPI 2,031 + KOSDAQ 1,318)',
+            'ETF, SPAC, REIT 자동 필터링',
+            '32-bit Python 3.7 환경 구성',
+            'pykiwoom 라이브러리 활용',
+            '재무지표 데이터 수집 (PER, PBR, ROE, 시가총액)'
+          ]
+        },
+        {
+          title: '✅ 한글 인코딩 문제 해결',
+          details: [
+            'CP949 → UTF-8 변환 처리',
+            'Latin-1 잘못된 인코딩 복구',
+            '21개 종목 수동 매핑 테이블',
+            '중복 레코드 제거 (8,243 → 3,349)',
+            '데이터 정합성 검증'
+          ]
+        },
+        {
+          title: '✅ Supabase 페이지네이션 구현',
+          details: [
+            '1,000개 제한 우회 로직',
+            '다중 페이지 순차 로드',
+            '최대 10,000개 종목 지원',
+            'kw_financial_snapshot 테이블',
+            '인덱싱 최적화'
+          ]
+        },
+        {
+          title: '✅ 누적 필터링 로직',
+          details: [
+            '3단계 필터 체인 시스템',
+            '가치평가 → 재무지표 → 섹터 필터',
+            'currentFilterValues state 구현',
+            '필터 재적용 시 누적 유지',
+            '실시간 통계 업데이트'
+          ]
+        },
+        {
+          title: '✅ UI/UX 최적화',
+          details: [
+            'TradingSettingsWithUniverse 컴포넌트 (1,100+ lines)',
+            '시각적 필터링 플로우 다이어그램',
+            '필터 초기화 버튼',
+            '실시간 필터별 통과율 표시',
+            '섹션별 스크롤바 제거'
+          ]
+        }
+      ]
+    },
+    {
+      id: 14,
       title: '키움 OpenAPI 실제 연동',
       status: 'in-progress',
       priority: 'high',
       icon: <TrendingUp />,
-      period: '2024.09.04 - 진행중',
+      period: '2025.09.06 - 진행중',
       description: '키움증권 모의투자 계정과 실제 API 연동',
       subtasks: [
         {
-          title: '⏳ 키움 OpenAPI 로그인',
+          title: '✅ 키움 OpenAPI 로그인',
           details: [
-            '모의투자 계정 로그인 구현',
-            'API 키/시크릿 검증',
-            '32비트 Python 환경 설정',
-            'COM 객체 초기화',
-            '자동 로그인 설정'
+            '모의투자 계정 로그인 구현 완료',
+            'API 키/시크릿 검증 완료',
+            '32비트 Python 환경 설정 완료',
+            'COM 객체 초기화 완료',
+            '자동 로그인 설정 완료'
           ]
         },
         {
@@ -797,12 +859,12 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 14,
+      id: 15,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
       icon: <Assessment />,
-      period: '2024.09 예정',
+      period: '2025.09 예정',
       description: '투자 성과 종합 분석 및 리포팅 시스템',
       subtasks: [
         {
@@ -858,12 +920,12 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 15,
+      id: 16,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
       icon: <AutoGraph />,
-      period: '2024.10 예정',
+      period: '2025.10 예정',
       description: '머신러닝 기반 포트폴리오 최적화 시스템',
       subtasks: [
         {
@@ -919,12 +981,12 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 16,
+      id: 17,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
       icon: <Notifications />,
-      period: '2024.10 예정',
+      period: '2025.10 예정',
       description: '다채널 알림 및 커뮤니케이션 시스템',
       subtasks: [
         {
@@ -980,12 +1042,12 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 17,
+      id: 18,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
       icon: <Dashboard />,
-      period: '2024.11 예정',
+      period: '2025.11 예정',
       description: '모바일 최적화 및 PWA 구현',
       subtasks: [
         {
@@ -1041,12 +1103,12 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 18,
+      id: 19,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
       icon: <BugReport />,
-      period: '2024.11 예정',
+      period: '2025.11 예정',
       description: '품질 보증 및 성능 최적화',
       subtasks: [
         {
@@ -1102,12 +1164,12 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 19,
+      id: 20,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
       icon: <Description />,
-      period: '2024.12 예정',
+      period: '2025.12 예정',
       description: '프로젝트 문서화 및 프로덕션 배포',
       subtasks: [
         {
