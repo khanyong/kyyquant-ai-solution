@@ -293,6 +293,21 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         },
         {
+          title: '✅ 3단계 전략 시스템 (2025.09.05 추가)',
+          details: [
+            '매수/매도 각 3단계 독립 평가',
+            '단계별 최대 5개 지표 동시 설정',
+            '1단계: 기본 필터링 조건 (시장/섹터)',
+            '2단계: 신호 강화 조건 (모멘텀/추세)',
+            '3단계: 최종 확인 조건 (진입 타이밍)',
+            '단계별 AND/OR 로직 독립 설정',
+            '단계 간 순차적 평가 (1→2→3)',
+            'StageBasedStrategy 컴포넌트 구현',
+            '투자 흐름 관리 (InvestmentFlowManager)',
+            '필터 우선/전략 우선 선택 가능'
+          ]
+        },
+        {
           title: '✅ 리스크 관리 설정',
           details: [
             '손절매 설정 (고정%, ATR 기반)',
