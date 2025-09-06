@@ -1,0 +1,112 @@
+{
+  "name": "Kiwoom-Supabase OAuth2 버전",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "⏰ 1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/strategies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "is_active",
+              "value": "eq.true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$credentials.apikey}}"
+            }
+          ]
+        }
+      },
+      "id": "get-strategies",
+      "name": "📊 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "kiwoom-token",
+      "name": "🔐 키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "kiwoom",
+          "name": "Kiwoom OAuth2"
+        }
+      },
+      "notes": "OAuth2 Credential 사용\nGrant Type: Client Credentials"
+    }
+  ],
+  "connections": {
+    "trigger": {
+      "main": [
+        [
+          {
+            "node": "get-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-strategies": {
+      "main": [
+        [
+          {
+            "node": "kiwoom-token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

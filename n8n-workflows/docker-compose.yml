@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=your_password_here
+      - N8N_HOST=workflow.bll-pro.com
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://workflow.bll-pro.com
+      - N8N_ENCRYPTION_KEY=your_encryption_key
+      
+      # Supabase 환경변수
+      - SUPABASE_URL=https://hznkyaomtrpzcayayayh.supabase.co
+      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs
+      
+      # 키움 API 환경변수
+      - KIWOOM_APP_KEY=iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk
+      - KIWOOM_APP_SECRET=9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA
+      - KIWOOM_ACCOUNT_NO=81101350-01
+      - KIWOOM_API_URL=https://mockapi.kiwoom.com
+      
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-workflows:/files
+
+volumes:
+  n8n_data:

@@ -1,0 +1,296 @@
+{
+  "name": "Supabase 자동매매 모니터링",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/strategies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "is_active",
+              "value": "eq.true"
+            },
+            {
+              "name": "select",
+              "value": "*"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$credentials.supabaseApi.apiKey}}"
+            },
+            {
+              "name": "Authorization", 
+              "value": "Bearer {{$credentials.supabaseApi.apiKey}}"
+            }
+          ]
+        }
+      },
+      "id": "get-strategies",
+      "name": "활성 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabaseApi",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-strategies",
+      "name": "전략 있는지 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$credentials.kiwoomApi.appKey}}"
+            },
+            {
+              "name": "secretkey",
+              "value": "={{$credentials.kiwoomApi.appSecret}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        }
+      },
+      "id": "kiwoom-auth",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 250],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kiwoomApi",
+          "name": "Kiwoom API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/trading/inquire-balance",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "CANO",
+              "value": "={{$credentials.kiwoomApi.accountNo}}"
+            },
+            {
+              "name": "ACNT_PRDT_CD",
+              "value": "01"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "Bearer {{$node['kiwoom-auth'].json.access_token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$credentials.kiwoomApi.appKey}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$credentials.kiwoomApi.appSecret}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "VTTC8434R"
+            }
+          ]
+        }
+      },
+      "id": "get-balance",
+      "name": "계좌 잔고 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/account_balance",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "system-n8n"
+            },
+            {
+              "name": "account_number",
+              "value": "={{$credentials.kiwoomApi.accountNo}}"
+            },
+            {
+              "name": "total_assets",
+              "value": "={{$json.output2.tot_evlu_amt}}"
+            },
+            {
+              "name": "available_cash",
+              "value": "={{$json.output2.nass_amt}}"
+            },
+            {
+              "name": "total_profit",
+              "value": "={{$json.output2.tot_evlu_pfls_amt}}"
+            },
+            {
+              "name": "profit_rate",
+              "value": "={{$json.output2.tot_evlu_pfls_rt}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$credentials.supabaseApi.apiKey}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$credentials.supabaseApi.apiKey}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        }
+      },
+      "id": "save-balance",
+      "name": "잔고 정보 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 250]
+    }
+  ],
+  "connections": {
+    "trigger": {
+      "main": [
+        [
+          {
+            "node": "get-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-strategies": {
+      "main": [
+        [
+          {
+            "node": "check-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-strategies": {
+      "main": [
+        [
+          {
+            "node": "kiwoom-auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kiwoom-auth": {
+      "main": [
+        [
+          {
+            "node": "get-balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-balance": {
+      "main": [
+        [
+          {
+            "node": "save-balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "1.0.0",
+  "triggerCount": 0
+}

@@ -55,9 +55,15 @@ import {
   Settings,
   Build,
   Home,
-  ArrowBack
+  ArrowBack,
+  SwapHoriz
 } from '@mui/icons-material'
 import InvestmentSettingsSummary from './InvestmentSettingsSummary'
+import InvestmentFlowManager from './InvestmentFlowManager'
+import StageBasedStrategy from './StageBasedStrategy'
+import { supabase } from '../lib/supabase'
+import { InvestmentFlowType } from '../types/investment'
+import { validateStrategyData, prepareStrategyForSave, checkJsonSize, generateStrategySummary } from '../utils/strategyValidator'
 
 interface Indicator {
   id: string
@@ -231,6 +237,10 @@ function TabPanel(props: TabPanelProps) {
 
 const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onNavigateHome }) => {
   const [currentTab, setCurrentTab] = useState(0)
+  const [currentFlowType, setCurrentFlowType] = useState<InvestmentFlowType>(InvestmentFlowType.FILTER_FIRST)
+  const [useStageBasedStrategy, setUseStageBasedStrategy] = useState(true) // 단계별 전략 사용 여부
+  const [buyStageStrategy, setBuyStageStrategy] = useState<any>(null)
+  const [sellStageStrategy, setSellStageStrategy] = useState<any>(null)
   const [strategy, setStrategy] = useState<Strategy>({
     id: 'custom-1',
     name: '나의 전략',
@@ -261,6 +271,37 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     value: 30,
     combineWith: 'AND'
   })
+  
+  // 투자 설정 상태
+  const [investmentConfig, setInvestmentConfig] = useState<any>(null)
+  const [filteredUniverseCount, setFilteredUniverseCount] = useState<number>(0)
+  
+  // 투자 설정 불러오기
+  React.useEffect(() => {
+    const loadInvestmentConfig = () => {
+      const config = localStorage.getItem('investmentConfig')
+      if (config) {
+        const parsed = JSON.parse(config)
+        setInvestmentConfig(parsed)
+        
+        // 필터링된 유니버스 정보도 확인
+        const universe = localStorage.getItem('filteredUniverse')
+        if (universe) {
+          const parsedUniverse = JSON.parse(universe)
+          setFilteredUniverseCount(parsedUniverse.length || 0)
+        }
+      }
+    }
+    
+    loadInvestmentConfig()
+    
+    // localStorage 변경 감지
+    window.addEventListener('storage', loadInvestmentConfig)
+    
+    return () => {
+      window.removeEventListener('storage', loadInvestmentConfig)
+    }
+  }, [])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue)
@@ -373,15 +414,251 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     }, 2000)
   }
 
-  // 전략 저장
-  const saveStrategy = () => {
-    setSavedStrategies([...savedStrategies, { ...strategy, id: `saved_${Date.now()}` }])
-    alert('전략이 저장되었습니다')
+  // 전략 저장 (Supabase에 저장)
+  const saveStrategy = async () => {
+    // 디버그용 콘솔 로그
+    console.log('Saving strategy...', strategy);
+    
+    // 데이터 검증
+    const validationResult = validateStrategyData({
+      ...strategy,
+      useStageBasedStrategy,
+      buyStageStrategy,
+      sellStageStrategy
+    })
+    
+    if (!validationResult.isValid) {
+      alert(`전략 저장 실패:\n\n${validationResult.errors.join('\n')}`)
+      return null
+    }
+    
+    if (validationResult.warnings.length > 0) {
+      const proceed = confirm(`경고:\n${validationResult.warnings.join('\n')}\n\n계속하시겠습니까?`)
+      if (!proceed) return null
+    }
+    
+    try {
+      // 전략 타입 결정 (대문자로 변경하거나 TECHNICAL로 통일)
+      let strategyType = 'TECHNICAL'  // 기본값을 TECHNICAL로 설정
+      
+      // 상세 타입은 config에 저장
+      let detailedType = 'custom'
+      if (strategy.indicators.some(i => i.id.includes('sma') || i.id.includes('ema'))) {
+        detailedType = 'sma'
+      } else if (strategy.indicators.some(i => i.id.includes('rsi'))) {
+        detailedType = 'rsi'
+      } else if (strategy.indicators.some(i => i.id.includes('bb'))) {
+        detailedType = 'bollinger'
+      } else if (strategy.indicators.some(i => i.id.includes('macd'))) {
+        detailedType = 'macd'
+      } else if (strategy.indicators.some(i => i.id.includes('ichimoku'))) {
+        detailedType = 'ichimoku'
+      }
+
+      // 투자 유니버스 설정 가져오기
+      const investmentConfig = localStorage.getItem('investmentConfig')
+      const universeSettings = investmentConfig ? JSON.parse(investmentConfig) : null
+
+      // 백테스팅과 호환되는 파라미터 구성
+      const parameters: any = {
+        strategy_type: detailedType,  // 상세 타입 정보 저장
+        useStageBasedStrategy: useStageBasedStrategy,  // 단계별 전략 사용 여부
+        buyStageStrategy: buyStageStrategy,  // 매수 단계 전략
+        sellStageStrategy: sellStageStrategy,  // 매도 단계 전략
+        // 투자 유니버스 설정
+        investmentUniverse: universeSettings ? {
+          financialFilters: universeSettings.universe,
+          sectorFilters: universeSettings.sectors,
+          portfolioSettings: universeSettings.portfolio,
+          riskSettings: universeSettings.risk
+        } : null,
+        // 기본 지표 파라미터
+        indicators: strategy.indicators.map(ind => ({
+          type: ind.id,
+          name: ind.name,
+          params: ind.params,
+          enabled: ind.enabled
+        })),
+        // 매수/매도 조건
+        buyConditions: strategy.buyConditions,
+        sellConditions: strategy.sellConditions,
+        // 리스크 관리
+        stopLoss: strategy.riskManagement.stopLoss,
+        takeProfit: strategy.riskManagement.takeProfit,
+        trailingStop: strategy.riskManagement.trailingStop,
+        trailingStopPercent: strategy.riskManagement.trailingStopPercent,
+        positionSize: strategy.riskManagement.positionSize,
+        maxPositions: strategy.riskManagement.maxPositions
+      }
+
+      // SMA 전략의 경우 특별 처리
+      if (strategyType === 'sma') {
+        const smaIndicator = strategy.indicators.find(i => i.id.includes('sma'))
+        if (smaIndicator) {
+          parameters.short_window = smaIndicator.params.period || 20
+          parameters.long_window = 60
+          parameters.volume_filter = true
+        }
+      }
+      // RSI 전략의 경우
+      else if (strategyType === 'rsi') {
+        const rsiIndicator = strategy.indicators.find(i => i.id.includes('rsi'))
+        if (rsiIndicator) {
+          parameters.rsi_period = rsiIndicator.params.period || 14
+          parameters.oversold = 30
+          parameters.overbought = 70
+        }
+      }
+      // 볼린저 밴드 전략의 경우
+      else if (strategyType === 'bollinger') {
+        const bbIndicator = strategy.indicators.find(i => i.id.includes('bb'))
+        if (bbIndicator) {
+          parameters.period = bbIndicator.params.period || 20
+          parameters.std_dev = bbIndicator.params.stdDev || 2
+        }
+      }
+
+      // 저장할 데이터 준비 (실제 테이블 스키마에 맞게)
+      const dataToSave: any = {
+        name: strategy.name || '이름 없는 전략',
+        description: strategy.description || `${strategy.name} - 전략빌더에서 생성`,
+        // type: null,  // type 컬럼은 null로 설정 (체크 제약조건 때문)
+        config: parameters,  // parameters 대신 config 컬럼 사용
+        indicators: {
+          list: strategy.indicators
+        },
+        entry_conditions: {
+          buy: strategy.buyConditions
+        },
+        exit_conditions: {
+          sell: strategy.sellConditions
+        },
+        risk_management: strategy.riskManagement,
+        is_active: true,
+        is_test_mode: false,
+        auto_trade_enabled: false,
+        position_size: strategy.riskManagement.positionSize || 10,
+        user_id: 'f912da32-897f-4dbb-9242-3a438e9733a8'
+      }
+      
+      // 데이터 정리 (undefined -> null 변환)
+      const cleanedData = prepareStrategyForSave(dataToSave)
+      
+      // 데이터 크기 확인
+      const sizeCheck = checkJsonSize(cleanedData)
+      if (!sizeCheck.isValid) {
+        alert(`전략 데이터가 너무 큽니다 (${sizeCheck.sizeInKB} KB). 일부 설정을 줄여주세요.`)
+        return null
+      }
+      
+      console.log('Data to save:', cleanedData)
+      console.log('Data size:', sizeCheck.sizeInKB, 'KB')
+      console.log('Strategy summary:', generateStrategySummary(cleanedData))
+      
+      const { data, error } = await supabase
+        .from('strategies')
+        .insert(cleanedData)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setSavedStrategies([...savedStrategies, { ...strategy, id: data.id }])
+      alert(`전략 '${strategy.name}'이 저장되었습니다!\n\n백테스팅 페이지에서 이 전략을 선택해 실행할 수 있습니다.`)
+      
+      return data.id // 저장된 전략 ID 반환
+    } catch (error: any) {
+      console.error('전략 저장 실패:', error)
+      
+      // 상세한 오류 메시지 표시
+      let errorMessage = '전략 저장에 실패했습니다.\n\n'
+      
+      if (error.message) {
+        errorMessage += `오류: ${error.message}\n`
+      }
+      
+      if (error.code === '42501') {
+        errorMessage += '\n테이블 접근 권한이 없습니다. Supabase에서 RLS 정책을 확인해주세요.'
+      } else if (error.code === '23505') {
+        errorMessage += '\n중복된 전략명입니다. 다른 이름을 사용해주세요.'
+      } else if (!navigator.onLine) {
+        errorMessage += '\n인터넷 연결을 확인해주세요.'
+      }
+      
+      alert(errorMessage)
+      return null
+    }
+  }
+
+  // Supabase에서 전략 목록 불러오기
+  React.useEffect(() => {
+    loadStrategiesFromSupabase()
+  }, [])
+
+  const loadStrategiesFromSupabase = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('strategies')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const strategies = data.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        indicators: s.indicators?.list || [],
+        buyConditions: s.entry_conditions?.buy || s.config?.buyConditions || [],
+        sellConditions: s.exit_conditions?.sell || s.config?.sellConditions || [],
+        riskManagement: s.risk_management || s.config?.riskManagement || {
+          stopLoss: -5,
+          takeProfit: 10,
+          trailingStop: false,
+          trailingStopPercent: 3,
+          positionSize: 10,
+          maxPositions: 10
+        },
+        // 추가: 단계별 전략 및 투자 유니버스 정보
+        useStageBasedStrategy: s.config?.useStageBasedStrategy || false,
+        buyStageStrategy: s.config?.buyStageStrategy || null,
+        sellStageStrategy: s.config?.sellStageStrategy || null,
+        investmentUniverse: s.config?.investmentUniverse || null
+      }))
+
+      setSavedStrategies(strategies)
+    } catch (error) {
+      console.error('전략 로드 실패:', error)
+    }
   }
 
   // 전략 불러오기
-  const loadStrategy = (savedStrategy: Strategy) => {
+  const loadStrategy = (savedStrategy: any) => {
     setStrategy(savedStrategy)
+    
+    // 단계별 전략 정보 복원
+    if (savedStrategy.useStageBasedStrategy !== undefined) {
+      setUseStageBasedStrategy(savedStrategy.useStageBasedStrategy)
+    }
+    if (savedStrategy.buyStageStrategy) {
+      setBuyStageStrategy(savedStrategy.buyStageStrategy)
+    }
+    if (savedStrategy.sellStageStrategy) {
+      setSellStageStrategy(savedStrategy.sellStageStrategy)
+    }
+    
+    // 투자 유니버스 설정 복원
+    if (savedStrategy.investmentUniverse) {
+      const configToRestore = {
+        universe: savedStrategy.investmentUniverse.financialFilters,
+        sectors: savedStrategy.investmentUniverse.sectorFilters,
+        portfolio: savedStrategy.investmentUniverse.portfolioSettings,
+        risk: savedStrategy.investmentUniverse.riskSettings
+      }
+      localStorage.setItem('investmentConfig', JSON.stringify(configToRestore))
+    }
+    
     setDialogOpen(false)
   }
 
@@ -393,6 +670,53 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
   return (
     <Box>
+      {/* 투자 유니버스 상태 표시 */}
+      {investmentConfig && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 2 }}
+          action={
+            <Button 
+              size="small" 
+              onClick={() => {
+                // 투자설정 탭으로 이동
+                const event = new CustomEvent('navigateToInvestmentSettings')
+                window.dispatchEvent(event)
+              }}
+            >
+              설정 변경
+            </Button>
+          }
+        >
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography variant="body2">
+              <strong>투자 유니버스 적용 중:</strong>
+            </Typography>
+            {investmentConfig.universe && (
+              <Chip 
+                size="small" 
+                label={`시총 ${investmentConfig.universe.marketCap?.[0]}~${investmentConfig.universe.marketCap?.[1]}억`}
+                variant="outlined"
+              />
+            )}
+            {investmentConfig.universe?.per && (
+              <Chip 
+                size="small" 
+                label={`PER ${investmentConfig.universe.per[0]}~${investmentConfig.universe.per[1]}`}
+                variant="outlined"
+              />
+            )}
+            {filteredUniverseCount > 0 && (
+              <Chip 
+                size="small" 
+                label={`대상종목 ${filteredUniverseCount}개`}
+                color="primary"
+              />
+            )}
+          </Stack>
+        </Alert>
+      )}
+      
       <Paper sx={{ p: 3, mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -465,16 +789,96 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         <Tabs value={currentTab} onChange={handleTabChange} variant="fullWidth">
           <Tab icon={<Build />} iconPosition="start" label="전략 구성" />
           <Tab icon={<Settings />} iconPosition="start" label="투자 설정 요약" />
+          <Tab icon={<SwapHoriz />} iconPosition="start" label="투자 흐름 관리" />
         </Tabs>
       </Paper>
 
       {/* 전략 구성 탭 */}
       <TabPanel value={currentTab} index={0}>
-        {/* 프리셋 전략 */}
+        {/* 전략 모드 선택 */}
         <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          프리셋 전략
-        </Typography>
+          <Typography variant="h6" gutterBottom>
+            전략 구성 방식
+          </Typography>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={useStageBasedStrategy}
+                onChange={(e) => setUseStageBasedStrategy(e.target.checked)}
+              />
+            }
+            label={
+              <Box>
+                <Typography variant="subtitle1">
+                  {useStageBasedStrategy ? '3단계 전략 시스템' : '기본 전략 시스템'}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {useStageBasedStrategy 
+                    ? '1→2→3단계 순차적 조건 평가 (각 단계 최대 5개 지표)'
+                    : '단일 조건으로 매수/매도 결정'}
+                </Typography>
+              </Box>
+            }
+          />
+        </Paper>
+
+        {/* 3단계 전략 시스템 */}
+        {useStageBasedStrategy ? (
+          <Grid container spacing={3}>
+            <Grid item xs={12} lg={6}>
+              <StageBasedStrategy
+                type="buy"
+                availableIndicators={AVAILABLE_INDICATORS}
+                onStrategyChange={(stageStrategy) => {
+                  setBuyStageStrategy(stageStrategy)
+                  // 기존 strategy 객체에도 반영
+                  setStrategy({
+                    ...strategy,
+                    buyConditions: stageStrategy.stages
+                      .filter(s => s.enabled)
+                      .flatMap(s => s.indicators.map(ind => ({
+                        id: ind.id,
+                        type: 'buy',
+                        indicator: ind.indicatorId,
+                        operator: ind.operator as any,
+                        value: ind.value,
+                        combineWith: ind.combineWith
+                      })))
+                  })
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} lg={6}>
+              <StageBasedStrategy
+                type="sell"
+                availableIndicators={AVAILABLE_INDICATORS}
+                onStrategyChange={(stageStrategy) => {
+                  setSellStageStrategy(stageStrategy)
+                  // 기존 strategy 객체에도 반영
+                  setStrategy({
+                    ...strategy,
+                    sellConditions: stageStrategy.stages
+                      .filter(s => s.enabled)
+                      .flatMap(s => s.indicators.map(ind => ({
+                        id: ind.id,
+                        type: 'sell',
+                        indicator: ind.indicatorId,
+                        operator: ind.operator as any,
+                        value: ind.value,
+                        combineWith: ind.combineWith
+                      })))
+                  })
+                }}
+              />
+            </Grid>
+          </Grid>
+        ) : (
+          <>
+            {/* 기존 프리셋 전략 */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                프리셋 전략
+              </Typography>
         <Grid container spacing={2}>
           {PRESET_STRATEGIES.map((preset, index) => (
             <Grid item xs={12} md={4} key={index}>
@@ -856,11 +1260,16 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 <Button
                   variant="contained"
                   startIcon={<Timeline />}
-                  onClick={() => {
-                    if (onExecute) onExecute(strategy)
+                  onClick={async () => {
+                    // 전략을 먼저 저장
+                    const strategyId = await saveStrategy()
+                    if (strategyId) {
+                      // 저장된 전략 ID를 가지고 백테스트 페이지로 이동
+                      window.location.href = `/backtest?strategyId=${strategyId}`
+                    }
                   }}
                 >
-                  상세 백테스팅으로 이동
+                  전략 저장 후 백테스팅
                 </Button>
                 <Button
                   variant="outlined"
@@ -873,6 +1282,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
           </Grid>
         )}
       </Grid>
+          </>
+        )}
       </TabPanel>
 
       {/* 투자 설정 요약 탭 */}
@@ -880,30 +1291,70 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         <InvestmentSettingsSummary />
       </TabPanel>
 
+      {/* 투자 흐름 관리 탭 */}
+      <TabPanel value={currentTab} index={2}>
+        <InvestmentFlowManager 
+          onFlowChange={(flow) => setCurrentFlowType(flow)}
+          currentStrategy={strategy}
+          currentUniverse={localStorage.getItem('investmentConfig') ? JSON.parse(localStorage.getItem('investmentConfig')!) : undefined}
+        />
+      </TabPanel>
+
       {/* 저장된 전략 다이얼로그 */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>저장된 전략</DialogTitle>
+        <DialogTitle>Supabase에 저장된 전략</DialogTitle>
         <DialogContent>
           <List>
-            {savedStrategies.map((saved) => (
-              <ListItem key={saved.id} button onClick={() => loadStrategy(saved)}>
-                <ListItemIcon>
-                  <ShowChart />
-                </ListItemIcon>
-                <ListItemText
-                  primary={saved.name}
-                  secondary={saved.description}
-                />
-                {saved.quickTestResult && (
-                  <Chip
-                    label={`수익률: ${saved.quickTestResult.returns}%`}
-                    color="primary"
-                    size="small"
+            {savedStrategies.length === 0 ? (
+              <Typography color="textSecondary" sx={{ p: 2, textAlign: 'center' }}>
+                저장된 전략이 없습니다. 새로운 전략을 만들어보세요!
+              </Typography>
+            ) : (
+              savedStrategies.map((saved) => (
+                <ListItem key={saved.id} button onClick={() => loadStrategy(saved)}>
+                  <ListItemIcon>
+                    <ShowChart />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={saved.name}
+                    secondary={saved.description || '설명 없음'}
                   />
-                )}
-              </ListItem>
-            ))}
+                  <Stack direction="row" spacing={1}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // 백테스트 실행
+                        window.location.href = `/backtest?strategyId=${saved.id}`
+                      }}
+                    >
+                      <PlayArrow />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        if (confirm(`'${saved.name}' 전략을 삭제하시겠습니까?`)) {
+                          await supabase.from('strategies').delete().eq('id', saved.id)
+                          loadStrategiesFromSupabase()
+                        }
+                      }}
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Stack>
+                </ListItem>
+              ))
+            )}
           </List>
+          <Button
+            variant="outlined"
+            fullWidth
+            sx={{ mt: 2 }}
+            onClick={() => loadStrategiesFromSupabase()}
+          >
+            새로고침
+          </Button>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>닫기</Button>

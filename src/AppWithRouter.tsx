@@ -37,8 +37,6 @@ import Community from './components/community/Community'
 import Settings from './pages/Settings'
 import TradingSettings from './pages/TradingSettings'
 import TradingSettingsWithUniverse from './components/TradingSettingsWithUniverse'
-import InvestmentUniverse from './components/InvestmentUniverse'
-import TestInvestmentUniverse from './components/TestInvestmentUniverse'
 import AdminDashboard from './pages/AdminDashboard'
 import AuthCallback from './pages/AuthCallback'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
@@ -449,10 +447,7 @@ function MainApp() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={6}>
-              <Stack spacing={3}>
-                <TradingSettingsWithUniverse />
-                <InvestmentUniverse />
-              </Stack>
+              <TradingSettingsWithUniverse />
             </TabPanel>
           </>
         )}

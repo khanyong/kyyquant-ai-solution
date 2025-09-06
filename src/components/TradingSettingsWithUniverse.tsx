@@ -36,8 +36,6 @@ import {
   Visibility,
   VisibilityOff
 } from '@mui/icons-material'
-import TradingSettingsSimplified from './TradingSettingsSimplified'
-import InvestmentWorkspace from './InvestmentWorkspace'
 import { supabase } from '../lib/supabase'
 
 const TradingSettingsWithUniverse: React.FC = () => {
@@ -343,11 +341,11 @@ const TradingSettingsWithUniverse: React.FC = () => {
   // 필터 적용 처리
   const handleFilterApplication = (filterType: string, filters: any) => {
     setIsCalculating(true)
-    setFilterProgress(prev => ({ ...prev, [filterType]: 0 }))
+    setFilterProgress((prev: any) => ({ ...prev, [filterType]: 0 }))
     
     // 프로그레스 애니메이션
     const progressInterval = setInterval(() => {
-      setFilterProgress(prev => {
+      setFilterProgress((prev: any) => {
         const newProgress = { ...prev }
         if (newProgress[filterType] < 100) {
           newProgress[filterType] += 10
@@ -376,7 +374,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
         const valuationFilters = filters
         
         // 필터 값 저장
-        setCurrentFilterValues(prev => ({ ...prev, valuation: valuationFilters }))
+        setCurrentFilterValues((prev: any) => ({ ...prev, valuation: valuationFilters }))
         
         // 전체 데이터에서 시작
         filteredData = [...allStocks]
@@ -425,7 +423,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
         const financialFilters = filters
         
         // 필터 값 저장
-        setCurrentFilterValues(prev => ({ ...prev, financial: financialFilters }))
+        setCurrentFilterValues((prev: any) => ({ ...prev, financial: financialFilters }))
         
         // 가치평가 필터가 적용되어 있으면 먼저 가치평가 필터를 다시 적용
         if (appliedFilters.valuation && currentFilterValues.valuation) {

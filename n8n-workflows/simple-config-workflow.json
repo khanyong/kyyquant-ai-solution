@@ -1,0 +1,76 @@
+{
+  "name": "간단한 자동매매 설정",
+  "nodes": [
+    {
+      "parameters": {
+        "values": {
+          "values": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA"
+            },
+            {
+              "name": "KIWOOM_ACCOUNT",
+              "value": "81101350-01"
+            }
+          ]
+        }
+      },
+      "id": "config",
+      "name": "⚙️ API 설정 (여기서 키 관리)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [250, 300],
+      "notes": "모든 API 키와 설정을 여기서 관리합니다.\n수정이 필요하면 이 노드만 편집하세요."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/strategies?is_active=eq.true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$json.SUPABASE_KEY}}"
+            }
+          ]
+        }
+      },
+      "id": "get-strategies",
+      "name": "📊 전략 가져오기",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    }
+  ],
+  "connections": {
+    "config": {
+      "main": [
+        [
+          {
+            "node": "get-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

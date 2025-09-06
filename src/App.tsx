@@ -25,6 +25,8 @@ import {
 import Header from './components/common/Header'
 import LoginDialog from './components/common/LoginDialog'
 import StrategyBuilder from './components/StrategyBuilder'
+import UnifiedStrategyBuilder from './components/UnifiedStrategyBuilder'
+import InvestmentUniverse from './components/InvestmentUniverse'
 import BacktestResults from './components/BacktestResults'
 import SignalMonitor from './components/SignalMonitor'
 import PerformanceDashboard from './components/PerformanceDashboard'
@@ -36,6 +38,7 @@ import PortfolioPanel from './components/trading/PortfolioPanel'
 import MarketOverview from './components/trading/MarketOverview'
 import Community from './components/community/Community'
 import AdminApprovalPanel from './components/admin/AdminApprovalPanel'
+import TestInvestmentUniverse from './components/TestInvestmentUniverse'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 // import { connectWebSocket } from './services/websocket' // Removed - using Supabase instead
 import { checkServerStatus } from './services/api'
@@ -376,6 +379,8 @@ function App() {
             
             <TabPanel value={currentTab} index={6}>
               <Stack spacing={3}>
+                <TestInvestmentUniverse />
+                <InvestmentUniverse />
                 <AdminApprovalPanel />
                 <TestSupabase />
                 <TradingSettings />

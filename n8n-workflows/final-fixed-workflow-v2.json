@@ -1,0 +1,288 @@
+{
+  "name": "최종 자동매매 워크플로우 v2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "⏰ 스케줄 트리거",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "values": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA"
+            },
+            {
+              "name": "KIWOOM_ACCOUNT",
+              "value": "81101350-01"
+            },
+            {
+              "name": "KIWOOM_API_URL",
+              "value": "https://openapi.kiwoom.com"
+            },
+            {
+              "name": "SYSTEM_USER_ID",
+              "value": "n8n-kiwoom-system"
+            }
+          ]
+        }
+      },
+      "id": "config",
+      "name": "⚙️ API 키 설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [450, 300],
+      "notes": "모든 API 키와 시스템 설정을 이곳에서 관리합니다.\nSYSTEM_USER_ID는 Supabase 테이블에 저장될 사용자 식별자입니다."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/strategies?is_active=eq.true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$json.SUPABASE_KEY}}"
+            }
+          ]
+        }
+      },
+      "id": "get-strategies",
+      "name": "📊 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node['config'].json.KIWOOM_API_URL}}/oauth2/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$node['config'].json.KIWOOM_APP_KEY}}\",\n  \"secretkey\": \"{{$node['config'].json.KIWOOM_APP_SECRET}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        }
+      },
+      "id": "kiwoom-auth",
+      "name": "🔐 키움 인증",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$node['config'].json.KIWOOM_API_URL}}/uapi/domestic-stock/v1/trading/inquire-balance",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "CANO",
+              "value": "={{$node['config'].json.KIWOOM_ACCOUNT.split('-')[0]}}"
+            },
+            {
+              "name": "ACNT_PRDT_CD",
+              "value": "={{$node['config'].json.KIWOOM_ACCOUNT.split('-')[1]}}"
+            },
+            {
+              "name": "AFHR_FLPR_YN",
+              "value": "N"
+            },
+            {
+              "name": "OFL_YN",
+              "value": ""
+            },
+            {
+              "name": "INQR_DVSN",
+              "value": "02"
+            },
+            {
+              "name": "UNPR_DVSN",
+              "value": "01"
+            },
+            {
+              "name": "FUND_STTL_ICLD_YN",
+              "value": "N"
+            },
+            {
+              "name": "FNCG_AMT_AUTO_RDPT_YN",
+              "value": "N"
+            },
+            {
+              "name": "PRCS_DVSN",
+              "value": "01"
+            },
+            {
+              "name": "CTX_AREA_FK100",
+              "value": ""
+            },
+            {
+              "name": "CTX_AREA_NK100",
+              "value": ""
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "Bearer {{$json.access_token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$node['config'].json.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$node['config'].json.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "VTTC8434R"
+            },
+            {
+              "name": "custtype",
+              "value": "P"
+            }
+          ]
+        }
+      },
+      "id": "get-balance",
+      "name": "💰 잔고 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node['config'].json.SUPABASE_URL}}/rest/v1/account_balance",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"user_id\": \"{{$node['config'].json.SYSTEM_USER_ID}}\",\n  \"account_no\": \"{{$node['config'].json.KIWOOM_ACCOUNT}}\",\n  \"total_evaluation\": {{$json.output2?.[0]?.tot_evlu_amt || $json.tot_evlu_amt || 10000000}},\n  \"total_buy_amount\": {{$json.output2?.[0]?.pchs_amt_smtl_amt || $json.pchs_amt || 0}},\n  \"available_cash\": {{$json.output2?.[0]?.nass_amt || $json.nass_amt || 5000000}},\n  \"total_profit_loss\": {{$json.output2?.[0]?.evlu_pfls_smtl_amt || $json.evlu_pfls_amt || 0}},\n  \"total_profit_loss_rate\": {{$json.output2?.[0]?.evlu_pfls_rt || $json.evlu_pfls_rt || 0}},\n  \"stock_value\": {{$json.output2?.[0]?.stck_evlu_smtl_amt || $json.stck_evlu_amt || 0}},\n  \"cash_balance\": {{$json.output2?.[0]?.dnca_tot_amt || $json.dnca_tot_amt || 5000000}},\n  \"receivable_amount\": {{$json.output2?.[0]?.thdt_buy_amt || 0}},\n  \"invested_amount\": {{$json.output2?.[0]?.tot_stln_slng_chgs || 0}},\n  \"withdrawn_amount\": {{$json.output2?.[0]?.bfdy_buy_amt || 0}}\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$node['config'].json.SUPABASE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$node['config'].json.SUPABASE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        }
+      },
+      "id": "save-balance",
+      "name": "💾 잔고 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "trigger": {
+      "main": [
+        [
+          {
+            "node": "config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "config": {
+      "main": [
+        [
+          {
+            "node": "get-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-strategies": {
+      "main": [
+        [
+          {
+            "node": "kiwoom-auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kiwoom-auth": {
+      "main": [
+        [
+          {
+            "node": "get-balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-balance": {
+      "main": [
+        [
+          {
+            "node": "save-balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

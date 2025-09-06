@@ -1,0 +1,329 @@
+{
+  "name": "Supabase-Kiwoom 자동매매 (실용버전)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "values": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA"
+            },
+            {
+              "name": "KIWOOM_ACCOUNT",
+              "value": "81101350-01"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-credentials",
+      "name": "API 키 설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/strategies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "is_active",
+              "value": "eq.true"
+            },
+            {
+              "name": "select",
+              "value": "*"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$json.SUPABASE_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-strategies",
+      "name": "전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$node['set-credentials'].json.SUPABASE_URL}}/rest/v1/trading_signals",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "order",
+              "value": "created_at.desc"
+            },
+            {
+              "name": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$node['set-credentials'].json.SUPABASE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$node['set-credentials'].json.SUPABASE_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-signals",
+      "name": "신호 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-signals",
+      "name": "신호 있는지 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$node['set-credentials'].json.KIWOOM_APP_KEY}}\",\n  \"secretkey\": \"{{$node['set-credentials'].json.KIWOOM_APP_SECRET}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "kiwoom-auth",
+      "name": "키움 인증",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/trading/order-cash",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"CANO\": \"{{$node['set-credentials'].json.KIWOOM_ACCOUNT}}\",\n  \"ACNT_PRDT_CD\": \"01\",\n  \"ORD_DVSN\": \"01\",\n  \"PDNO\": \"{{$json.stock_code}}\",\n  \"ORD_QTY\": \"1\",\n  \"ORD_UNPR\": \"0\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "Bearer {{$node['kiwoom-auth'].json.access_token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$node['set-credentials'].json.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$node['set-credentials'].json.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "VTTC0802U"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "place-order",
+      "name": "주문 실행",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1450, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node['set-credentials'].json.SUPABASE_URL}}/rest/v1/kiwoom_orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"signal_id\": \"{{$json.signal_id}}\",\n  \"order_type\": \"{{$json.signal_type}}\",\n  \"stock_code\": \"{{$json.stock_code}}\",\n  \"quantity\": 1,\n  \"price\": {{$json.current_price}},\n  \"status\": \"executed\",\n  \"kiwoom_order_id\": \"{{$node['place-order'].json.output.ODNO}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$node['set-credentials'].json.SUPABASE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$node['set-credentials'].json.SUPABASE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-order",
+      "name": "주문 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 250]
+    }
+  ],
+  "connections": {
+    "trigger": {
+      "main": [
+        [
+          {
+            "node": "set-credentials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set-credentials": {
+      "main": [
+        [
+          {
+            "node": "get-strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-strategies": {
+      "main": [
+        [
+          {
+            "node": "get-signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-signals": {
+      "main": [
+        [
+          {
+            "node": "check-signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-signals": {
+      "main": [
+        [
+          {
+            "node": "kiwoom-auth",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "kiwoom-auth": {
+      "main": [
+        [
+          {
+            "node": "place-order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "place-order": {
+      "main": [
+        [
+          {
+            "node": "save-order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
