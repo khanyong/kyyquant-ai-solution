@@ -83,7 +83,7 @@ export default function InvestmentUniverse() {
         const { data, error, count } = await supabase
           .from('kw_financial_snapshot')
           .select('*', { count: 'exact' })
-          .order('market_cap', { ascending: false, nullsLast: true })
+          .order('market_cap', { ascending: false })
           .range(offset, offset + pageSize - 1);
 
         if (error) {

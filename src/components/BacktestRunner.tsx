@@ -34,6 +34,7 @@ interface Strategy {
   description: string;
   type: string;
   parameters: any;
+  created_at?: string;
 }
 
 interface BacktestConfig {
@@ -282,9 +283,9 @@ export const BacktestRunner: React.FC = () => {
                 <DatePicker
                   label="시작일"
                   value={config.startDate}
-                  onChange={(date) => setConfig({ ...config, startDate: date })}
+                  onChange={(date: any) => setConfig({ ...config, startDate: date })}
                   disabled={isRunning}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  sx={{ width: '100%' }}
                 />
               </LocalizationProvider>
             </Grid>
@@ -294,9 +295,9 @@ export const BacktestRunner: React.FC = () => {
                 <DatePicker
                   label="종료일"
                   value={config.endDate}
-                  onChange={(date) => setConfig({ ...config, endDate: date })}
+                  onChange={(date: any) => setConfig({ ...config, endDate: date })}
                   disabled={isRunning}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  sx={{ width: '100%' }}
                 />
               </LocalizationProvider>
             </Grid>

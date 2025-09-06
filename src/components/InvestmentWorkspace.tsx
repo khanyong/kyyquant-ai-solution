@@ -47,7 +47,8 @@ import {
   Download,
   ArrowUpward,
   ArrowDownward,
-  Circle
+  Circle,
+  ArrowForward
 } from '@mui/icons-material'
 import { supabase } from '../lib/supabase'
 
@@ -159,13 +160,13 @@ const InvestmentWorkspace: React.FC<InvestmentWorkspaceProps> = ({
         if (include?.length > 0) {
           sectorFiltered = financialFiltered?.filter((stock: any) => 
             include.includes(stock.sector)
-          )
+          ) || null
         }
         
         if (exclude?.length > 0) {
           sectorFiltered = sectorFiltered?.filter((stock: any) => 
             !exclude.includes(stock.sector)
-          )
+          ) || null
         }
       }
 
@@ -399,7 +400,7 @@ const InvestmentWorkspace: React.FC<InvestmentWorkspaceProps> = ({
                       <Chip
                         size="small"
                         label={`${stock.score || 0}점`}
-                        color={stock.score > 70 ? 'success' : stock.score > 40 ? 'warning' : 'default'}
+                        color={(stock.score || 0) > 70 ? 'success' : (stock.score || 0) > 40 ? 'warning' : 'default'}
                       />
                       <IconButton
                         size="small"
@@ -526,7 +527,7 @@ const InvestmentWorkspace: React.FC<InvestmentWorkspaceProps> = ({
                           <Chip
                             size="small"
                             label={`적합도 ${stock.score || 0}점`}
-                            color={stock.score > 70 ? 'success' : stock.score > 40 ? 'warning' : 'default'}
+                            color={(stock.score || 0) > 70 ? 'success' : (stock.score || 0) > 40 ? 'warning' : 'default'}
                           />
                         </Stack>
                       </Box>

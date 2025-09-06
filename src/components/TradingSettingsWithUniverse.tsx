@@ -608,7 +608,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
             </Button>
           </Box>
           <Box sx={{ p: 2 }}>
-            <TradingSettingsSimplified />
+            {/* Trading Settings Component removed - integrated above */}
           </Box>
         </Paper>
       </Box>
@@ -701,7 +701,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
             {dataStatus === 'ready' && (
               <Box>
                 <Alert severity="success" sx={{ mt: 2 }}>
-                  {dataFreshness.totalStocks}개 종목 데이터 준비 완료
+                  {dataFreshness?.totalStocks || 0}개 종목 데이터 준비 완료
                 </Alert>
                 {dataFreshness && (
                   <Paper sx={{ mt: 2, p: 2, bgcolor: 'background.default' }}>
