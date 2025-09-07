@@ -1353,14 +1353,32 @@ const TradingSettingsWithUniverse: React.FC = () => {
               {activeTab === 3 && (
                 <Box>
                   <InvestorTrendFilter
-                    initialFilters={investorFilters as any}
+                    initialFilters={{
+                      foreign: {
+                        enabled: false,
+                        trend: 'neutral' as 'accumulating' | 'distributing' | 'neutral',
+                        days: 20,
+                        minAmount: 0
+                      },
+                      institution: {
+                        enabled: false,
+                        trend: 'neutral' as 'accumulating' | 'distributing' | 'neutral',
+                        days: 20,
+                        minAmount: 0
+                      },
+                      individual: {
+                        enabled: false,
+                        trend: 'neutral' as 'accumulating' | 'distributing' | 'neutral',
+                        days: 20,
+                        minAmount: 0
+                      }
+                    }}
                     onFilterChange={(filters) => {
-                      setInvestorFilters(filters as any)
                       setCurrentFilterValues((prev: any) => ({ ...prev, investor: filters }))
                     }}
                     onApplyFilter={() => {
                       const event = new CustomEvent('applyFilter', {
-                        detail: { filterType: 'investor', filters: investorFilters }
+                        detail: { filterType: 'investor', filters: currentFilterValues.investor }
                       })
                       window.dispatchEvent(event)
                     }}
