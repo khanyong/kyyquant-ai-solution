@@ -27,6 +27,9 @@ import Header from './components/common/Header'
 import LoginDialog from './components/common/LoginDialog'
 import StrategyBuilder from './components/StrategyBuilder'
 import BacktestResults from './components/BacktestResults'
+import BacktestResultsList from './components/BacktestResultsList'
+import BacktestRunner from './components/BacktestRunner'
+import BacktestDashboard from './components/BacktestDashboard'
 import SignalMonitor from './components/SignalMonitor'
 import PerformanceDashboard from './components/PerformanceDashboard'
 import AutoTradingPanel from './components/trading/AutoTradingPanel'
@@ -411,7 +414,7 @@ function MainApp() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={2}>
-              <BacktestResults />
+              <BacktestDashboard />
             </TabPanel>
 
             <TabPanel value={currentTab} index={3}>
@@ -466,6 +469,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<MainApp />} />
+        <Route path="/backtest/results" element={<BacktestResultsList />} />
+        <Route path="/backtest/results/:backtestId" element={<BacktestResults />} />
         <Route path="/investment-settings" element={<TradingSettings />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/admin" element={<AdminDashboard />} />

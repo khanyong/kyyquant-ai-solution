@@ -62,6 +62,7 @@ import InvestmentSettingsSummary from './InvestmentSettingsSummary'
 import InvestmentFlowManager from './InvestmentFlowManager'
 import StageBasedStrategy from './StageBasedStrategy'
 import { supabase } from '../lib/supabase'
+import { authService } from '../services/auth'
 import { InvestmentFlowType } from '../types/investment'
 import { validateStrategyData, prepareStrategyForSave, checkJsonSize, generateStrategySummary } from '../utils/strategyValidator'
 
@@ -399,8 +400,45 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
   const runQuickTest = async () => {
     setQuickTestRunning(true)
     
-    // 시뮬레이션 (실제로는 API 호출)
-    setTimeout(() => {
+    try {
+      // 백엔드 API 호출
+      const response = await fetch('http://localhost:8000/api/backtest/quick', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          strategy: {
+            ...strategy,
+            config: {
+              buyConditions: strategy.buyConditions,
+              sellConditions: strategy.sellConditions,
+              riskManagement: strategy.riskManagement,
+              useStageBasedStrategy,
+              buyStageStrategy,
+              sellStageStrategy
+            }
+          },
+          stock_codes: filteredUniverseCount > 0 ? 
+            JSON.parse(localStorage.getItem('filteredUniverse') || '[]').slice(0, 5).map((s: any) => s.code) :
+            ['005930', '000660', '035720']  // 기본: 삼성전자, SK하이닉스, 카카오
+        })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setStrategy({
+          ...strategy,
+          quickTestResult: result
+        })
+      } else {
+        throw new Error('백테스트 실행 실패')
+      }
+    } catch (error) {
+      console.error('Quick backtest error:', error)
+      alert('백테스트 실행 중 오류가 발생했습니다.')
+      
+      // 폴백: 시뮬레이션 데이터
       setStrategy({
         ...strategy,
         quickTestResult: {
@@ -410,12 +448,19 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
           trades: 48
         }
       })
+    } finally {
       setQuickTestRunning(false)
-    }, 2000)
+    }
   }
 
   // 전략 저장 (Supabase에 저장)
   const saveStrategy = async () => {
+    // 현재 사용자 가져오기
+    const user = await authService.getCurrentUser()
+    if (!user) {
+      alert('로그인이 필요합니다.')
+      return null
+    }
     // 디버그용 콘솔 로그
     console.log('Saving strategy...', strategy);
     
@@ -538,7 +583,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         is_test_mode: false,
         auto_trade_enabled: false,
         position_size: strategy.riskManagement.positionSize || 10,
-        user_id: 'f912da32-897f-4dbb-9242-3a438e9733a8'
+        user_id: user?.id || 'f912da32-897f-4dbb-9242-3a438e9733a8'  // 현재 사용자 ID
       }
       
       // 데이터 정리 (undefined -> null 변환)
@@ -597,9 +642,18 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
   const loadStrategiesFromSupabase = async () => {
     try {
+      // 현재 사용자 가져오기
+      const user = await authService.getCurrentUser()
+      if (!user) {
+        console.warn('User not logged in')
+        setSavedStrategies([])
+        return
+      }
+
       const { data, error } = await supabase
         .from('strategies')
         .select('*')
+        .eq('user_id', user.id)  // 사용자 ID로 필터링
         .eq('is_active', true)
         .order('created_at', { ascending: false })
 

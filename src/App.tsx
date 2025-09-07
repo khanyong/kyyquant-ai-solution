@@ -28,6 +28,7 @@ import StrategyBuilder from './components/StrategyBuilder'
 import UnifiedStrategyBuilder from './components/UnifiedStrategyBuilder'
 import InvestmentUniverse from './components/InvestmentUniverse'
 import BacktestResults from './components/BacktestResults'
+import BacktestRunner from './components/BacktestRunner'
 import SignalMonitor from './components/SignalMonitor'
 import PerformanceDashboard from './components/PerformanceDashboard'
 import TradingSettings from './components/TradingSettings'
@@ -339,7 +340,7 @@ function App() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={2}>
-              <BacktestResults />
+              <BacktestRunner />
             </TabPanel>
 
             <TabPanel value={currentTab} index={3}>
