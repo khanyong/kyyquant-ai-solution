@@ -88,8 +88,11 @@ const FilteringStrategy: React.FC<FilteringStrategyProps> = ({
     
     // 종목 코드 추출
     let stockCodes = []
-    if (filterData.stock_codes && Array.isArray(filterData.stock_codes)) {
-      // Supabase에서 온 데이터 (stock_codes 필드)
+    if (filterData.filtered_stocks && Array.isArray(filterData.filtered_stocks)) {
+      // Supabase에서 온 데이터 (filtered_stocks 필드)
+      stockCodes = filterData.filtered_stocks
+    } else if (filterData.stock_codes && Array.isArray(filterData.stock_codes)) {
+      // 다른 곳에서 온 데이터 (stock_codes 필드)
       stockCodes = filterData.stock_codes
     } else if (filterData.filteredStocks && Array.isArray(filterData.filteredStocks)) {
       // 로컬 스토리지에서 온 데이터 (filteredStocks 필드)

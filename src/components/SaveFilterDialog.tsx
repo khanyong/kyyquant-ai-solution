@@ -130,7 +130,13 @@ const SaveFilterDialog: React.FC<SaveFilterDialogProps> = ({
           return
         }
 
-        // investment_filters 테이블에 저장
+        // 종목 코드만 추출 (객체인 경우 code 또는 stock_code 필드 사용)
+        const stockCodes = filterData.filteredStocks.map((stock: any) => {
+          if (typeof stock === 'string') return stock
+          return stock.code || stock.stock_code || stock.symbol || String(stock)
+        }).filter((code: string) => code && code.trim() !== '')
+
+        // investment_filters 테이블에 저장 (로컬과 동일한 형태로)
         const { data, error: saveError } = await supabase
           .from('kw_investment_filters')
           .insert({
@@ -140,8 +146,8 @@ const SaveFilterDialog: React.FC<SaveFilterDialogProps> = ({
             filters: filterData.filters,
             applied_filters: filterData.appliedFilters,
             filter_stats: filterData.filterStats,
-            filtered_stocks_count: filterData.filteredStocks.length,
-            filtered_stocks: filterData.filteredStocks.slice(0, 100), // 상위 100개만 저장
+            filtered_stocks_count: stockCodes.length,
+            filtered_stocks: stockCodes, // 모든 종목 코드 저장 (제한 없음)
             is_active: true
           })
           .select()

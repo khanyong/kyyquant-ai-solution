@@ -328,7 +328,7 @@ const LoadFilterDialog: React.FC<LoadFilterDialogProps> = ({
                             />
                           ))}
                           <Chip 
-                            label={`${filter.filterStats?.final || 0}개 종목`} 
+                            label={`${filter.filterStats?.final || filter.filter_stats?.final || filter.filtered_stocks_count || 0}개 종목`} 
                             size="small" 
                             variant="filled"
                             color="success"
