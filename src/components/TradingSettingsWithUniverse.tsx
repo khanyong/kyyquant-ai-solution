@@ -79,6 +79,7 @@ import {
 import { supabase } from '../lib/supabase'
 import SaveFilterDialog from './SaveFilterDialog'
 import LoadFilterDialog from './LoadFilterDialog'
+import InvestorTrendFilter from './InvestorTrendFilter'
 
 const TradingSettingsWithUniverse: React.FC = () => {
   const [showUniverse, setShowUniverse] = useState(true)
@@ -415,6 +416,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
           afterMarketCap,
           afterFinancial,
           afterSector,
+          afterInvestor: filteredStocks.length,
           final: filteredStocks.length
         })
         
@@ -476,6 +478,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
         afterMarketCap,
         afterFinancial,
         afterSector,
+        afterInvestor: afterSector,
         final: afterSector
       })
       
@@ -1350,10 +1353,10 @@ const TradingSettingsWithUniverse: React.FC = () => {
               {activeTab === 3 && (
                 <Box>
                   <InvestorTrendFilter
-                    initialFilters={investorFilters}
+                    initialFilters={investorFilters as any}
                     onFilterChange={(filters) => {
                       setInvestorFilters(filters as any)
-                      setCurrentFilterValues(prev => ({ ...prev, investor: filters }))
+                      setCurrentFilterValues((prev: any) => ({ ...prev, investor: filters }))
                     }}
                     onApplyFilter={() => {
                       const event = new CustomEvent('applyFilter', {
@@ -1574,7 +1577,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                   tooltipTitle="섹터 필터 적용"
                   onClick={() => {
                     const event = new CustomEvent('applyFilter', {
-                      detail: { filterType: 'sector', sectors: selectedSectors }
+                      detail: { filterType: 'sector', sectors: [] }
                     })
                     window.dispatchEvent(event)
                   }}
@@ -1611,7 +1614,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                       dividendYield: [0, 10],
                       dividendPayout: [0, 100]
                     })
-                    setSelectedSectors([])
+                    // setSelectedSectors([])
                   }}
                 />
               </SpeedDial>
@@ -1797,18 +1800,19 @@ const TradingSettingsWithUniverse: React.FC = () => {
                     color="secondary"
                     onClick={() => {
                       // 모든 필터 초기화
-                      setAppliedFilters({ valuation: false, financial: false, sector: false })
-                      setCurrentFilterValues({ valuation: null, financial: null, sector: null })
+                      setAppliedFilters({ valuation: false, financial: false, sector: false, investor: false })
+                      setCurrentFilterValues({ valuation: null, financial: null, sector: null, investor: null })
                       setFilterStats({
                         total: dataFreshness?.totalStocks || 0,
                         afterMarketCap: 0,
                         afterFinancial: 0,
                         afterSector: 0,
+                        afterInvestor: 0,
                         final: 0
                       })
                       setCumulativeFilteredStocks([])
                       setFilteredStocks([])
-                      setFilterProgress({ valuation: 0, financial: 0, sector: 0 })
+                      setFilterProgress({ valuation: 0, financial: 0, sector: 0, investor: 0 })
                     }}
                   >
                     필터 초기화

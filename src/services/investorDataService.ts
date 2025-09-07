@@ -114,6 +114,12 @@ class InvestorDataService {
     if (amount < 0) return 'error';
     return 'default';
   }
+
+  async filterStocksByInvestor(stocks: any[], filters: any): Promise<any[]> {
+    // 투자자 필터링 로직 구현
+    // 실제 구현은 투자자 데이터와 종목을 매칭하여 필터링
+    return stocks; // 임시로 전체 반환
+  }
 }
 
 export const investorDataService = new InvestorDataService();

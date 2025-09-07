@@ -247,7 +247,7 @@ const BacktestRunner: React.FC = () => {
                    code !== '[object Object]' &&
                    code !== 'undefined' &&
                    code !== 'null';
-          }).map(code => String(code).trim());
+          }).map((code: any) => String(code).trim());
           
           console.log('Extracted stock codes from filteredStocks:', stockCodes);
           
@@ -285,7 +285,7 @@ const BacktestRunner: React.FC = () => {
                    code !== '[object Object]' &&
                    code !== 'undefined' &&
                    code !== 'null';
-          }).map(code => String(code).trim());
+          }).map((code: any) => String(code).trim());
           
           console.log('Selected stock codes from investment settings:', stockCodes);
           
@@ -338,7 +338,7 @@ const BacktestRunner: React.FC = () => {
                  code !== '[object Object]' &&
                  code !== 'undefined' &&
                  code !== 'null';
-        }).map(code => String(code).trim());
+        }).map((code: any) => String(code).trim());
         
         if (stockCodes.length > 0) {
           console.log('Filter ID:', filterData.id);
@@ -388,7 +388,7 @@ const BacktestRunner: React.FC = () => {
                  code !== '[object Object]' &&
                  code !== 'undefined' &&
                  code !== 'null';
-        }).map(code => String(code).trim());
+        }).map((code: any) => String(code).trim());
         
         if (stockCodes.length > 0) {
           console.log('Setting stock codes (local):', stockCodes);

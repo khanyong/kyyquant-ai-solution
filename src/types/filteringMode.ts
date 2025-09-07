@@ -48,7 +48,7 @@ export interface FilterRules {
   }
 }
 
-export type FilteringModeType = 'pre-filter' | 'post-filter' | 'hybrid'
+export type FilteringModeType = 'pre-filter' | 'post-filter' | 'hybrid' | 'real-time' | 'none'
 export type RebalancePeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'none'
 
 export interface FilteringMode {
