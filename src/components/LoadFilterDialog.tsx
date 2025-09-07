@@ -336,7 +336,7 @@ const LoadFilterDialog: React.FC<LoadFilterDialogProps> = ({
                         </Stack>
                         <Typography variant="caption" color="text.secondary">
                           <AccessTime sx={{ fontSize: 12, mr: 0.5 }} />
-                          {new Date(filter.timestamp || filter.created_at).toLocaleString('ko-KR')}
+                          {new Date(filter.timestamp || filter.created_at || Date.now()).toLocaleString('ko-KR')}
                         </Typography>
                       </Box>
                     }
