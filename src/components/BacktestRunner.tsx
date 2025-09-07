@@ -548,7 +548,8 @@ const BacktestRunner: React.FC = () => {
       
       // 백테스트 실행 요청
       console.log('Sending backtest request to server...');
-      const response = await fetch('http://localhost:8000/api/backtest/run', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/backtest/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -617,7 +618,8 @@ const BacktestRunner: React.FC = () => {
       
       // 에러 메시지 개선
       if (err.message && err.message.includes('Failed to fetch')) {
-        setError('백테스트 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요. (http://localhost:8000)');
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        setError(`백테스트 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요. (${apiUrl})`);
       } else if (err.message && err.message.includes('종목 데이터를 불러올 수 없습니다')) {
         setError(err.message);
       } else {
@@ -632,7 +634,8 @@ const BacktestRunner: React.FC = () => {
     if (!backtestId) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/backtest/stop/${backtestId}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/backtest/stop/${backtestId}`, {
         method: 'POST',
       });
 

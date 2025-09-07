@@ -171,7 +171,8 @@ class StockDataService {
       console.log(`Fetching from API: ${stockCode}`)
       
       // API 엔드포인트 (백엔드 서버)
-      const response = await fetch(`http://localhost:8000/api/stock/${stockCode}/daily?start_date=${startDate}&end_date=${endDate}`)
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/stock/${stockCode}/daily?start_date=${startDate}&end_date=${endDate}`)
       
       if (!response.ok) {
         console.error(`API error for ${stockCode}: ${response.status}`)
