@@ -814,6 +814,67 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 14,
+      title: '백테스트 필터링 시스템',
+      status: 'done',
+      priority: 'high',
+      icon: <FilterList />,
+      period: '2025.09.07',
+      description: '백테스트 시스템과 통합된 고급 필터링 전략 시스템 구축',
+      subtasks: [
+        {
+          title: '✅ 필터링 전략 컴포넌트',
+          details: [
+            'FilteringStrategy 컴포넌트 개발',
+            '5가지 필터링 모드 구현 (사전/사후/하이브리드/실시간/없음)',
+            '모드별 장단점 및 사용 사례 UI',
+            '동적 리밸런싱 설정',
+            '필터 우선순위 관리 시스템'
+          ]
+        },
+        {
+          title: '✅ 투자자 동향 필터',
+          details: [
+            'InvestorTrendFilter 컴포넌트 구현',
+            '외국인/기관 보유비율 필터',
+            '순매수 금액 및 일수 추적',
+            '연속 매수일 분석',
+            'investorDataService 구현'
+          ]
+        },
+        {
+          title: '✅ 필터 저장/불러오기',
+          details: [
+            'SaveFilterDialog 구현',
+            'LoadFilterDialog 구현',
+            '로컬/클라우드 저장 옵션',
+            'kw_investment_filters 테이블 활용',
+            '필터 즐겨찾기 및 사용 횟수 추적'
+          ]
+        },
+        {
+          title: '✅ 백테스트 통합',
+          details: [
+            'BacktestRunner에 필터링 전략 통합',
+            '사전 필터링 모드 종목 자동 로드',
+            'stockDataService 3-tier 데이터 로딩',
+            'kw_price_daily 테이블 연동',
+            '필터 ID 기반 종목 관리'
+          ]
+        },
+        {
+          title: '✅ 백테스트 결과 목록',
+          details: [
+            'BacktestResultsList 컴포넌트',
+            '결과 검색 및 필터링',
+            '성과 지표 시각화',
+            '결과 상세보기 및 삭제',
+            'backtestService 확장'
+          ]
+        }
+      ]
+    },
+    {
+      id: 15,
       title: '키움 OpenAPI 실제 연동',
       status: 'in-progress',
       priority: 'high',
@@ -874,7 +935,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 15,
+      id: 16,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -935,7 +996,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 16,
+      id: 21,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -996,7 +1057,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 17,
+      id: 21,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1057,7 +1118,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 18,
+      id: 21,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -1118,7 +1179,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 19,
+      id: 21,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1179,7 +1240,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 20,
+      id: 21,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
