@@ -79,7 +79,6 @@ import {
 import { supabase } from '../lib/supabase'
 import SaveFilterDialog from './SaveFilterDialog'
 import LoadFilterDialog from './LoadFilterDialog'
-import InvestorTrendFilter from './InvestorTrendFilter'
 
 const TradingSettingsWithUniverse: React.FC = () => {
   const [showUniverse, setShowUniverse] = useState(true)

@@ -905,7 +905,7 @@ const BacktestRunner: React.FC = () => {
                       setConfig(prev => ({ ...prev, stockCodes: filterData.stock_codes }))
                     } else if (mode.stockCodes && mode.stockCodes.length > 0) {
                       console.log('Setting stock codes from mode:', mode.stockCodes.length, 'stocks')
-                      setConfig(prev => ({ ...prev, stockCodes: mode.stockCodes }))
+                      setConfig(prev => ({ ...prev, stockCodes: mode.stockCodes || [] }))
                     }
                     
                     // 필터 데이터도 업데이트
