@@ -47,7 +47,10 @@ interface SavedFilter {
   filters: any
   appliedFilters: any
   filteredStocks?: any[]
+  filtered_stocks?: string[]  // 클라우드 필드
   filterStats: any
+  filter_stats?: any  // 클라우드 필드
+  filtered_stocks_count?: number  // 클라우드 필드
   timestamp: string
   created_at?: string
   is_favorite?: boolean
