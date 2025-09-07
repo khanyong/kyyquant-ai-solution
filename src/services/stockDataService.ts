@@ -134,12 +134,12 @@ class StockDataService {
       console.log(`Loading from Supabase: ${stockCode} (${startDate} ~ ${endDate})`)
       
       const { data, error } = await supabase
-        .from('kw_stock_daily')
+        .from('kw_price_daily')
         .select('*')
         .eq('stock_code', stockCode)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: true })
+        .gte('trade_date', startDate)
+        .lte('trade_date', endDate)
+        .order('trade_date', { ascending: true })
       
       if (error) {
         console.error(`Supabase error for ${stockCode}:`, error)
