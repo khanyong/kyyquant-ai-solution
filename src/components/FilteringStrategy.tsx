@@ -246,7 +246,7 @@ const FilteringStrategy: React.FC<FilteringStrategyProps> = ({
                       <Typography variant="caption" color="success.main" sx={{ fontWeight: 'bold' }}>
                         장점:
                       </Typography>
-                      {desc.pros.map((pro, idx) => (
+                      {desc.pros.map((pro: string, idx: number) => (
                         <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <CheckCircle sx={{ fontSize: 12, color: 'success.main' }} />
                           <Typography variant="caption">{pro}</Typography>
@@ -258,7 +258,7 @@ const FilteringStrategy: React.FC<FilteringStrategyProps> = ({
                       <Typography variant="caption" color="warning.main" sx={{ fontWeight: 'bold' }}>
                         단점:
                       </Typography>
-                      {desc.cons.map((con, idx) => (
+                      {desc.cons.map((con: string, idx: number) => (
                         <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <Cancel sx={{ fontSize: 12, color: 'warning.main' }} />
                           <Typography variant="caption">{con}</Typography>

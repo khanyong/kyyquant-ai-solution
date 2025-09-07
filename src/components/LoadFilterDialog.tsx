@@ -49,6 +49,7 @@ interface SavedFilter {
   filteredStocks?: any[]
   filterStats: any
   timestamp: string
+  created_at?: string
   is_favorite?: boolean
   usage_count?: number
 }

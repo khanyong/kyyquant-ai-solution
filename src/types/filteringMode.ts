@@ -122,5 +122,19 @@ export const FILTERING_MODE_DESCRIPTIONS = {
     pros: ['균형잡힌 성능', '유연한 필터링', '단계별 검증'],
     cons: ['복잡한 설정', '중간 수준의 속도'],
     useCase: '기본 조건 + 추가 검증이 필요한 경우'
+  },
+  'real-time': {
+    title: '실시간 필터링 (Real-Time)',
+    description: '실시간으로 조건에 맞는 종목을 동적으로 필터링',
+    pros: ['실시간 시장 반응', '동적 포트폴리오 구성'],
+    cons: ['높은 연산 비용', '복잡한 구현'],
+    useCase: '실시간 거래 시스템 구축'
+  },
+  'none': {
+    title: '필터링 없음 (None)',
+    description: '필터링 없이 전체 종목 대상으로 전략 실행',
+    pros: ['모든 기회 포착', '단순한 설정'],
+    cons: ['느린 속도', '많은 노이즈'],
+    useCase: '전체 시장 스캔이 필요한 경우'
   }
 }

@@ -355,7 +355,7 @@ const BacktestResults: React.FC = () => {
                           conditionText += `(${condition.period})`;
                         }
                         if (condition.operator) {
-                          const operatorText = {
+                          const operatorText: { [key: string]: string } = {
                             '>': ' >',
                             '<': ' <',
                             '>=': ' ≥',
@@ -363,8 +363,8 @@ const BacktestResults: React.FC = () => {
                             '==': ' =',
                             'crosses_above': ' 상향돌파',
                             'crosses_below': ' 하향돌파'
-                          }[condition.operator] || ` ${condition.operator}`;
-                          conditionText += operatorText;
+                          };
+                          conditionText += operatorText[condition.operator] || ` ${condition.operator}`;
                         }
                         if (condition.value !== undefined && condition.value !== null) {
                           conditionText += ` ${condition.value}`;
@@ -405,7 +405,7 @@ const BacktestResults: React.FC = () => {
                           conditionText += `(${condition.period})`;
                         }
                         if (condition.operator) {
-                          const operatorText = {
+                          const operatorText: { [key: string]: string } = {
                             '>': ' >',
                             '<': ' <',
                             '>=': ' ≥',
@@ -413,8 +413,8 @@ const BacktestResults: React.FC = () => {
                             '==': ' =',
                             'crosses_above': ' 상향돌파',
                             'crosses_below': ' 하향돌파'
-                          }[condition.operator] || ` ${condition.operator}`;
-                          conditionText += operatorText;
+                          };
+                          conditionText += operatorText[condition.operator] || ` ${condition.operator}`;
                         }
                         if (condition.value !== undefined && condition.value !== null) {
                           conditionText += ` ${condition.value}`;
