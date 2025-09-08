@@ -457,11 +457,12 @@ const BacktestRunner: React.FC = () => {
       }
 
       // 전략 데이터 구성
+      const templateStrategyName = `[템플릿] ${template.name}`;
       const strategyData = {
-        name: `[템플릿] ${template.name}`,
+        name: templateStrategyName,
         description: template.description,
         type: template.type === 'complex' ? 'stage_based' : 'custom',
-        custom_parameters: template.type === 'complex' 
+        config: template.type === 'complex' 
           ? {
               buyStageStrategy: template.stageStrategy.buyStages,
               sellStageStrategy: template.stageStrategy.sellStages,
@@ -482,11 +483,14 @@ const BacktestRunner: React.FC = () => {
                 maxPositions: 5
               },
               templateId: template.id,  // 템플릿 ID 저장
-              templateName: template.name  // 템플릿 이름 저장
+              templateName: template.name,  // 템플릿 이름 저장
+              strategy_type: template.type === 'complex' ? 'stage_based' : 'custom'
             },
         user_id: user.id,
         is_active: true
       };
+
+      console.log('Saving template strategy:', strategyData);
 
       // Supabase에 임시 저장
       const { data, error } = await supabase
@@ -501,11 +505,26 @@ const BacktestRunner: React.FC = () => {
         return;
       }
 
+      console.log('Template strategy saved:', data);
+
+      // 저장된 전략을 strategies 배열에 즉시 추가
+      const newStrategy = {
+        id: data.id,
+        name: templateStrategyName,
+        description: data.description || '',
+        type: data.config?.strategy_type || data.type || 'custom',
+        parameters: data.config || {},
+        created_at: data.created_at
+      };
+      
+      // strategies 배열에 새 전략 추가
+      setStrategies(prev => [...prev, newStrategy]);
+      
       // 저장된 전략 ID로 설정
       setConfig(prev => ({ ...prev, strategyId: data.id }));
       
-      // 전략 목록 새로고침
-      loadStrategies();
+      // 전략 목록 새로고침 (비동기로 실행)
+      setTimeout(() => loadStrategies(), 100);
       
       // 다이얼로그 닫기
       setShowTemplateDialog(false);
@@ -691,9 +710,25 @@ const BacktestRunner: React.FC = () => {
         setIsRunning(false);
         
         // 결과를 state에 저장하고 상세 정보 포맷팅
+        console.log('Raw backtest result from server:', result);
+        console.log('Result.results:', result.results);
+        console.log('Trades data:', result.results?.trades);
+        console.log('Daily returns data:', result.results?.daily_returns);
+        
+        // 전략 이름 찾기 - strategies 배열이나 백엔드 응답에서
+        const currentStrategy = strategies.find(s => s.id === config.strategyId);
+        const strategyNameFromBackend = result.results?.strategy_name;
+        const finalStrategyName = currentStrategy?.name || strategyNameFromBackend || '알 수 없음';
+        
+        console.log('Strategy name resolution:', {
+          fromStrategies: currentStrategy?.name,
+          fromBackend: strategyNameFromBackend,
+          final: finalStrategyName
+        });
+        
         const formattedResult = {
           id: result.backtest_id,
-          strategy_name: strategies.find(s => s.id === config.strategyId)?.name || '알 수 없음',
+          strategy_name: finalStrategyName,
           start_date: config.startDate.toISOString().split('T')[0],
           end_date: config.endDate.toISOString().split('T')[0],
           initial_capital: config.initialCapital,
@@ -707,12 +742,33 @@ const BacktestRunner: React.FC = () => {
           losing_trades: result.results.losing_trades || 0,
           sharpe_ratio: result.results.sharpe_ratio || 0,
           volatility: result.results.volatility || 0,
-          trades: result.results.trades || [],
-          daily_returns: result.results.daily_returns || [],
+          // trades 배열 확인 및 포맷팅
+          trades: Array.isArray(result.results?.trades) ? result.results.trades.map((trade: any) => ({
+            date: trade.date || trade.trade_date || '',
+            stock_code: trade.stock_code || trade.code || '',
+            stock_name: trade.stock_name || trade.name || '',
+            action: trade.action || trade.type || 'unknown',
+            quantity: trade.quantity || trade.shares || 0,
+            price: trade.price || 0,
+            amount: trade.amount || trade.cost || trade.revenue || 0,
+            profit_loss: trade.profit_loss || trade.profit || 0,
+            profit_rate: trade.profit_rate || trade.return_rate || 0
+          })) : [],
+          // daily_returns 배열 확인 및 포맷팅
+          daily_returns: Array.isArray(result.results?.daily_returns) ? result.results.daily_returns.map((dr: any) => ({
+            date: dr.date || '',
+            portfolio_value: dr.portfolio_value || dr.value || 0,
+            daily_return: dr.daily_return || dr.return || 0,
+            cumulative_return: dr.cumulative_return || dr.total_return || 0
+          })) : [],
           strategy_config: strategies.find(s => s.id === config.strategyId)?.parameters || {},
           investment_config: currentFilters || {},
           filtering_config: filteringMode || {},
         };
+        
+        console.log('Formatted result:', formattedResult);
+        console.log('Formatted trades count:', formattedResult.trades.length);
+        console.log('Formatted daily_returns count:', formattedResult.daily_returns.length);
         
         setBacktestResults(formattedResult);
         // 결과 다이얼로그 자동 표시
@@ -788,12 +844,21 @@ const BacktestRunner: React.FC = () => {
 
     setIsSaving(true);
     try {
+      console.log('Saving backtest result...');
+      console.log('Current strategies:', strategies);
+      console.log('Current strategyId:', config.strategyId);
+      
       const strategy = strategies.find(s => s.id === config.strategyId);
+      console.log('Found strategy:', strategy);
+      
+      // backtestResults에 이미 strategy_name이 있으면 그것을 사용, 없으면 strategies에서 찾기
+      const strategyName = backtestResults.strategy_name || strategy?.name || 'Unknown Strategy';
+      console.log('Strategy name to save:', strategyName);
       
       // 실제 테이블 스키마에 맞춰서 데이터 구성
       const resultToSave = {
         strategy_id: config.strategyId,
-        strategy_name: strategy?.name || 'Unknown',
+        strategy_name: strategyName,
         start_date: config.startDate?.toISOString().split('T')[0] || '',
         end_date: config.endDate?.toISOString().split('T')[0] || '',
         test_period_start: config.startDate?.toISOString().split('T')[0],

@@ -138,8 +138,10 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
+    console.log('BacktestResultViewer received propResult:', propResult);
     if (propResult) {
       setResult(propResult);
+      console.log('Result set with trades:', propResult.trades?.length, 'daily_returns:', propResult.daily_returns?.length);
     }
   }, [propResult]);
 
@@ -158,14 +160,23 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
 
   // 수익률 차트 데이터 생성
   const getChartData = () => {
-    if (!result?.daily_returns) return null;
+    if (!result?.daily_returns || !Array.isArray(result.daily_returns) || result.daily_returns.length === 0) {
+      console.log('No daily_returns data available for chart', {
+        exists: !!result?.daily_returns,
+        isArray: Array.isArray(result?.daily_returns),
+        type: typeof result?.daily_returns,
+        value: result?.daily_returns
+      });
+      return null;
+    }
 
+    console.log('Creating chart data with', result.daily_returns.length, 'data points');
     return {
-      labels: result.daily_returns.map(d => d.date),
+      labels: result.daily_returns.map(d => d.date || ''),
       datasets: [
         {
           label: '누적 수익률 (%)',
-          data: result.daily_returns.map(d => d.cumulative_return),
+          data: result.daily_returns.map(d => d.cumulative_return || 0),
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
           tension: 0.1,
@@ -173,7 +184,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
         },
         {
           label: '일일 수익률 (%)',
-          data: result.daily_returns.map(d => d.daily_return),
+          data: result.daily_returns.map(d => d.daily_return || 0),
           borderColor: 'rgb(255, 99, 132)',
           backgroundColor: 'rgba(255, 99, 132, 0.2)',
           tension: 0.1,
@@ -185,6 +196,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
 
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top' as const,
@@ -193,10 +205,26 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
         display: true,
         text: '수익률 추이',
       },
+      tooltip: {
+        mode: 'index' as const,
+        intersect: false,
+      },
     },
     scales: {
+      x: {
+        display: true,
+        title: {
+          display: true,
+          text: '날짜'
+        }
+      },
       y: {
+        display: true,
         beginAtZero: true,
+        title: {
+          display: true,
+          text: '수익률 (%)'
+        },
         ticks: {
           callback: function(value: any) {
             return value + '%';
@@ -204,6 +232,11 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
         },
       },
     },
+    interaction: {
+      mode: 'nearest' as const,
+      axis: 'x' as const,
+      intersect: false
+    }
   };
 
   if (!result) {
@@ -305,35 +338,67 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
 
         {/* 수익률 차트 탭 */}
         <TabPanel value={tabValue} index={0}>
-          {getChartData() ? (
-            <Box sx={{ height: 400 }}>
-              <Line data={getChartData()!} options={chartOptions} />
-            </Box>
-          ) : (
-            <Alert severity="warning">차트 데이터가 없습니다.</Alert>
-          )}
+          {(() => {
+            const chartData = getChartData();
+            console.log('Chart data for rendering:', chartData);
+            
+            if (!chartData) {
+              // 데이터가 없어도 더미 데이터로 차트를 표시
+              const dummyData = {
+                labels: ['시작', '종료'],
+                datasets: [
+                  {
+                    label: '누적 수익률 (%)',
+                    data: [0, result?.total_return || 0],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true,
+                  }
+                ]
+              };
+              
+              return (
+                <Box>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    상세 일일 수익률 데이터가 없습니다. 총 수익률만 표시합니다.
+                  </Alert>
+                  <Box sx={{ height: 400, position: 'relative' }}>
+                    <Line data={dummyData} options={chartOptions} />
+                  </Box>
+                </Box>
+              );
+            }
+            
+            return (
+              <Box sx={{ height: 400, position: 'relative' }}>
+                <Line data={chartData} options={chartOptions} />
+              </Box>
+            );
+          })()}
         </TabPanel>
 
         {/* 거래 내역 탭 */}
         <TabPanel value={tabValue} index={1}>
-          <TableContainer component={Paper}>
-            <Table sx={{ minWidth: 650 }} aria-label="거래 내역">
-              <TableHead>
-                <TableRow>
-                  <TableCell>날짜</TableCell>
-                  <TableCell>종목</TableCell>
-                  <TableCell align="center">구분</TableCell>
-                  <TableCell align="right">수량</TableCell>
-                  <TableCell align="right">단가</TableCell>
-                  <TableCell align="right">금액</TableCell>
-                  <TableCell align="right">손익</TableCell>
-                  <TableCell align="right">수익률</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {result.trades
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((trade, index) => (
+          {result.trades && Array.isArray(result.trades) && result.trades.length > 0 ? (
+            <TableContainer component={Paper}>
+              <Table sx={{ minWidth: 650 }} aria-label="거래 내역">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>날짜</TableCell>
+                    <TableCell>종목</TableCell>
+                    <TableCell align="center">구분</TableCell>
+                    <TableCell align="right">수량</TableCell>
+                    <TableCell align="right">단가</TableCell>
+                    <TableCell align="right">금액</TableCell>
+                    <TableCell align="right">손익</TableCell>
+                    <TableCell align="right">수익률</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {result.trades
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((trade, index) => (
                     <TableRow key={index}>
                       <TableCell>{trade.date}</TableCell>
                       <TableCell>
@@ -390,6 +455,9 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
               labelRowsPerPage="페이지당 행 수:"
             />
           </TableContainer>
+          ) : (
+            <Alert severity="info">거래 내역이 없습니다.</Alert>
+          )}
         </TabPanel>
 
         {/* 통계 분석 탭 */}

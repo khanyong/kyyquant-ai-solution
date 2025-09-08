@@ -163,6 +163,8 @@ const BacktestComparison: React.FC = () => {
         // .eq('user_id', user.id)  // 개발 중 주석 처리
         .order('created_at', { ascending: false });
 
+      console.log('Loaded backtest results from DB:', data);
+      
       if (error) {
         console.error('Error loading backtest results:', error);
         
@@ -230,32 +232,113 @@ const BacktestComparison: React.FC = () => {
         setRecords(dummyData.map((d, i) => ({ ...d, color: COLORS[i % COLORS.length] })));
       } else {
         // 실제 데이터 포맷팅 - 실제 스키마에 맞춤
-        const formattedData = (data || []).map((item, index) => ({
-          id: item.id,
-          strategy_name: item.strategy_name || '알 수 없음',
-          created_at: item.created_at,
-          start_date: item.start_date,
-          end_date: item.end_date,
-          initial_capital: Number(item.initial_capital) || 0,
-          final_capital: Number(item.final_capital) || 0,
-          total_return: Number(item.total_return) || 0,
-          max_drawdown: Number(item.max_drawdown) || 0,
-          win_rate: Number(item.win_rate) || 0,
-          sharpe_ratio: Number(item.sharpe_ratio) || 0,
-          total_trades: item.total_trades || 0,
-          profitable_trades: item.profitable_trades || 0,
-          winning_trades: item.winning_trades || item.profitable_trades || 0,
-          losing_trades: item.losing_trades || 0,
-          avg_profit: Number(item.avg_profit) || 0,
-          avg_loss: Number(item.avg_loss) || 0,
-          profit_factor: Number(item.profit_factor) || 0,
-          recovery_factor: Number(item.recovery_factor) || 0,
-          results_data: item.results_data,
-          trade_details: item.trade_details,
-          daily_returns: item.daily_returns,
-          visible: true,
-          color: COLORS[index % COLORS.length],
-        }));
+        console.log('Formatting data for BacktestComparison');
+        const formattedData = (data || []).map((item, index) => {
+          console.log(`Processing item ${index}:`, {
+            id: item.id,
+            strategy_name: item.strategy_name,
+            trade_details_count: item.trade_details?.length || 0,
+            daily_returns_count: item.daily_returns?.length || 0,
+            has_results_data: !!item.results_data
+          });
+          
+          // trade_details와 daily_returns 파싱
+          let trades = [];
+          let dailyReturns = [];
+          
+          // trade_details 처리
+          if (item.trade_details) {
+            if (typeof item.trade_details === 'string') {
+              try {
+                trades = JSON.parse(item.trade_details);
+              } catch (e) {
+                console.error('Failed to parse trade_details:', e);
+                trades = [];
+              }
+            } else if (Array.isArray(item.trade_details)) {
+              trades = item.trade_details;
+            } else {
+              trades = [];
+            }
+          }
+          
+          // daily_returns 처리
+          if (item.daily_returns) {
+            if (typeof item.daily_returns === 'string') {
+              try {
+                dailyReturns = JSON.parse(item.daily_returns);
+              } catch (e) {
+                console.error('Failed to parse daily_returns:', e);
+                dailyReturns = [];
+              }
+            } else if (Array.isArray(item.daily_returns)) {
+              dailyReturns = item.daily_returns;
+            } else {
+              dailyReturns = [];
+            }
+          }
+          
+          console.log(`Item ${index} parsed data:`, {
+            trades_type: typeof item.trade_details,
+            trades_parsed: Array.isArray(trades),
+            trades_count: trades.length,
+            daily_returns_type: typeof item.daily_returns,
+            daily_returns_parsed: Array.isArray(dailyReturns),
+            daily_returns_count: dailyReturns.length
+          });
+          
+          // BacktestResultViewer가 기대하는 형식으로 results 객체 생성
+          const results = {
+            id: item.id,
+            strategy_name: item.strategy_name || '알 수 없음',
+            start_date: item.start_date,
+            end_date: item.end_date,
+            initial_capital: Number(item.initial_capital) || 0,
+            final_capital: Number(item.final_capital) || 0,
+            total_return: Number(item.total_return) || 0,
+            annual_return: item.results_data?.annual_return || 0,
+            max_drawdown: Number(item.max_drawdown) || 0,
+            win_rate: Number(item.win_rate) || 0,
+            total_trades: item.total_trades || 0,
+            winning_trades: item.winning_trades || item.profitable_trades || 0,
+            losing_trades: item.losing_trades || 0,
+            sharpe_ratio: Number(item.sharpe_ratio) || 0,
+            volatility: item.results_data?.volatility || 0,
+            trades: trades,  // 파싱된 배열 사용
+            daily_returns: dailyReturns,  // 파싱된 배열 사용
+            strategy_config: item.results_data?.strategy_config || {},
+            investment_config: item.results_data?.investment_config || {},
+            filtering_config: item.results_data?.filter_config || {},
+          };
+
+          return {
+            id: item.id,
+            strategy_name: item.strategy_name || '알 수 없음',
+            created_at: item.created_at,
+            start_date: item.start_date,
+            end_date: item.end_date,
+            initial_capital: Number(item.initial_capital) || 0,
+            final_capital: Number(item.final_capital) || 0,
+            total_return: Number(item.total_return) || 0,
+            max_drawdown: Number(item.max_drawdown) || 0,
+            win_rate: Number(item.win_rate) || 0,
+            sharpe_ratio: Number(item.sharpe_ratio) || 0,
+            total_trades: item.total_trades || 0,
+            profitable_trades: item.profitable_trades || 0,
+            winning_trades: item.winning_trades || item.profitable_trades || 0,
+            losing_trades: item.losing_trades || 0,
+            avg_profit: Number(item.avg_profit) || 0,
+            avg_loss: Number(item.avg_loss) || 0,
+            profit_factor: Number(item.profit_factor) || 0,
+            recovery_factor: Number(item.recovery_factor) || 0,
+            results_data: item.results_data,
+            trade_details: item.trade_details,
+            daily_returns: item.daily_returns,
+            results: results,  // BacktestResultViewer에서 사용할 results 객체
+            visible: true,
+            color: COLORS[index % COLORS.length],
+          };
+        });
         
         setRecords(formattedData);
       }
@@ -552,6 +635,7 @@ const BacktestComparison: React.FC = () => {
                       <Checkbox
                         checked={isSelected}
                         color="primary"
+                        onChange={() => handleSelectRecord(record)}
                         onClick={(e) => e.stopPropagation()}
                       />
                     </TableCell>
