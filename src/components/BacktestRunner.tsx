@@ -20,6 +20,13 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Tabs,
+  Tab,
 } from '@mui/material';
 // import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 // import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -30,6 +37,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HistoryIcon from '@mui/icons-material/History';
+import CloseIcon from '@mui/icons-material/Close';
 import { BacktestService } from '../services/backtestService';
 import { supabase } from '../lib/supabase';
 import { authService } from '../services/auth';
@@ -39,6 +47,13 @@ import FilteringStrategy from './FilteringStrategy';
 import { FilteringMode, FilterRules } from '../types/filteringMode';
 import LoadFilterDialog from './LoadFilterDialog';
 import { stockDataService } from '../services/stockDataService';
+import BacktestResultViewer from './backtest/BacktestResultViewer';
+import BacktestComparison from './backtest/BacktestComparison';
+import { backtestStorageService } from '../services/backtestStorage';
+import SaveIcon from '@mui/icons-material/Save';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import { STRATEGY_TEMPLATES } from '../constants/strategyTemplates';
+import StyleIcon from '@mui/icons-material/Style';
 
 interface Strategy {
   id: string;
@@ -74,6 +89,12 @@ const BacktestRunner: React.FC = () => {
   const [filteringMode, setFilteringMode] = useState<FilteringMode | undefined>(undefined);
   const [showLoadFilterDialog, setShowLoadFilterDialog] = useState(false);
   const [currentFilterId, setCurrentFilterId] = useState<string | null>(null);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedResultId, setSavedResultId] = useState<string | null>(null);
+  const [currentSubTab, setCurrentSubTab] = useState(0); // 0: 백테스트 실행, 1: 결과 보기
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false); // 템플릿 선택 다이얼로그
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   
   const [config, setConfig] = useState<BacktestConfig>({
     strategyId: '',
@@ -152,11 +173,12 @@ const BacktestRunner: React.FC = () => {
         return;
       }
 
-      // 로그인한 경우 사용자의 전략 로드
+      // 개발 모드: 모든 사용자의 전략을 로드
+      // 프로덕션에서는 .eq('user_id', user.id) 추가 필요
       const { data, error } = await supabase
         .from('strategies')
         .select('*')
-        .eq('user_id', user.id)  // 사용자 ID로 필터링
+        // .eq('user_id', user.id)  // 개발 중 주석 처리 - 모든 사용자 전략 조회
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       
@@ -199,7 +221,9 @@ const BacktestRunner: React.FC = () => {
         description: s.description || '',
         type: s.config?.strategy_type || s.type || 'custom',  // config 내 strategy_type 사용
         parameters: s.config || s.parameters || {},  // config 컬럼 우선 사용
-        created_at: s.created_at
+        created_at: s.created_at,
+        user_id: s.user_id,  // 사용자 ID 추가
+        isOwn: s.user_id === user.id  // 자신의 전략인지 표시
       })) || [];
       
       console.log('Formatted strategies:', formattedStrategies);
@@ -422,6 +446,79 @@ const BacktestRunner: React.FC = () => {
     }
   }
 
+  // 템플릿 적용 함수
+  const applyTemplate = async (template: any) => {
+    try {
+      // 템플릿을 임시 전략으로 저장
+      const user = await authService.getCurrentUser();
+      if (!user) {
+        setError('로그인이 필요합니다.');
+        return;
+      }
+
+      // 전략 데이터 구성
+      const strategyData = {
+        name: `[템플릿] ${template.name}`,
+        description: template.description,
+        type: template.type === 'complex' ? 'stage_based' : 'custom',
+        custom_parameters: template.type === 'complex' 
+          ? {
+              buyStageStrategy: template.stageStrategy.buyStages,
+              sellStageStrategy: template.stageStrategy.sellStages,
+              isStageBasedStrategy: true,
+              templateId: template.id,  // 템플릿 ID 저장
+              templateName: template.name  // 템플릿 이름 저장
+            }
+          : {
+              indicators: template.strategy.indicators,
+              buyConditions: template.strategy.buyConditions,
+              sellConditions: template.strategy.sellConditions,
+              riskManagement: template.strategy.riskManagement || {
+                stopLoss: -5,
+                takeProfit: 10,
+                trailingStop: false,
+                trailingStopPercent: 0,
+                positionSize: 20,
+                maxPositions: 5
+              },
+              templateId: template.id,  // 템플릿 ID 저장
+              templateName: template.name  // 템플릿 이름 저장
+            },
+        user_id: user.id,
+        is_active: true
+      };
+
+      // Supabase에 임시 저장
+      const { data, error } = await supabase
+        .from('strategies')
+        .insert([strategyData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('템플릿 저장 오류:', error);
+        setError('템플릿 적용 중 오류가 발생했습니다.');
+        return;
+      }
+
+      // 저장된 전략 ID로 설정
+      setConfig(prev => ({ ...prev, strategyId: data.id }));
+      
+      // 전략 목록 새로고침
+      loadStrategies();
+      
+      // 다이얼로그 닫기
+      setShowTemplateDialog(false);
+      setSelectedTemplate(null);
+      
+      // 성공 메시지 표시
+      setSuccess(`"${template.name}" 템플릿이 적용되었습니다. 이제 백테스트를 실행할 수 있습니다.`);
+    } catch (error) {
+      console.error('템플릿 적용 오류:', error);
+      setError('템플릿 적용 중 오류가 발생했습니다.');
+    }
+  };
+
   const runBacktest = async () => {
     if (!config.strategyId || !config.startDate || !config.endDate) {
       setError('필수 항목을 모두 입력해주세요.');
@@ -593,8 +690,33 @@ const BacktestRunner: React.FC = () => {
           최대 손실: ${result.results.max_drawdown}%`);
         setIsRunning(false);
         
-        // 결과를 state에 저장 (선택사항)
-        setBacktestResults(result.results);
+        // 결과를 state에 저장하고 상세 정보 포맷팅
+        const formattedResult = {
+          id: result.backtest_id,
+          strategy_name: strategies.find(s => s.id === config.strategyId)?.name || '알 수 없음',
+          start_date: config.startDate.toISOString().split('T')[0],
+          end_date: config.endDate.toISOString().split('T')[0],
+          initial_capital: config.initialCapital,
+          final_capital: result.results.final_capital || config.initialCapital * (1 + result.results.total_return / 100),
+          total_return: result.results.total_return || 0,
+          annual_return: result.results.annual_return || 0,
+          max_drawdown: result.results.max_drawdown || 0,
+          win_rate: result.results.win_rate || 0,
+          total_trades: result.results.total_trades || 0,
+          winning_trades: result.results.winning_trades || 0,
+          losing_trades: result.results.losing_trades || 0,
+          sharpe_ratio: result.results.sharpe_ratio || 0,
+          volatility: result.results.volatility || 0,
+          trades: result.results.trades || [],
+          daily_returns: result.results.daily_returns || [],
+          strategy_config: strategies.find(s => s.id === config.strategyId)?.parameters || {},
+          investment_config: currentFilters || {},
+          filtering_config: filteringMode || {},
+        };
+        
+        setBacktestResults(formattedResult);
+        // 결과 다이얼로그 자동 표시
+        setShowResultDialog(true);
       } else {
         // 비동기 백테스트인 경우 진행 상황 모니터링 (향후 구현)
         const subscription = BacktestService.subscribeToBacktestProgress(
@@ -661,35 +783,128 @@ const BacktestRunner: React.FC = () => {
     navigate('/backtest/results');
   };
 
+  const saveBacktestResult = async () => {
+    if (!backtestResults) return;
+
+    setIsSaving(true);
+    try {
+      const strategy = strategies.find(s => s.id === config.strategyId);
+      
+      // 실제 테이블 스키마에 맞춰서 데이터 구성
+      const resultToSave = {
+        strategy_id: config.strategyId,
+        strategy_name: strategy?.name || 'Unknown',
+        start_date: config.startDate?.toISOString().split('T')[0] || '',
+        end_date: config.endDate?.toISOString().split('T')[0] || '',
+        test_period_start: config.startDate?.toISOString().split('T')[0],
+        test_period_end: config.endDate?.toISOString().split('T')[0],
+        initial_capital: config.initialCapital,
+        final_capital: backtestResults.final_capital || (config.initialCapital + (backtestResults.total_return * config.initialCapital / 100)),
+        total_return: backtestResults.total_return,
+        max_drawdown: backtestResults.max_drawdown,
+        sharpe_ratio: backtestResults.sharpe_ratio || null,
+        win_rate: backtestResults.win_rate || null,
+        total_trades: backtestResults.total_trades || 0,
+        profitable_trades: backtestResults.winning_trades || 0,
+        winning_trades: backtestResults.winning_trades || 0,
+        losing_trades: backtestResults.losing_trades || 0,
+        avg_profit: backtestResults.avg_profit || null,
+        avg_loss: backtestResults.avg_loss || null,
+        profit_factor: backtestResults.profit_factor || null,
+        recovery_factor: backtestResults.recovery_factor || null,
+        // JSONB 필드들
+        results_data: {
+          strategy_config: backtestResults.strategy_config || {},
+          investment_config: {
+            initial_capital: config.initialCapital,
+            commission: config.commission,
+            slippage: config.slippage,
+            data_interval: config.dataInterval
+          },
+          filter_config: currentFilters || {},
+          filtering_mode: filteringMode,
+          stock_codes: config.stockCodes,
+          filter_id: currentFilterId,
+          volatility: backtestResults.volatility || 0,
+          annual_return: backtestResults.annual_return || 0
+        },
+        trade_details: backtestResults.trades || [],
+        daily_returns: backtestResults.daily_returns || []
+      };
+
+      const { data, error } = await backtestStorageService.saveResult(resultToSave);
+      
+      if (error) {
+        throw error;
+      }
+
+      setSavedResultId(data.id);
+      setSuccess('백테스트 결과가 저장되었습니다.');
+    } catch (err: any) {
+      console.error('Failed to save backtest result:', err);
+      setError('결과 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const navigateToComparison = () => {
+    // 결과 비교 탭으로 이동 (index 3)
+    const tabEvent = new CustomEvent('changeTab', { detail: { tab: 3 } });
+    window.dispatchEvent(tabEvent);
+  };
+
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          백테스트 실행
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          전략빌더에서 생성한 전략을 선택하여 백테스트를 실행할 수 있습니다.
-        </Typography>
+      {/* 탭 메뉴 */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={currentSubTab} onChange={(e, newValue) => setCurrentSubTab(newValue)}>
+          <Tab label="백테스트 실행" icon={<PlayArrowIcon />} iconPosition="start" />
+          <Tab label="결과 보기" icon={<AssessmentIcon />} iconPosition="start" />
+        </Tabs>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+      {/* 탭 컨텐츠 */}
+      {currentSubTab === 0 ? (
+        // 백테스트 실행 탭
+        <Box>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h5" gutterBottom>
+              백테스트 실행
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              전략빌더에서 생성한 전략을 선택하여 백테스트를 실행할 수 있습니다.
+            </Typography>
+          </Box>
 
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
 
-      {/* 전략 선택 카드 */}
-      <Card sx={{ mb: 3 }}>
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+              {success}
+            </Alert>
+          )}
+
+          {/* 전략 선택 카드 */}
+          <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            전략 선택
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              전략 선택
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<StyleIcon />}
+              onClick={() => setShowTemplateDialog(true)}
+              disabled={isRunning}
+            >
+              템플릿에서 선택
+            </Button>
+          </Box>
           <FormControl fullWidth>
             <InputLabel id="strategy-select-label">전략 선택</InputLabel>
             <Select
@@ -963,6 +1178,38 @@ const BacktestRunner: React.FC = () => {
                         결과 보기
                       </Button>
                     )}
+                    {backtestResults && (
+                      <>
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          size="large"
+                          startIcon={<AssessmentIcon />}
+                          onClick={() => setShowResultDialog(true)}
+                        >
+                          상세 결과 보기
+                        </Button>
+                        {!savedResultId && (
+                          <Button
+                            variant="outlined"
+                            size="large"
+                            startIcon={<SaveIcon />}
+                            onClick={saveBacktestResult}
+                            disabled={isSaving}
+                          >
+                            {isSaving ? '저장 중...' : '결과 저장'}
+                          </Button>
+                        )}
+                        <Button
+                          variant="outlined"
+                          size="large"
+                          startIcon={<CompareArrowsIcon />}
+                          onClick={navigateToComparison}
+                        >
+                          결과 비교
+                        </Button>
+                      </>
+                    )}
                   </>
                 ) : (
                   <Button
@@ -1057,6 +1304,121 @@ const BacktestRunner: React.FC = () => {
         onClose={() => setShowLoadFilterDialog(false)}
         onLoadFilter={handleFilterLoad}
       />
+
+      {/* 템플릿 선택 다이얼로그 */}
+      <Dialog
+        open={showTemplateDialog}
+        onClose={() => setShowTemplateDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            전략 템플릿 선택
+            <IconButton onClick={() => setShowTemplateDialog(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            검증된 전략 템플릿을 선택하여 백테스트를 진행하세요
+          </Typography>
+          <Grid container spacing={2}>
+            {STRATEGY_TEMPLATES.map((template) => (
+              <Grid item xs={12} sm={6} md={4} key={template.id}>
+                <Card 
+                  sx={{ 
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    border: selectedTemplate?.id === template.id ? 2 : 0,
+                    borderColor: 'primary.main',
+                    '&:hover': { 
+                      transform: 'translateY(-4px)',
+                      boxShadow: 3 
+                    }
+                  }}
+                  onClick={() => setSelectedTemplate(template)}
+                >
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
+                      <Typography variant="h6">
+                        {template.name}
+                      </Typography>
+                      <Chip 
+                        label={template.difficulty === 'beginner' ? '초급' :
+                               template.difficulty === 'intermediate' ? '중급' :
+                               template.difficulty === 'advanced' ? '고급' : '전문가'}
+                        size="small"
+                        color={template.difficulty === 'beginner' ? 'success' :
+                               template.difficulty === 'intermediate' ? 'warning' :
+                               template.difficulty === 'advanced' ? 'error' : 'error'}
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      {template.description}
+                    </Typography>
+                    <Chip 
+                      label={template.type === 'complex' ? '3단계 전략' : '기본 전략'}
+                      size="small"
+                      variant="outlined"
+                      color={template.type === 'complex' ? 'secondary' : 'primary'}
+                    />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowTemplateDialog(false)}>
+            취소
+          </Button>
+          <Button 
+            onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
+            variant="contained"
+            disabled={!selectedTemplate}
+          >
+            템플릿 적용
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 백테스트 결과 다이얼로그 */}
+      <Dialog
+        open={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        maxWidth="xl"
+        fullWidth
+        PaperProps={{
+          sx: { minHeight: '80vh' }
+        }}
+      >
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h5">백테스트 결과</Typography>
+            <IconButton onClick={() => setShowResultDialog(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {backtestResults && (
+            <BacktestResultViewer
+              result={backtestResults}
+              onRefresh={() => {
+                // 필요시 결과 새로고침 로직 추가
+                console.log('Refreshing backtest results...');
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+        </Box>
+      ) : (
+        // 결과 보기 탭
+        <BacktestComparison />
+      )}
     </Box>
   );
 };

@@ -1,0 +1,163 @@
+# 하이브리드 자동매매 시스템 Docker 구성
+# 시놀로지 NAS와 Windows 양쪽 지원
+
+version: '3.8'
+
+services:
+  # 1. REST API 기반 백엔드 (NAS/Linux용)
+  trading-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.api
+    container_name: kiwoom-rest-api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      # API 타입 강제 지정
+      - KIWOOM_API_TYPE=rest
+      
+      # 키움 REST API 설정
+      - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
+      - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}
+      - KIWOOM_ACCOUNT_NO=${KIWOOM_ACCOUNT_NO}
+      - KIWOOM_IS_DEMO=${KIWOOM_IS_DEMO:-true}
+      - KIWOOM_API_URL=https://openapi.kiwoom.com:9443
+      
+      # Supabase 설정
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      
+      # 운영 설정
+      - ENVIRONMENT=production
+      - TZ=Asia/Seoul
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./strategies:/app/strategies
+    networks:
+      - trading-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 2. 프론트엔드 (React)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: trading-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://trading-api:8000
+      - VITE_SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+    networks:
+      - trading-network
+    depends_on:
+      - trading-api
+
+  # 3. Redis (캐시 및 세션)
+  redis:
+    image: redis:7-alpine
+    container_name: trading-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - trading-network
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # 4. PostgreSQL (로컬 백업용 - 선택사항)
+  postgres:
+    image: postgres:15-alpine
+    container_name: trading-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=trading
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-trading123}
+      - POSTGRES_DB=auto_trading
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./supabase:/docker-entrypoint-initdb.d
+    networks:
+      - trading-network
+
+  # 5. Nginx (리버스 프록시)
+  nginx:
+    image: nginx:alpine
+    container_name: trading-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    networks:
+      - trading-network
+    depends_on:
+      - frontend
+      - trading-api
+
+  # 6. 모니터링 - Prometheus (선택사항)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: trading-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - trading-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  # 7. 모니터링 - Grafana (선택사항)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: trading-grafana
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=redis-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    networks:
+      - trading-network
+    depends_on:
+      - prometheus
+
+volumes:
+  redis-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  trading-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

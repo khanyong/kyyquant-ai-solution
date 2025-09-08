@@ -79,12 +79,14 @@ interface StageBasedStrategyProps {
   type: 'buy' | 'sell'
   availableIndicators: any[]
   onStrategyChange?: (strategy: StageStrategy) => void
+  initialStrategy?: any  // 초기 전략 설정을 받기 위한 prop
 }
 
 const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
   type,
   availableIndicators,
-  onStrategyChange
+  onStrategyChange,
+  initialStrategy
 }) => {
   const [strategy, setStrategy] = useState<StageStrategy>({
     type,
@@ -106,6 +108,82 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
     value: 30,
     combineWith: 'AND'
   })
+
+  // initialStrategy가 제공될 때 state 업데이트
+  useEffect(() => {
+    if (initialStrategy) {
+      // stage1, stage2, stage3 형식을 stages 배열로 변환
+      if (initialStrategy.stage1 || initialStrategy.stage2 || initialStrategy.stage3) {
+        const newStages: Stage[] = []
+        
+        if (initialStrategy.stage1) {
+          const indicators = initialStrategy.stage1.conditions?.map((cond: any, idx: number) => ({
+            id: `s1-${idx}`,
+            indicatorId: cond.indicator,
+            name: cond.indicator,
+            operator: cond.operator,
+            value: cond.value,
+            combineWith: 'AND'
+          })) || []
+          
+          newStages.push({
+            stage: 1,
+            enabled: true,
+            indicators,
+            passAllRequired: true
+          })
+        } else {
+          newStages.push({ stage: 1, enabled: false, indicators: [], passAllRequired: true })
+        }
+        
+        if (initialStrategy.stage2) {
+          const indicators = initialStrategy.stage2.conditions?.map((cond: any, idx: number) => ({
+            id: `s2-${idx}`,
+            indicatorId: cond.indicator,
+            name: cond.indicator,
+            operator: cond.operator,
+            value: cond.value,
+            combineWith: 'AND'
+          })) || []
+          
+          newStages.push({
+            stage: 2,
+            enabled: true,
+            indicators,
+            passAllRequired: true
+          })
+        } else {
+          newStages.push({ stage: 2, enabled: false, indicators: [], passAllRequired: true })
+        }
+        
+        if (initialStrategy.stage3 && initialStrategy.stage3.conditions?.length > 0) {
+          const indicators = initialStrategy.stage3.conditions?.map((cond: any, idx: number) => ({
+            id: `s3-${idx}`,
+            indicatorId: cond.indicator,
+            name: cond.indicator,
+            operator: cond.operator,
+            value: cond.value,
+            combineWith: 'AND'
+          })) || []
+          
+          newStages.push({
+            stage: 3,
+            enabled: true,
+            indicators,
+            passAllRequired: true
+          })
+        } else {
+          newStages.push({ stage: 3, enabled: false, indicators: [], passAllRequired: true })
+        }
+        
+        setStrategy({
+          type,
+          stages: newStages,
+          usedIndicators: new Set()
+        })
+      }
+    }
+  }, [initialStrategy, type])
 
   useEffect(() => {
     if (onStrategyChange) {

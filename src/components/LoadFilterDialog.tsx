@@ -107,10 +107,12 @@ const LoadFilterDialog: React.FC<LoadFilterDialogProps> = ({
           return
         }
 
+        // 개발 모드: 모든 사용자의 필터를 불러옴
+        // 프로덕션에서는 .eq('user_id', user.id) 추가 필요
         const { data, error: fetchError } = await supabase
           .from('kw_investment_filters')
           .select('*')
-          .eq('user_id', user.id)
+          // .eq('user_id', user.id)  // 개발 중 주석 처리 - 모든 사용자 필터 조회
           .eq('is_active', true)
           .order('created_at', { ascending: false })
 
@@ -119,7 +121,12 @@ const LoadFilterDialog: React.FC<LoadFilterDialogProps> = ({
           setError('클라우드 필터를 불러오는 중 오류가 발생했습니다.')
           setCloudFilters([])
         } else {
-          setCloudFilters(data || [])
+          // 사용자 정보 추가
+          const filtersWithUserInfo = (data || []).map(filter => ({
+            ...filter,
+            isOwn: filter.user_id === user.id  // 자신의 필터인지 표시
+          }))
+          setCloudFilters(filtersWithUserInfo)
         }
       }
     } catch (err) {
@@ -301,6 +308,14 @@ const LoadFilterDialog: React.FC<LoadFilterDialogProps> = ({
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {filter.name}
+                        {!filter.isOwn && (
+                          <Chip 
+                            label="공유" 
+                            size="small" 
+                            color="info" 
+                            variant="outlined"
+                          />
+                        )}
                         {filter.is_favorite && (
                           <Star sx={{ fontSize: 16, color: 'warning.main' }} />
                         )}
@@ -346,7 +361,7 @@ const LoadFilterDialog: React.FC<LoadFilterDialogProps> = ({
                   />
                   <ListItemSecondaryAction>
                     <Stack direction="row" spacing={1}>
-                      {activeTab === 1 && (
+                      {activeTab === 1 && filter.isOwn && (
                         <IconButton
                           size="small"
                           onClick={() => handleToggleFavorite(filter.id, !!filter.is_favorite)}
@@ -354,12 +369,14 @@ const LoadFilterDialog: React.FC<LoadFilterDialogProps> = ({
                           {filter.is_favorite ? <Star color="warning" /> : <StarBorder />}
                         </IconButton>
                       )}
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteFilter(filter.id, activeTab === 0)}
-                      >
-                        <Delete />
-                      </IconButton>
+                      {(activeTab === 0 || filter.isOwn) && (  // 로컬이거나 자신의 필터만 삭제 가능
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteFilter(filter.id, activeTab === 0)}
+                        >
+                          <Delete />
+                        </IconButton>
+                      )}
                     </Stack>
                   </ListItemSecondaryAction>
                 </ListItem>

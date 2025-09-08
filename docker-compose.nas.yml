@@ -1,0 +1,106 @@
+# 시놀로지 NAS용 Docker Compose 설정
+# REST API 기반 자동매매 시스템
+
+version: '3.8'
+
+services:
+  # Python 백엔드 (키움 REST API 연동)
+  trading-backend:
+    image: python:3.9-slim
+    container_name: auto-trading-backend
+    restart: always
+    working_dir: /app
+    command: python main.py
+    ports:
+      - "8000:8000"
+    environment:
+      # 키움증권 REST API
+      - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
+      - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}
+      - KIWOOM_ACCOUNT_NO=${KIWOOM_ACCOUNT_NO}
+      - KIWOOM_API_URL=https://openapi.kiwoom.com:9443
+      
+      # Supabase
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      
+      # 운영 모드
+      - ENVIRONMENT=production
+      - TZ=Asia/Seoul
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # React 프론트엔드
+  trading-frontend:
+    image: node:18-alpine
+    container_name: auto-trading-frontend
+    restart: always
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    depends_on:
+      - trading-backend
+
+  # Redis (캐시 및 세션 관리)
+  redis:
+    image: redis:7-alpine
+    container_name: auto-trading-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+
+  # PostgreSQL (로컬 데이터베이스 - 선택사항)
+  postgres:
+    image: postgres:15-alpine
+    container_name: auto-trading-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=trading
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=auto_trading
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+
+  # Nginx (리버스 프록시)
+  nginx:
+    image: nginx:alpine
+    container_name: auto-trading-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - trading-frontend
+      - trading-backend
+
+volumes:
+  redis-data:
+  postgres-data:
+
+networks:
+  default:
+    name: auto-trading-network

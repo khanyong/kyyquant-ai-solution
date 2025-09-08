@@ -1,0 +1,33 @@
+# REST API 백엔드용 Dockerfile
+# 시놀로지 NAS 및 Linux 환경용
+
+FROM python:3.9-slim
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# 시스템 패키지 업데이트 및 필수 도구 설치
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 패키지 설치
+COPY requirements-api.txt .
+RUN pip install --no-cache-dir -r requirements-api.txt
+
+# 애플리케이션 파일 복사
+COPY kiwoom_api_interface.py .
+COPY kiwoom_rest_impl.py .
+COPY kiwoom_hybrid_manager.py .
+COPY main_hybrid.py .
+
+# 헬스체크 스크립트
+COPY health_check.py .
+
+# 포트 노출
+EXPOSE 8000
+
+# 실행 명령
+CMD ["python", "main_hybrid.py"]

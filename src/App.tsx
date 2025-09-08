@@ -20,7 +20,8 @@ import {
   Speed,
   Settings,
   TrendingUp,
-  Announcement
+  Announcement,
+  CompareArrows
 } from '@mui/icons-material'
 import Header from './components/common/Header'
 import LoginDialog from './components/common/LoginDialog'
@@ -29,10 +30,12 @@ import UnifiedStrategyBuilder from './components/UnifiedStrategyBuilder'
 import InvestmentUniverse from './components/InvestmentUniverse'
 import BacktestResults from './components/BacktestResults'
 import BacktestRunner from './components/BacktestRunner'
+import BacktestComparison from './components/backtest/BacktestComparison'
 import SignalMonitor from './components/SignalMonitor'
 import PerformanceDashboard from './components/PerformanceDashboard'
 import TradingSettings from './components/TradingSettings'
 import TestSupabase from './components/test/TestSupabase'
+import TestBacktestTable from './components/test/TestBacktestTable'
 import AutoTradingPanel from './components/trading/AutoTradingPanel'
 import OrderPanel from './components/trading/OrderPanel'
 import PortfolioPanel from './components/trading/PortfolioPanel'
@@ -93,6 +96,15 @@ function App() {
     if (isConnected) {
       // connectWebSocket() // Removed - using Supabase instead
     }
+
+    // Tab change event listener
+    const handleTabChange = (event: CustomEvent) => {
+      if (event.detail && typeof event.detail.tab === 'number') {
+        setCurrentTab(event.detail.tab)
+      }
+    }
+
+    window.addEventListener('changeTab', handleTabChange as any)
 
     // Supabase Auth 상태 모니터링
     const { data: authListener } = authService.onAuthStateChange(async (user) => {
@@ -161,6 +173,7 @@ function App() {
 
     return () => {
       authListener?.subscription.unsubscribe()
+      window.removeEventListener('changeTab', handleTabChange as any)
     }
   }, [isConnected, dispatch])
 
@@ -380,6 +393,7 @@ function App() {
             
             <TabPanel value={currentTab} index={6}>
               <Stack spacing={3}>
+                <TestBacktestTable />
                 <TestInvestmentUniverse />
                 <InvestmentUniverse />
                 <AdminApprovalPanel />
