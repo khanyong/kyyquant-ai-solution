@@ -458,8 +458,10 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
   const saveStrategy = async () => {
     // 현재 사용자 가져오기
     const user = await authService.getCurrentUser()
-    if (!user) {
-      alert('로그인이 필요합니다.')
+    if (!user || !user.id) {
+      alert('전략을 저장하려면 로그인이 필요합니다.\n로그인 후 다시 시도해주세요.')
+      // 로그인 페이지로 이동하거나 로그인 모달 표시
+      window.location.href = '/login'
       return null
     }
     // 디버그용 콘솔 로그
@@ -584,7 +586,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         is_test_mode: false,
         auto_trade_enabled: false,
         position_size: strategy.riskManagement.positionSize || 10,
-        user_id: user?.id || 'f912da32-897f-4dbb-9242-3a438e9733a8'  // 현재 사용자 ID
+        user_id: user?.id  // 현재 사용자 ID (필수)
       }
       
       // 데이터 정리 (undefined -> null 변환)
@@ -645,12 +647,14 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     try {
       // 현재 사용자 가져오기
       const user = await authService.getCurrentUser()
-      if (!user) {
-        console.warn('User not logged in')
+      if (!user || !user.id) {
+        console.warn('User not logged in - cannot load strategies')
         setSavedStrategies([])
         return
       }
 
+      console.log('Loading strategies for user:', user.id)
+      
       const { data, error } = await supabase
         .from('strategies')
         .select('*')
