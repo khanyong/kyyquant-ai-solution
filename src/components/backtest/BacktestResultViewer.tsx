@@ -86,12 +86,16 @@ interface BacktestResult {
 
 interface Trade {
   date: string;
-  stock_code: string;
-  stock_name: string;
+  stock_code?: string;
+  stock_name?: string;
+  code?: string;  // 백엔드에서 사용하는 필드
   action: 'buy' | 'sell';
-  quantity: number;
+  quantity?: number;
+  shares?: number;  // 백엔드에서 사용하는 필드  
   price: number;
-  amount: number;
+  amount?: number;
+  cost?: number;  // 백엔드에서 사용하는 필드 (매수)
+  revenue?: number;  // 백엔드에서 사용하는 필드 (매도)
   profit_loss?: number;
   profit_rate?: number;
 }
@@ -334,9 +338,9 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                       <TableCell>{trade.date}</TableCell>
                       <TableCell>
                         <Stack>
-                          <Typography variant="body2">{trade.stock_name}</Typography>
+                          <Typography variant="body2">{trade.stock_name || '종목'}</Typography>
                           <Typography variant="caption" color="textSecondary">
-                            {trade.stock_code}
+                            {trade.stock_code || trade.code || ''}
                           </Typography>
                         </Stack>
                       </TableCell>

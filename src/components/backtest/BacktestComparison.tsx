@@ -102,6 +102,8 @@ interface BacktestRecord {
   selected?: boolean;
   visible?: boolean;
   color?: string;
+  annual_return?: number;  // 연간 수익률 추가
+  results?: any;  // results 필드 추가
 }
 
 const COLORS = [
@@ -270,7 +272,7 @@ const BacktestComparison: React.FC = () => {
     // 검색어 필터
     if (searchTerm) {
       filtered = filtered.filter(record =>
-        record.strategy_name.toLowerCase().includes(searchTerm.toLowerCase())
+        record.strategy_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -350,8 +352,8 @@ const BacktestComparison: React.FC = () => {
           label: record.strategy_name,
           data: [
             record.total_return,
-            record.win_rate,
-            record.sharpe_ratio * 20,
+            record.win_rate || 0,
+            (record.sharpe_ratio || 0) * 20,
             Math.abs(record.max_drawdown),
             record.total_trades / 2,
           ],
@@ -376,8 +378,8 @@ const BacktestComparison: React.FC = () => {
           label: record.strategy_name,
           data: [
             record.total_return,
-            record.win_rate,
-            record.sharpe_ratio * 10,
+            record.win_rate || 0,
+            (record.sharpe_ratio || 0) * 10,
             Math.abs(record.max_drawdown),
           ],
           backgroundColor: chartType === 'bar' ? `${record.color}99` : record.color,
@@ -725,7 +727,7 @@ const BacktestComparison: React.FC = () => {
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {selectedRecords.find(r => 
-                    r.win_rate === Math.max(...selectedRecords.map(r => r.win_rate))
+                    r.win_rate === Math.max(...selectedRecords.map(r => r.win_rate || 0))
                   )?.strategy_name}
                 </Typography>
               </Grid>
@@ -738,7 +740,7 @@ const BacktestComparison: React.FC = () => {
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {selectedRecords.find(r => 
-                    r.sharpe_ratio === Math.max(...selectedRecords.map(r => r.sharpe_ratio))
+                    r.sharpe_ratio === Math.max(...selectedRecords.map(r => r.sharpe_ratio || 0))
                   )?.strategy_name}
                 </Typography>
               </Grid>

@@ -26,8 +26,8 @@ const TestBacktestTable: React.FC = () => {
       // 전체 테이블 구조 확인
       const tableCheckResult = await checkBacktestResultsTable();
       
-      if (tableCheckResult.error) {
-        setError(`테이블 확인 오류: ${tableCheckResult.error.message || tableCheckResult.error}`);
+      if ('error' in tableCheckResult) {
+        setError(`테이블 확인 오류: ${tableCheckResult.error}`);
         return;
       }
 
@@ -46,7 +46,7 @@ const TestBacktestTable: React.FC = () => {
         setSampleData(data || []);
         
         // 테이블 구조 검증
-        const validation = tableCheckResult.columns ? 
+        const validation = 'columns' in tableCheckResult && tableCheckResult.columns ? 
           validateTableStructure(tableCheckResult.columns) : 
           { isValid: false, missingColumns: [], extraColumns: [] };
         

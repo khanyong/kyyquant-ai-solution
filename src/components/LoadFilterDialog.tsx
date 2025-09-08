@@ -55,6 +55,7 @@ interface SavedFilter {
   created_at?: string
   is_favorite?: boolean
   usage_count?: number
+  isOwn?: boolean  // 자신의 필터인지 여부
 }
 
 interface LoadFilterDialogProps {
