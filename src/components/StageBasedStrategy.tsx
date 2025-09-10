@@ -49,7 +49,8 @@ import {
   LockOpen,
   Layers,
   ArrowDownward,
-  ArrowUpward
+  ArrowUpward,
+  Percent
 } from '@mui/icons-material'
 
 interface StageIndicator {
@@ -67,6 +68,7 @@ interface Stage {
   enabled: boolean
   indicators: StageIndicator[]
   passAllRequired: boolean // true: 모든 지표 통과 필요, false: 하나만 통과
+  positionPercent: number // 이 단계에서 매수/매도할 비율 (%)
 }
 
 interface StageStrategy {
@@ -91,9 +93,9 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
   const [strategy, setStrategy] = useState<StageStrategy>({
     type,
     stages: [
-      { stage: 1, enabled: true, indicators: [], passAllRequired: true },
-      { stage: 2, enabled: false, indicators: [], passAllRequired: true },
-      { stage: 3, enabled: false, indicators: [], passAllRequired: true }
+      { stage: 1, enabled: true, indicators: [], passAllRequired: true, positionPercent: 30 },
+      { stage: 2, enabled: false, indicators: [], passAllRequired: true, positionPercent: 30 },
+      { stage: 3, enabled: false, indicators: [], passAllRequired: true, positionPercent: 40 }
     ],
     usedIndicators: new Set()
   })
@@ -130,10 +132,11 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
             stage: 1,
             enabled: true,
             indicators,
-            passAllRequired: true
+            passAllRequired: true,
+            positionPercent: initialStrategy.stage1.positionPercent || 30
           })
         } else {
-          newStages.push({ stage: 1, enabled: false, indicators: [], passAllRequired: true })
+          newStages.push({ stage: 1, enabled: false, indicators: [], passAllRequired: true, positionPercent: 30 })
         }
         
         if (initialStrategy.stage2) {
@@ -150,10 +153,11 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
             stage: 2,
             enabled: true,
             indicators,
-            passAllRequired: true
+            passAllRequired: true,
+            positionPercent: initialStrategy.stage2.positionPercent || 30
           })
         } else {
-          newStages.push({ stage: 2, enabled: false, indicators: [], passAllRequired: true })
+          newStages.push({ stage: 2, enabled: false, indicators: [], passAllRequired: true, positionPercent: 30 })
         }
         
         if (initialStrategy.stage3 && initialStrategy.stage3.conditions?.length > 0) {
@@ -170,10 +174,11 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
             stage: 3,
             enabled: true,
             indicators,
-            passAllRequired: true
+            passAllRequired: true,
+            positionPercent: initialStrategy.stage3.positionPercent || 40
           })
         } else {
-          newStages.push({ stage: 3, enabled: false, indicators: [], passAllRequired: true })
+          newStages.push({ stage: 3, enabled: false, indicators: [], passAllRequired: true, positionPercent: 40 })
         }
         
         setStrategy({
@@ -304,6 +309,13 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
   const togglePassAllRequired = (stageNum: number) => {
     const newStages = [...strategy.stages]
     newStages[stageNum - 1].passAllRequired = !newStages[stageNum - 1].passAllRequired
+    setStrategy({ ...strategy, stages: newStages })
+  }
+
+  const updateStagePercent = (stageNum: number, percent: number) => {
+    const newStages = [...strategy.stages]
+    // 각 단계는 0-100% 사이의 값을 가질 수 있음
+    newStages[stageNum - 1].positionPercent = Math.min(100, Math.max(0, percent))
     setStrategy({ ...strategy, stages: newStages })
   }
 
@@ -638,12 +650,46 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
           {type === 'buy' ? '매수' : '매도'} 조건 - 3단계 전략
         </Typography>
         
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            각 단계별로 최대 5개의 지표를 설정할 수 있으며, 1단계를 통과해야 2단계가 평가됩니다.
-            이미 사용된 지표는 다른 단계에서 선택할 수 없습니다.
-          </Typography>
-        </Alert>
+        <Stack spacing={2} sx={{ mb: 3 }}>
+          <Alert severity="info">
+            <Typography variant="body2">
+              각 단계별로 최대 5개의 지표를 설정할 수 있으며, 각 단계는 <strong>현재 남은 자본(포지션)</strong>의 비율로 {type === 'buy' ? '매수' : '매도'}합니다.
+              예: 1단계 50% → 2단계 50% = 전체 자본의 75% {type === 'buy' ? '매수' : '매도'} (50% + 남은 50%의 50%)
+            </Typography>
+          </Alert>
+          
+          {/* 단계별 비율 설명 */}
+          {(() => {
+            const enabledStages = strategy.stages.filter(s => s.enabled)
+            if (enabledStages.length === 0) return null
+            
+            let remainingPercent = 100
+            let cumulativePercent = 0
+            
+            return (
+              <Alert severity="info">
+                <Typography variant="body2" gutterBottom>
+                  <strong>단계별 {type === 'buy' ? '매수' : '매도'} 시뮬레이션:</strong>
+                </Typography>
+                {enabledStages.map((stage, idx) => {
+                  const stageAmount = (remainingPercent * stage.positionPercent) / 100
+                  cumulativePercent += stageAmount
+                  const result = (
+                    <Typography key={idx} variant="caption" display="block" sx={{ mt: 0.5 }}>
+                      {stage.stage}단계: 남은 {remainingPercent.toFixed(1)}%의 {stage.positionPercent}% = {stageAmount.toFixed(1)}% 
+                      (누적: {cumulativePercent.toFixed(1)}%)
+                    </Typography>
+                  )
+                  remainingPercent -= stageAmount
+                  return result
+                })}
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, fontWeight: 'bold' }}>
+                  최종 남은 {type === 'buy' ? '자본' : '포지션'}: {remainingPercent.toFixed(1)}%
+                </Typography>
+              </Alert>
+            )
+          })()}
+        </Stack>
 
         {/* 3개 단계 표시 */}
         {strategy.stages.map((stage, index) => {
@@ -692,6 +738,29 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
                       color={stage.passAllRequired ? 'primary' : 'secondary'}
                       variant="outlined"
                     />
+                  )}
+
+                  {/* 단계별 매수/매도 비율 표시 */}
+                  {stage.enabled && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                      <Percent fontSize="small" color="action" />
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={stage.positionPercent}
+                        onChange={(e) => updateStagePercent(stageNum, Number(e.target.value))}
+                        inputProps={{ 
+                          min: 0, 
+                          max: 100, 
+                          step: 5,
+                          style: { width: '60px', textAlign: 'right' }
+                        }}
+                        InputProps={{
+                          endAdornment: <Typography variant="body2">%</Typography>
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </Box>
                   )}
 
                   {!canEnable && (
