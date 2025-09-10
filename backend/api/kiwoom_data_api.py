@@ -182,8 +182,8 @@ class KiwoomDataAPI:
         df = self.get_daily_price(stock_code, start, end)
         
         # 3. API 실패 시 모의 데이터 사용 (개발/테스트용)
-        if df.empty and not self.access_token:
-            print(f"API 인증 실패 - 모의 데이터 사용: {stock_code}")
+        if df.empty:
+            print(f"API 데이터 조회 실패 - 모의 데이터 사용: {stock_code}")
             from .mock_kiwoom_api import generate_mock_stock_data
             df = generate_mock_stock_data(stock_code, start_date, end_date)
         

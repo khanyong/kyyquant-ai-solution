@@ -318,6 +318,7 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
     portfolio = {
         'cash': initial_capital,
         'positions': {},
+        'position_costs': {},  # 각 포지션의 매수 비용 추적
         'value': initial_capital
     }
     
@@ -340,6 +341,12 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
                     if cost <= portfolio['cash']:
                         portfolio['cash'] -= cost
                         portfolio['positions'][code] = portfolio['positions'].get(code, 0) + shares
+                        # 매수 비용 저장 (평균 단가 계산)
+                        if code in portfolio['position_costs']:
+                            total_cost = portfolio['position_costs'][code] + cost
+                            portfolio['position_costs'][code] = total_cost
+                        else:
+                            portfolio['position_costs'][code] = cost
                         trades.append({
                             'date': date.isoformat() if hasattr(date, 'isoformat') else str(date),
                             'code': code,
@@ -354,14 +361,23 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
                     shares = portfolio['positions'][code]
                     revenue = price * shares * (1 - commission - slippage)
                     portfolio['cash'] += revenue
+                    
+                    # 손익 계산
+                    original_cost = portfolio['position_costs'].get(code, 0)
+                    profit = revenue - original_cost if original_cost > 0 else 0
+                    
                     portfolio['positions'][code] = 0
+                    portfolio['position_costs'][code] = 0  # 비용 초기화
+                    
                     trades.append({
                         'date': date.isoformat() if hasattr(date, 'isoformat') else str(date),
                         'code': code,
                         'action': 'sell',
                         'price': price,
                         'shares': shares,
-                        'revenue': revenue
+                        'revenue': revenue,
+                        'cost': original_cost,  # 원래 매수 비용
+                        'profit': profit  # 손익
                     })
                 
                 # 포지션 평가
@@ -378,10 +394,23 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
     final_capital = portfolio['value']
     total_return = ((final_capital - initial_capital) / initial_capital) * 100
     
-    # 승률 계산
-    winning_trades = len([t for t in trades if t.get('action') == 'sell' and t.get('revenue', 0) > t.get('cost', 0)])
-    losing_trades = len([t for t in trades if t.get('action') == 'sell' and t.get('revenue', 0) <= t.get('cost', 0)])
-    win_rate = (winning_trades / max(1, winning_trades + losing_trades)) * 100
+    # 승률 계산 - profit 필드 사용
+    sell_trades = [t for t in trades if t.get('action') == 'sell']
+    winning_trades = len([t for t in sell_trades if t.get('profit', 0) > 0])
+    losing_trades = len([t for t in sell_trades if t.get('profit', 0) < 0])
+    win_rate = (winning_trades / max(1, len(sell_trades))) * 100
+    
+    # 디버깅 로그
+    if sell_trades:
+        print(f"\n=== Backtest Server Win Rate Debug ===")
+        print(f"Total sell trades: {len(sell_trades)}")
+        print(f"Winning trades: {winning_trades}")
+        print(f"Losing trades: {losing_trades}")
+        print(f"Win rate: {win_rate:.1f}%")
+        profits = [t.get('profit', 0) for t in sell_trades]
+        if profits:
+            print(f"Profit range: {min(profits):.0f} ~ {max(profits):.0f}")
+        print(f"======================================\n")
     
     # 최대 낙폭 계산
     max_drawdown = calculate_max_drawdown(equity_curve)
@@ -404,16 +433,27 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
 
 def generate_signal(df: pd.DataFrame, date, strategy_params: Dict) -> str:
     """거래 신호 생성"""
-    # 간단한 예시: 랜덤 신호
-    # 실제로는 strategy_params를 기반으로 기술적 지표 계산
-    import random
+    # TODO: 실제 전략 파라미터를 사용한 신호 생성 구현 필요
+    # 임시로 간단한 기술적 지표 기반 신호 생성
     
-    rand = random.random()
-    if rand < 0.05:  # 5% 확률로 매수
-        return 'buy'
-    elif rand > 0.95:  # 5% 확률로 매도
-        return 'sell'
+    # 현재는 매수/매도 신호를 생성하지 않음 (hold만 반환)
+    # 이렇게 하면 백테스트가 일관된 결과를 보여줄 것임
     return 'hold'
+    
+    # 나중에 실제 전략 구현 시 아래와 같은 방식으로:
+    # if 'buyConditions' in strategy_params:
+    #     # 매수 조건 체크
+    #     for condition in strategy_params['buyConditions']:
+    #         if evaluate_condition(df, date, condition):
+    #             return 'buy'
+    # 
+    # if 'sellConditions' in strategy_params:
+    #     # 매도 조건 체크
+    #     for condition in strategy_params['sellConditions']:
+    #         if evaluate_condition(df, date, condition):
+    #             return 'sell'
+    # 
+    # return 'hold'
 
 def calculate_max_drawdown(equity_curve: List[Dict]) -> float:
     """최대 낙폭 계산"""

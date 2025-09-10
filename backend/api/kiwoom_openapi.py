@@ -14,11 +14,15 @@ try:
     from PyQt5.QAxContainer import QAxWidget
     from PyQt5.QtCore import QEventLoop, QTimer
     from PyQt5.QtWidgets import QApplication
-    from pykiwoom import Kiwoom
-except ImportError:
-    print("pykiwoom이 설치되어 있지 않습니다.")
-    print("설치: pip install pykiwoom PyQt5")
-    sys.exit(1)
+    try:
+        from pykiwoom.kiwoom import Kiwoom
+    except ImportError:
+        from pykiwoom import Kiwoom
+    KIWOOM_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: 키움 OpenAPI+ 모듈 로드 실패: {e}")
+    print("모의 데이터 모드로 실행됩니다.")
+    KIWOOM_AVAILABLE = False
 
 # 환경변수에서 Supabase 클라이언트 가져오기
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -30,6 +34,11 @@ class KiwoomOpenAPI:
     
     def __init__(self):
         """키움 API 초기화"""
+        if not KIWOOM_AVAILABLE:
+            self.connected = False
+            self.supabase = get_supabase_client()
+            return
+            
         # QApplication이 없으면 생성
         if not QApplication.instance():
             self.app = QApplication(sys.argv)
@@ -44,27 +53,41 @@ class KiwoomOpenAPI:
         
     def connect(self) -> bool:
         """키움 서버 접속"""
-        try:
-            # 자동 로그인 시도
-            self.kiwoom.CommConnect()
+        if not KIWOOM_AVAILABLE:
+            return False
             
-            # 접속 대기 (최대 30초)
-            for i in range(30):
-                if self.kiwoom.GetConnectState() == 1:
-                    self.connected = True
-                    print("키움증권 OpenAPI+ 접속 성공")
-                    
-                    # 계좌 정보 가져오기
+        try:
+            # 로그인 시도 (자동으로 로그인 창 표시)
+            print("키움증권 OpenAPI+ 접속 시도...")
+            self.kiwoom.CommConnect(block=True)  # block=True로 동기 처리
+            
+            # 연결 상태 확인
+            if self.kiwoom.GetConnectState() == 1:
+                self.connected = True
+                print("키움증권 OpenAPI+ 접속 성공")
+                
+                # 계좌 정보 가져오기
+                try:
                     accounts = self.kiwoom.GetLoginInfo("ACCNO")
                     if accounts:
-                        self.account = accounts.split(';')[0]
-                        print(f"계좌번호: {self.account}")
-                    
-                    return True
-                time.sleep(1)
+                        if isinstance(accounts, list):
+                            self.account = accounts[0] if accounts else ""
+                        elif isinstance(accounts, str):
+                            self.account = accounts.split(';')[0] if ';' in accounts else accounts
+                        else:
+                            self.account = str(accounts)
+                        
+                        if self.account:
+                            print(f"계좌번호: {self.account}")
+                except Exception as acc_err:
+                    print(f"계좌 정보 조회 실패: {acc_err}")
+                    # 계좌 정보 실패해도 연결은 성공으로 처리
+                    pass
                 
-            print("키움증권 OpenAPI+ 접속 실패 - 시간 초과")
-            return False
+                return True
+            else:
+                print("키움증권 OpenAPI+ 접속 실패")
+                return False
             
         except Exception as e:
             print(f"접속 중 오류: {e}")
@@ -72,13 +95,13 @@ class KiwoomOpenAPI:
     
     def get_stock_name(self, code: str) -> str:
         """종목명 조회"""
-        if not self.connected:
+        if not KIWOOM_AVAILABLE or not self.connected:
             return ""
         return self.kiwoom.GetMasterCodeName(code)
     
     def get_current_price(self, code: str) -> Dict:
         """현재가 조회"""
-        if not self.connected:
+        if not KIWOOM_AVAILABLE or not self.connected:
             return {}
         
         try:
@@ -92,16 +115,32 @@ class KiwoomOpenAPI:
             time.sleep(0.5)
             
             # 데이터 가져오기
+            def safe_int(value):
+                if isinstance(value, str):
+                    value = value.strip()
+                    if value == '' or value == '-':
+                        return 0
+                    return abs(int(value))
+                return int(value) if value else 0
+            
+            def safe_float(value):
+                if isinstance(value, str):
+                    value = value.strip()
+                    if value == '' or value == '-':
+                        return 0.0
+                    return float(value)
+                return float(value) if value else 0.0
+            
             data = {
                 'code': code,
                 'name': self.get_stock_name(code),
-                'current_price': abs(int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "현재가"))),
-                'change': int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "전일대비")),
-                'change_rate': float(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "등락율")),
-                'volume': int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "거래량")),
-                'high': abs(int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "고가"))),
-                'low': abs(int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "저가"))),
-                'open': abs(int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "시가")))
+                'current_price': safe_int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "현재가")),
+                'change': safe_int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "전일대비")),
+                'change_rate': safe_float(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "등락율")),
+                'volume': safe_int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "거래량")),
+                'high': safe_int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "고가")),
+                'low': safe_int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "저가")),
+                'open': safe_int(self.kiwoom.GetCommData("opt10001", "현재가조회", 0, "시가"))
             }
             
             return data
@@ -118,7 +157,7 @@ class KiwoomOpenAPI:
             start_date: 시작일 (YYYYMMDD or YYYY-MM-DD)
             end_date: 종료일 (기본값: 오늘)
         """
-        if not self.connected:
+        if not KIWOOM_AVAILABLE or not self.connected:
             return pd.DataFrame()
         
         try:
@@ -132,7 +171,8 @@ class KiwoomOpenAPI:
             if not end_date:
                 end_date = datetime.now().strftime('%Y%m%d')
             
-            # pykiwoom의 block_request 사용
+            # pykiwoom의 block_request 사용 (타임아웃 추가)
+            print(f"  [요청 시작] {datetime.now().strftime('%H:%M:%S')} - {code} 일봉 데이터 요청")
             df = self.kiwoom.block_request("opt10081",
                                           종목코드=code,
                                           기준일자=end_date,
@@ -140,7 +180,10 @@ class KiwoomOpenAPI:
                                           output="주식일봉차트조회",
                                           next=0)
             
+            print(f"  [요청 완료] {datetime.now().strftime('%H:%M:%S')} - {code} 데이터 수신")
+            
             if df is not None and not df.empty:
+                print(f"  [처리 중] {len(df)}개 레코드 처리")
                 # 컬럼명 변경
                 df = df.rename(columns={
                     '일자': 'date',
@@ -160,7 +203,13 @@ class KiwoomOpenAPI:
                 
                 # 절대값 변환 (키움 API는 음수로 반환)
                 for col in ['open', 'high', 'low', 'close']:
-                    df[col] = df[col].abs()
+                    if col in df.columns:
+                        # 문자열을 숫자로 변환 후 절대값 적용
+                        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).abs()
+                
+                # volume도 숫자로 변환
+                if 'volume' in df.columns:
+                    df['volume'] = pd.to_numeric(df['volume'], errors='coerce').fillna(0).astype(int)
                 
                 # 인덱스 설정
                 df.set_index('date', inplace=True)
@@ -182,7 +231,7 @@ class KiwoomOpenAPI:
             code: 종목코드
             interval: 분봉 간격 (1, 3, 5, 10, 15, 30, 45, 60)
         """
-        if not self.connected:
+        if not KIWOOM_AVAILABLE or not self.connected:
             return pd.DataFrame()
         
         try:
@@ -232,7 +281,7 @@ class KiwoomOpenAPI:
     
     def get_account_balance(self) -> Dict:
         """계좌 잔고 조회"""
-        if not self.connected or not hasattr(self, 'account'):
+        if not KIWOOM_AVAILABLE or not self.connected or not hasattr(self, 'account'):
             return {}
         
         try:
@@ -249,13 +298,29 @@ class KiwoomOpenAPI:
                 # 첫 번째 행에서 요약 정보 추출
                 summary = df.iloc[0]
                 
+                def safe_int(value, default=0):
+                    if pd.isna(value) or value == '' or value == '-':
+                        return default
+                    try:
+                        return int(value)
+                    except:
+                        return default
+                
+                def safe_float(value, default=0.0):
+                    if pd.isna(value) or value == '' or value == '-':
+                        return default
+                    try:
+                        return float(value)
+                    except:
+                        return default
+                
                 balance = {
                     'account_no': self.account,
-                    'total_evaluation': int(summary.get('총평가금액', 0)),
-                    'total_purchase': int(summary.get('총매입금액', 0)),
-                    'total_profit_loss': int(summary.get('총평가손익금액', 0)),
-                    'profit_rate': float(summary.get('총수익률(%)', 0)),
-                    'deposit': int(summary.get('예수금', 0))
+                    'total_evaluation': safe_int(summary.get('총평가금액', 0)),
+                    'total_purchase': safe_int(summary.get('총매입금액', 0)),
+                    'total_profit_loss': safe_int(summary.get('총평가손익금액', 0)),
+                    'profit_rate': safe_float(summary.get('총수익률(%)', 0)),
+                    'deposit': safe_int(summary.get('예수금', 0))
                 }
                 
                 # 보유종목 조회
