@@ -21,10 +21,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Cloudflare + 시놀로지 리버스 프록시를 통한 HTTPS 접근
+  // HTTP로 직접 연결 (SSL 인증서 문제 우회)
+  // Docker 컨테이너가 8080 포트로 실행 중
   const targetUrl = process.env.BACKTEST_API_URL 
     ? `${process.env.BACKTEST_API_URL}/api/backtest/run`
-    : `https://api.bll-pro.com/api/backtest/run`;
+    : `http://128.134.229.105:8080/api/backtest/run`;
   
   try {
     console.log('Proxying request to:', targetUrl);
