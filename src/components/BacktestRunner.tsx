@@ -664,7 +664,7 @@ const BacktestRunner: React.FC = () => {
       
       // 백테스트 실행 요청
       console.log('Sending backtest request to server...');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
       const response = await fetch(`${apiUrl}/api/backtest/run`, {
         method: 'POST',
         headers: {
@@ -697,23 +697,29 @@ const BacktestRunner: React.FC = () => {
 
       const result = await response.json();
       console.log('Backtest result:', result);
+      console.log('Result structure:', {
+        hasSuccess: 'success' in result,
+        hasSummary: 'summary' in result,
+        hasIndividualResults: 'individual_results' in result,
+        successValue: result.success
+      });
 
       setBacktestId(result.backtest_id);
       
-      // 백테스트가 즉시 완료되는 경우 (현재 구현)
-      if (result.status === 'completed' && result.results) {
+      // 백테스트가 즉시 완료되는 경우 (현재 구현 - success 필드 체크)
+      if (result.success && result.summary) {
         setProgress(100);
         setSuccess(`백테스트가 완료되었습니다. 
-          총 수익률: ${result.results.total_return}%, 
-          승률: ${result.results.win_rate}%, 
-          최대 손실: ${result.results.max_drawdown}%`);
+          총 수익률: ${result.summary.total_return?.toFixed(2)}%, 
+          평균 승률: ${result.summary.average_win_rate?.toFixed(2)}%, 
+          최대 손실: ${result.summary.max_drawdown?.toFixed(2)}%`);
         setIsRunning(false);
         
         // 결과를 state에 저장하고 상세 정보 포맷팅
         console.log('Raw backtest result from server:', result);
-        console.log('Result.results:', result.results);
-        console.log('Trades data:', result.results?.trades);
-        console.log('Daily returns data:', result.results?.daily_returns);
+        console.log('Result.summary:', result.summary);
+        console.log('Individual results:', result.individual_results);
+        console.log('First stock result:', result.individual_results?.[0]);
         
         // 전략 이름 찾기 - strategies 배열이나 백엔드 응답에서
         const currentStrategy = strategies.find(s => s.id === config.strategyId);
@@ -726,24 +732,37 @@ const BacktestRunner: React.FC = () => {
           final: finalStrategyName
         });
         
+        // 개별 종목 결과에서 거래 데이터 집계
+        const allTrades = [];
+        result.individual_results?.forEach(stockResult => {
+          const stockTrades = stockResult.result?.trades || [];
+          stockTrades.forEach(trade => {
+            allTrades.push({
+              ...trade,
+              stock_code: stockResult.stock_code,
+              stock_name: stockResult.stock_code // 임시로 코드를 이름으로 사용
+            });
+          });
+        });
+
         const formattedResult = {
-          id: result.backtest_id,
+          id: result.backtest_id || `backtest_${Date.now()}`,
           strategy_name: finalStrategyName,
           start_date: config.startDate.toISOString().split('T')[0],
           end_date: config.endDate.toISOString().split('T')[0],
           initial_capital: config.initialCapital,
-          final_capital: result.results.final_capital || config.initialCapital * (1 + result.results.total_return / 100),
-          total_return: result.results.total_return || 0,
-          annual_return: result.results.annual_return || 0,
-          max_drawdown: result.results.max_drawdown || 0,
-          win_rate: result.results.win_rate || 0,
-          total_trades: result.results.total_trades || 0,
-          winning_trades: result.results.winning_trades || 0,
-          losing_trades: result.results.losing_trades || 0,
-          sharpe_ratio: result.results.sharpe_ratio || 0,
-          volatility: result.results.volatility || 0,
-          // trades 배열 확인 및 포맷팅
-          trades: Array.isArray(result.results?.trades) ? result.results.trades.map((trade: any) => ({
+          final_capital: config.initialCapital * (1 + (result.summary?.total_return || 0) / 100),
+          total_return: result.summary?.total_return || 0,
+          annual_return: result.summary?.total_return || 0, // 연간 수익률은 별도 계산 필요
+          max_drawdown: result.summary?.max_drawdown || 0,
+          win_rate: result.summary?.average_win_rate || 0,
+          total_trades: result.summary?.processed_count || 0,
+          winning_trades: 0, // 개별 결과에서 집계 필요
+          losing_trades: 0, // 개별 결과에서 집계 필요
+          sharpe_ratio: result.summary?.average_sharpe_ratio || 0,
+          volatility: 0, // 변동성은 별도 계산 필요
+          // trades 배열 포맷팅
+          trades: allTrades.map((trade: any) => ({
             date: trade.date || trade.trade_date || '',
             stock_code: trade.stock_code || trade.code || '',
             stock_name: trade.stock_name || trade.name || '',
@@ -753,14 +772,9 @@ const BacktestRunner: React.FC = () => {
             amount: trade.amount || trade.cost || trade.revenue || 0,
             profit_loss: trade.profit_loss || trade.profit || 0,
             profit_rate: trade.profit_rate || trade.return_rate || 0
-          })) : [],
-          // daily_returns 배열 확인 및 포맷팅
-          daily_returns: Array.isArray(result.results?.daily_returns) ? result.results.daily_returns.map((dr: any) => ({
-            date: dr.date || '',
-            portfolio_value: dr.portfolio_value || dr.value || 0,
-            daily_return: dr.daily_return || dr.return || 0,
-            cumulative_return: dr.cumulative_return || dr.total_return || 0
-          })) : [],
+          })),
+          // daily_returns는 개별 종목 결과에서 필요시 집계
+          daily_returns: [],
           strategy_config: strategies.find(s => s.id === config.strategyId)?.parameters || {},
           investment_config: currentFilters || {},
           filtering_config: filteringMode || {},
@@ -796,7 +810,7 @@ const BacktestRunner: React.FC = () => {
       
       // 에러 메시지 개선
       if (err.message && err.message.includes('Failed to fetch')) {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
         setError(`백테스트 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요. (${apiUrl})`);
       } else if (err.message && err.message.includes('종목 데이터를 불러올 수 없습니다')) {
         setError(err.message);
@@ -812,7 +826,7 @@ const BacktestRunner: React.FC = () => {
     if (!backtestId) return;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
       const response = await fetch(`${apiUrl}/api/backtest/stop/${backtestId}`, {
         method: 'POST',
       });
@@ -1214,6 +1228,37 @@ const BacktestRunner: React.FC = () => {
                     백테스트 진행 중... {progress}%
                   </Typography>
                   <LinearProgress variant="determinate" value={progress} />
+                </Box>
+              </Grid>
+            )}
+
+            {/* 진행 상황 표시 */}
+            {isRunning && (
+              <Grid item xs={12}>
+                <Box sx={{ mt: 2, mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ width: '100%', mr: 1 }}>
+                      <LinearProgress 
+                        variant={progress > 0 ? "determinate" : "indeterminate"}
+                        value={progress}
+                      />
+                    </Box>
+                    {progress > 0 && (
+                      <Box sx={{ minWidth: 35 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          {`${Math.round(progress)}%`}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    {progress > 0 
+                      ? `처리 중... (${Math.round(progress)}% 완료)`
+                      : '백테스트 실행 중... 서버 콘솔에서 진행 상황을 확인할 수 있습니다.'}
+                  </Typography>
+                  <Typography variant="caption" color="info.main" display="block" sx={{ mt: 1 }}>
+                    💡 팁: 서버 콘솔 창에서 각 종목별 처리 상황을 실시간으로 확인할 수 있습니다.
+                  </Typography>
                 </Box>
               </Grid>
             )}
