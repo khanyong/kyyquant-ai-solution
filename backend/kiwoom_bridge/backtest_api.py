@@ -99,12 +99,13 @@ class BacktestEngine:
     """백테스트 엔진"""
     
     @staticmethod
-    async def run_backtest(data: pd.DataFrame, initial_capital: float) -> BacktestResult:
+    async def run_backtest(data: pd.DataFrame, initial_capital: float, commission: float = 0.00015, slippage: float = 0.001) -> BacktestResult:
         """백테스트 실행"""
         capital = initial_capital
         position = 0
         trades = []
         entry_price = 0
+        entry_cost = 0  # 실제 매수 비용 저장
         
         for i in range(1, len(data)):
             signal = data.iloc[i]['signal']
@@ -113,45 +114,84 @@ class BacktestEngine:
             
             # 매수 신호
             if signal == 1 and position == 0:
-                shares = int(capital / price)
-                position = shares
-                entry_price = price
-                capital -= shares * price
+                # 슬리피지와 수수료 적용
+                actual_price = price * (1 + slippage)
+                available_capital = capital / (1 + commission)
+                shares = int(available_capital / actual_price)
                 
-                trades.append({
-                    'date': date,
-                    'type': 'buy',
-                    'price': price,
-                    'shares': shares
-                })
+                if shares > 0:
+                    total_cost = shares * actual_price * (1 + commission)
+                    position = shares
+                    entry_price = actual_price
+                    entry_cost = total_cost  # 실제 지불 비용 저장
+                    capital -= total_cost
+                    
+                    trades.append({
+                        'date': date,
+                        'type': 'buy',
+                        'price': actual_price,
+                        'shares': shares,
+                        'cost': total_cost
+                    })
             
             # 매도 신호
             elif signal == -1 and position > 0:
-                capital += position * price
-                profit = (price - entry_price) * position
-                profit_pct = ((price - entry_price) / entry_price) * 100
+                # 슬리피지와 수수료 적용
+                actual_price = price * (1 - slippage)
+                proceeds = position * actual_price * (1 - commission)
+                
+                # 수익 계산 (실제 비용 대비)
+                profit = proceeds - entry_cost
+                profit_pct = (profit / entry_cost) * 100 if entry_cost > 0 else 0
                 
                 trades.append({
                     'date': date,
                     'type': 'sell',
-                    'price': price,
+                    'price': actual_price,
                     'shares': position,
+                    'proceeds': proceeds,
                     'profit': profit,
                     'profit_pct': profit_pct
                 })
                 
+                capital += proceeds
                 position = 0
+                entry_cost = 0
         
         # 마지막 포지션 정리
         if position > 0:
-            final_price = data.iloc[-1]['close']
-            capital += position * final_price
+            final_price = data.iloc[-1]['close'] * (1 - slippage)
+            proceeds = position * final_price * (1 - commission)
+            capital += proceeds
+            
+            # 수익 계산
+            profit = proceeds - entry_cost
+            profit_pct = (profit / entry_cost) * 100 if entry_cost > 0 else 0
+            
+            trades.append({
+                'date': data.iloc[-1]['date'],
+                'type': 'sell',
+                'price': final_price,
+                'shares': position,
+                'proceeds': proceeds,
+                'profit': profit,
+                'profit_pct': profit_pct,
+                'forced': True  # 강제 청산 표시
+            })
         
         # 성과 계산
         total_return = ((capital - initial_capital) / initial_capital) * 100
-        winning_trades = [t for t in trades if t.get('profit', 0) > 0]
-        losing_trades = [t for t in trades if t.get('profit', 0) < 0]
-        win_rate = len(winning_trades) / len(trades) * 100 if trades else 0
+        
+        # 매도 거래만으로 승률 계산
+        sell_trades = [t for t in trades if t['type'] == 'sell']
+        if sell_trades:
+            winning_trades = [t for t in sell_trades if t.get('profit', 0) > 0]
+            losing_trades = [t for t in sell_trades if t.get('profit', 0) <= 0]
+            win_rate = (len(winning_trades) / len(sell_trades)) * 100
+        else:
+            winning_trades = []
+            losing_trades = []
+            win_rate = 0
         
         # 최대 낙폭 계산
         cumulative_returns = []
@@ -226,9 +266,15 @@ async def run_backtest(request: BacktestRequest):
                 # 기본: 이동평균 교차
                 data = await strategy.moving_average_crossover(data, {'short_window': 5, 'long_window': 20})
             
-            # 백테스트 실행
+            # 백테스트 실행 (수수료와 슬리피지 포함)
             engine = BacktestEngine()
-            result = await engine.run_backtest(data, request.initial_capital / len(request.stock_codes))
+            capital_per_stock = request.initial_capital / total_stocks
+            result = await engine.run_backtest(
+                data, 
+                capital_per_stock,
+                commission=request.commission,
+                slippage=request.slippage
+            )
             
             all_results.append({
                 'stock_code': stock_code,
