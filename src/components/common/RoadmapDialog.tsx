@@ -875,25 +875,137 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 15,
-      title: '키움 OpenAPI 실제 연동',
-      status: 'in-progress',
+      title: '전략 관리 시스템 개선',
+      status: 'done',
       priority: 'high',
-      icon: <TrendingUp />,
-      period: '2025.09.06 - 진행중',
-      description: '키움증권 모의투자 계정과 실제 API 연동',
+      icon: <Code />,
+      period: '2025.09.12',
+      description: '전략 불러오기 기능 개선 및 조건 조합 시각화',
       subtasks: [
         {
-          title: '✅ 키움 OpenAPI 로그인',
+          title: '✅ 전략 로더 컴포넌트 개발',
           details: [
-            '모의투자 계정 로그인 구현 완료',
-            'API 키/시크릿 검증 완료',
-            '32비트 Python 환경 설정 완료',
-            'COM 객체 초기화 완료',
-            '자동 로그인 설정 완료'
+            'StrategyLoader 컴포넌트 신규 개발 (656 lines)',
+            '전략 목록 카드 기반 UI 구현',
+            '전략별 상세 통계 정보 표시',
+            '실행 횟수, 평균 수익률, 승률 표시',
+            '백테스트 결과 통합 표시'
           ]
         },
         {
-          title: '⏳ 실시간 시세 수신',
+          title: '✅ 전략 조건 조합 시각화',
+          details: [
+            '전략 조건 특성 요약 함수 구현',
+            '지표명 한글화 매핑 (RSI, MACD, 이평선 등)',
+            '매수/매도 조건 조합 표시',
+            '단계별 전략 플로우 시각화 (1단계→2단계→3단계)',
+            '리스크 관리 설정 표시 (손절/익절/추적손절)'
+          ]
+        },
+        {
+          title: '✅ 공개/비공개 전략 기능',
+          details: [
+            'is_public 필드 추가 (Supabase 스키마)',
+            'Row Level Security 정책 업데이트',
+            '공개 전략 아이콘 표시 (Public/Lock)',
+            'strategy_favorites 테이블 생성',
+            '전략 공유 다이얼로그 구현'
+          ]
+        },
+        {
+          title: '✅ 검색 및 정렬 기능',
+          details: [
+            '전략명/설명 실시간 검색',
+            '이름/생성일/수정일 정렬',
+            '오름차순/내림차순 토글',
+            '탭 기반 필터링 (나의 전략/공유된 전략)',
+            '선택된 카드 하이라이트 효과'
+          ]
+        },
+        {
+          title: '✅ 디버깅 및 오류 수정',
+          details: [
+            '전략 불러오기 버튼 동작 문제 해결',
+            'console.log 디버깅 코드 추가',
+            'TypeScript 타입 오류 수정',
+            'SavedStrategy 인터페이스 확장',
+            '레거시 필드 호환성 추가'
+          ]
+        }
+      ]
+    },
+    {
+      id: 16,
+      title: '빌드 최적화 및 배포 개선',
+      status: 'done',
+      priority: 'high',
+      icon: <Settings />,
+      period: '2025.09.12',
+      description: 'Vite 빌드 최적화 및 배포 환경 오류 해결',
+      subtasks: [
+        {
+          title: '✅ 청크 분할 최적화',
+          details: [
+            '단일 번들 1.36MB → 5개 청크로 분할',
+            'React vendor: 375KB',
+            'MUI vendor: 405KB',
+            'Supabase vendor: 122KB',
+            'Utils vendor: 30KB'
+          ]
+        },
+        {
+          title: '✅ 빌드 설정 개선',
+          details: [
+            'vite.config.ts manualChunks 설정',
+            'terser → esbuild 변경으로 안정성 향상',
+            'ES2015 타겟 설정',
+            'console.log 프로덕션 제거',
+            'Gzip 압축 최적화 (총 399KB)'
+          ]
+        },
+        {
+          title: '✅ 배포 오류 해결',
+          details: [
+            'MUI vendor 순환 의존성 문제 해결',
+            '초기화 순서 오류 수정',
+            'Vercel 자동 배포 연동',
+            '로딩 속도 3-4초로 개선 (3G)',
+            '병렬 다운로드로 성능 향상'
+          ]
+        },
+        {
+          title: '✅ 프로젝트 문서 정리',
+          details: [
+            'DOCUMENTATION_STRUCTURE.md 생성',
+            'PROJECT_OVERVIEW.md 작성',
+            'KIWOOM_REST_API_INTEGRATION.md 작성',
+            'docs/archive 폴더로 구버전 문서 이동',
+            'docs/planning 폴더로 계획 문서 분리'
+          ]
+        }
+      ]
+    },
+    {
+      id: 17,
+      title: '키움 REST API 실제 연동',
+      status: 'in-progress',
+      priority: 'high',
+      icon: <TrendingUp />,
+      period: '2025.09.12 - 진행중',
+      description: '키움증권 REST API 및 N8N 워크플로우 통합',
+      subtasks: [
+        {
+          title: '⏳ 키움 REST API 앱 등록',
+          details: [
+            'https://openapi.kiwoom.com 개발자 센터 등록',
+            'REST API 앱 키 발급',
+            'OAuth 2.0 인증 구현',
+            'Access Token 관리 시스템',
+            'Refresh Token 자동 갱신'
+          ]
+        },
+        {
+          title: '⏳ REST API 엔드포인트 연동',
           details: [
             '실시간 체결 데이터 구독',
             '실시간 호가 데이터 수신',
@@ -935,7 +1047,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 16,
+      id: 18,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -996,7 +1108,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 21,
+      id: 19,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -1057,7 +1169,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 21,
+      id: 20,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1179,7 +1291,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 21,
+      id: 22,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1240,7 +1352,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 21,
+      id: 23,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
