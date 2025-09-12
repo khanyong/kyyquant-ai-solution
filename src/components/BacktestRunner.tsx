@@ -733,10 +733,10 @@ const BacktestRunner: React.FC = () => {
         });
         
         // 개별 종목 결과에서 거래 데이터 집계
-        const allTrades = [];
-        result.individual_results?.forEach(stockResult => {
+        const allTrades: any[] = [];
+        result.individual_results?.forEach((stockResult: any) => {
           const stockTrades = stockResult.result?.trades || [];
-          stockTrades.forEach(trade => {
+          stockTrades.forEach((trade: any) => {
             allTrades.push({
               ...trade,
               stock_code: stockResult.stock_code,

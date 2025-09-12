@@ -401,7 +401,7 @@ const MyPageEnhanced: React.FC = () => {
       })
       
       if (!result.success) {
-        throw new Error(result.error || 'API 키 저장 실패')
+        throw new Error(('error' in result ? result.error : 'API 키 저장 실패') as string)
       }
       
       await loadApiKeys()
