@@ -21,7 +21,10 @@ export default async function handler(req, res) {
     return;
   }
 
-  const targetUrl = `http://khanyong.asuscomm.com:8001/api/backtest/run`;
+  // 환경변수에서 URL 가져오기 (IP 주소 직접 사용 권장)
+  const targetUrl = process.env.BACKTEST_API_URL 
+    ? `${process.env.BACKTEST_API_URL}/api/backtest/run`
+    : `http://128.134.229.105:8001/api/backtest/run`;
   
   try {
     console.log('Proxying request to:', targetUrl);
