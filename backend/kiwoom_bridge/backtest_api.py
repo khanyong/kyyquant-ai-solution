@@ -35,6 +35,8 @@ class BacktestResult(BaseModel):
     total_trades: int
     winning_trades: int
     losing_trades: int
+    buy_count: int = 0  # 매수 횟수
+    sell_count: int = 0  # 매도 횟수
     trades: List[Dict]
 
 class Strategy:
@@ -182,8 +184,11 @@ class BacktestEngine:
         # 성과 계산
         total_return = ((capital - initial_capital) / initial_capital) * 100
         
-        # 매도 거래만으로 승률 계산
+        # 매수/매도 횟수 계산
+        buy_trades = [t for t in trades if t['type'] == 'buy']
         sell_trades = [t for t in trades if t['type'] == 'sell']
+        
+        # 매도 거래만으로 승률 계산
         if sell_trades:
             winning_trades = [t for t in sell_trades if t.get('profit', 0) > 0]
             losing_trades = [t for t in sell_trades if t.get('profit', 0) <= 0]
@@ -223,9 +228,11 @@ class BacktestEngine:
             win_rate=win_rate,
             sharpe_ratio=sharpe_ratio,
             max_drawdown=max_drawdown,
-            total_trades=len(trades),
+            total_trades=len(sell_trades),  # 완료된 거래(매도) 수만 카운트
             winning_trades=len(winning_trades),
             losing_trades=len(losing_trades),
+            buy_count=len(buy_trades),  # 매수 횟수
+            sell_count=len(sell_trades),  # 매도 횟수
             trades=trades
         )
 
@@ -289,7 +296,15 @@ async def run_backtest(request: BacktestRequest):
         avg_sharpe = np.mean([r['result']['sharpe_ratio'] for r in all_results])
         max_dd = np.max([r['result']['max_drawdown'] for r in all_results])
         
+        # 전체 거래 수와 승리/패배 거래 수, 매수/매도 횟수 집계
+        total_trades = sum([r['result']['total_trades'] for r in all_results])
+        total_winning = sum([r['result']['winning_trades'] for r in all_results])
+        total_losing = sum([r['result']['losing_trades'] for r in all_results])
+        total_buy_count = sum([r['result'].get('buy_count', 0) for r in all_results])
+        total_sell_count = sum([r['result'].get('sell_count', 0) for r in all_results])
+        
         print(f"[결과] 평균 수익률: {total_return:.2f}%, 평균 승률: {avg_win_rate:.2f}%")
+        print(f"[결과] 총 거래: {total_trades}회, 승리: {total_winning}회, 패배: {total_losing}회")
         
         return {
             "success": True,
@@ -299,7 +314,12 @@ async def run_backtest(request: BacktestRequest):
                 "average_sharpe_ratio": avg_sharpe,
                 "max_drawdown": max_dd,
                 "stock_count": len(request.stock_codes),
-                "processed_count": len(all_results)
+                "processed_count": len(all_results),
+                "total_trades": total_trades,
+                "winning_trades": total_winning,
+                "losing_trades": total_losing,
+                "buy_count": total_buy_count,
+                "sell_count": total_sell_count
             },
             "individual_results": all_results,
             "request": request.dict()

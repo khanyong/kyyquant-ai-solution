@@ -746,8 +746,17 @@ const BacktestRunner: React.FC = () => {
         
         // 개별 종목 결과에서 거래 데이터 집계
         const allTrades: any[] = [];
+        let totalWinningTrades = 0;
+        let totalLosingTrades = 0;
+        let totalTradeCount = 0;
+        
         result.individual_results?.forEach((stockResult: any) => {
           const stockTrades = stockResult.result?.trades || [];
+          // 각 종목의 승리/패배 거래 수 집계
+          totalWinningTrades += stockResult.result?.winning_trades || 0;
+          totalLosingTrades += stockResult.result?.losing_trades || 0;
+          totalTradeCount += stockResult.result?.total_trades || 0;
+          
           stockTrades.forEach((trade: any) => {
             allTrades.push({
               ...trade,
@@ -756,6 +765,12 @@ const BacktestRunner: React.FC = () => {
             });
           });
         });
+
+        // 매수/매도 거래 분리 및 승패 계산
+        const buyTrades = allTrades.filter(t => t.type === 'buy' || t.action === 'buy');
+        const sellTrades = allTrades.filter(t => t.type === 'sell' || t.action === 'sell');
+        const actualWinningTrades = sellTrades.filter(t => (t.profit || t.profit_loss || 0) > 0).length;
+        const actualLosingTrades = sellTrades.filter(t => (t.profit || t.profit_loss || 0) <= 0).length;
 
         const formattedResult = {
           id: result.backtest_id || `backtest_${Date.now()}`,
@@ -768,9 +783,11 @@ const BacktestRunner: React.FC = () => {
           annual_return: result.summary?.total_return || 0, // 연간 수익률은 별도 계산 필요
           max_drawdown: result.summary?.max_drawdown || 0,
           win_rate: result.summary?.average_win_rate || 0,
-          total_trades: result.summary?.processed_count || 0,
-          winning_trades: 0, // 개별 결과에서 집계 필요
-          losing_trades: 0, // 개별 결과에서 집계 필요
+          total_trades: result.summary?.total_trades || totalTradeCount || sellTrades.length || result.summary?.processed_count || 0,
+          winning_trades: result.summary?.winning_trades || actualWinningTrades || totalWinningTrades,
+          losing_trades: result.summary?.losing_trades || actualLosingTrades || totalLosingTrades,
+          buy_count: result.summary?.buy_count || buyTrades.length,
+          sell_count: result.summary?.sell_count || sellTrades.length,
           sharpe_ratio: result.summary?.average_sharpe_ratio || 0,
           volatility: 0, // 변동성은 별도 계산 필요
           // trades 배열 포맷팅

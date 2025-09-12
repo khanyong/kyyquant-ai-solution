@@ -23,6 +23,7 @@ import {
   IconButton,
   Tooltip,
   TablePagination,
+  useTheme,
 } from '@mui/material';
 import {
   Assessment,
@@ -75,6 +76,8 @@ interface BacktestResult {
   total_trades: number;
   winning_trades: number;
   losing_trades: number;
+  buy_count?: number;  // 매수 횟수
+  sell_count?: number;  // 매도 횟수
   sharpe_ratio: number;
   volatility: number;
   trades: Trade[];
@@ -98,6 +101,9 @@ interface Trade {
   revenue?: number;  // 백엔드에서 사용하는 필드 (매도)
   profit_loss?: number;
   profit_rate?: number;
+  profit_pct?: number;  // 백엔드에서 사용하는 수익률 필드
+  proceeds?: number;  // 백엔드에서 사용하는 매도 수익금
+  profit?: number;  // 백엔드에서 사용하는 순이익
 }
 
 interface DailyReturn {
@@ -131,6 +137,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
   result: propResult, 
   onRefresh 
 }) => {
+  const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   const [result, setResult] = useState<BacktestResult | null>(propResult || null);
   const [loading, setLoading] = useState(false);
@@ -429,12 +436,12 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                         )}
                       </TableCell>
                       <TableCell align="right">
-                        {trade.profit_rate !== undefined ? (
+                        {(trade.profit_rate !== undefined || trade.profit_pct !== undefined) ? (
                           <Typography
-                            color={trade.profit_rate >= 0 ? 'success.main' : 'error.main'}
+                            color={(trade.profit_rate || trade.profit_pct || 0) >= 0 ? 'success.main' : 'error.main'}
                           >
-                            {trade.profit_rate >= 0 ? '+' : ''}
-                            {trade.profit_rate.toFixed(2)}%
+                            {(trade.profit_rate || trade.profit_pct || 0) >= 0 ? '+' : ''}
+                            {(trade.profit_rate || trade.profit_pct || 0).toFixed(2)}%
                           </Typography>
                         ) : (
                           '-'
@@ -507,9 +514,22 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                   <Divider sx={{ mb: 2 }} />
                   <Stack spacing={2}>
                     <Box display="flex" justifyContent="space-between">
-                      <Typography>총 거래 횟수</Typography>
+                      <Typography>총 거래 횟수 (완료)</Typography>
                       <Typography fontWeight="bold">{result.total_trades}회</Typography>
                     </Box>
+                    <Box display="flex" justifyContent="space-between">
+                      <Typography>매수 횟수</Typography>
+                      <Typography fontWeight="bold" color="primary.main">
+                        {result.buy_count || result.total_trades || 0}회
+                      </Typography>
+                    </Box>
+                    <Box display="flex" justifyContent="space-between">
+                      <Typography>매도 횟수</Typography>
+                      <Typography fontWeight="bold" color="secondary.main">
+                        {result.sell_count || result.total_trades || 0}회
+                      </Typography>
+                    </Box>
+                    <Divider />
                     <Box display="flex" justifyContent="space-between">
                       <Typography>승리 거래</Typography>
                       <Typography fontWeight="bold" color="success.main">
@@ -555,9 +575,11 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                         <pre style={{ 
                           fontSize: '0.8rem', 
                           overflow: 'auto',
-                          backgroundColor: '#f5f5f5',
+                          backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                          color: theme.palette.text.primary,
                           padding: 8,
-                          borderRadius: 4
+                          borderRadius: 4,
+                          border: `1px solid ${theme.palette.divider}`
                         }}>
                           {JSON.stringify(result.strategy_config, null, 2)}
                         </pre>
@@ -584,9 +606,11 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                       <pre style={{ 
                         fontSize: '0.8rem', 
                         overflow: 'auto',
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                        color: theme.palette.text.primary,
                         padding: 8,
-                        borderRadius: 4
+                        borderRadius: 4,
+                        border: `1px solid ${theme.palette.divider}`
                       }}>
                         {JSON.stringify(result.investment_config, null, 2)}
                       </pre>
