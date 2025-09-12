@@ -1527,6 +1527,23 @@ const BacktestRunner: React.FC = () => {
             />
           )}
         </DialogContent>
+        <DialogActions>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={saveBacktestResult}
+            disabled={isSaving || !backtestResults}
+          >
+            {isSaving ? '저장 중...' : '결과 저장'}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => setShowResultDialog(false)}
+          >
+            닫기
+          </Button>
+        </DialogActions>
       </Dialog>
         </Box>
       ) : (
