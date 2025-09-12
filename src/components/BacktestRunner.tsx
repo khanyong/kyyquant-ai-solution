@@ -597,6 +597,10 @@ const BacktestRunner: React.FC = () => {
       }
 
       // 백테스트 실행 요청 준비
+      // 선택된 전략의 파라미터 가져오기
+      const selectedStrategy = strategies.find(s => s.id === config.strategyId);
+      const strategyParameters = selectedStrategy?.parameters || {};
+      
       const requestPayload: any = {
         strategy_id: config.strategyId,
         start_date: config.startDate.toISOString().split('T')[0],
@@ -607,6 +611,10 @@ const BacktestRunner: React.FC = () => {
         data_interval: config.dataInterval,
         filtering_mode: typeof config.filteringMode === 'object' ? config.filteringMode.mode : config.filteringMode,
         use_cached_data: true,  // 캐시된 데이터 사용 플래그
+        parameters: {
+          ...strategyParameters,
+          strategy_type: selectedStrategy?.type || 'ma_crossover' // 전략 타입 추가
+        }
       };
       
       // 필터링 모드에 따라 다르게 처리
@@ -773,9 +781,9 @@ const BacktestRunner: React.FC = () => {
             action: trade.action || trade.type || 'unknown',
             quantity: trade.quantity || trade.shares || 0,
             price: trade.price || 0,
-            amount: trade.amount || trade.cost || trade.revenue || 0,
+            amount: trade.amount || trade.cost || trade.proceeds || trade.revenue || 0,
             profit_loss: trade.profit_loss || trade.profit || 0,
-            profit_rate: trade.profit_rate || trade.return_rate || 0
+            profit_rate: trade.profit_rate || trade.profit_pct || trade.return_rate || 0
           })),
           // daily_returns는 개별 종목 결과에서 필요시 집계
           daily_returns: [],
