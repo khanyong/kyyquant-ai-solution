@@ -5,11 +5,25 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import pandas as pd
 import numpy as np
+import os
+import asyncio
+import aiohttp
+from supabase import create_client, Client
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
+
+# Supabase 클라이언트 초기화
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+supabase: Optional[Client] = None
+
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+else:
+    print("[경고] Supabase 환경변수가 설정되지 않았습니다. Mock 데이터를 사용합니다.")
 
 class BacktestRequest(BaseModel):
     """백테스트 요청 모델"""
@@ -268,17 +282,52 @@ async def run_backtest(request: BacktestRequest):
         # 각 종목에 대해 백테스트 실행
         for idx, stock_code in enumerate(request.stock_codes[:total_stocks], 1):
             print(f"[진행중] {idx}/{total_stocks} - 종목코드: {stock_code} 처리 중...")
-            # TODO: Supabase에서 과거 가격 데이터 조회
-            # 여기서는 Mock 데이터 사용
-            dates = pd.date_range(start=request.start_date, end=request.end_date, freq='D')
-            base_price = 50000 + np.random.randint(0, 50000)  # 종목별 다른 기준가
-            mock_prices = np.random.randn(len(dates)) * (base_price * 0.02) + base_price
             
-            data = pd.DataFrame({
-                'date': dates,
-                'close': mock_prices,
-                'volume': np.random.randint(1000000, 10000000, len(dates))
-            })
+            # 실제 주가 데이터 조회 (3-tier 전략: Supabase → API → Mock)
+            data = None
+            
+            # 1. Supabase에서 데이터 조회 시도
+            if supabase:
+                try:
+                    print(f"  - Supabase에서 {stock_code} 데이터 조회 중...")
+                    response = supabase.table('stock_prices').select('*').eq(
+                        'stock_code', stock_code
+                    ).gte('date', request.start_date).lte('date', request.end_date).order('date').execute()
+                    
+                    if response.data and len(response.data) > 0:
+                        print(f"  ✓ Supabase에서 {len(response.data)}개 데이터 로드")
+                        data = pd.DataFrame(response.data)
+                        data['date'] = pd.to_datetime(data['date'])
+                        # 필요한 컬럼만 선택
+                        if 'close' in data.columns:
+                            data = data[['date', 'close', 'volume'] if 'volume' in data.columns else ['date', 'close']]
+                        else:
+                            print(f"  ! 데이터에 close 컬럼이 없습니다")
+                            data = None
+                except Exception as e:
+                    print(f"  ! Supabase 조회 실패: {str(e)}")
+                    data = None
+            
+            # 2. 외부 API에서 데이터 조회 (필요시 구현)
+            # if data is None:
+            #     data = await fetch_from_external_api(stock_code, request.start_date, request.end_date)
+            
+            # 3. 데이터가 없으면 Mock 데이터 사용 (개발/테스트용)
+            if data is None or data.empty:
+                print(f"  ! 실제 데이터 없음. Mock 데이터 생성 중...")
+                dates = pd.date_range(start=request.start_date, end=request.end_date, freq='D')
+                base_price = 50000 + np.random.randint(0, 50000)
+                mock_prices = np.random.randn(len(dates)) * (base_price * 0.02) + base_price
+                
+                data = pd.DataFrame({
+                    'date': dates,
+                    'close': mock_prices,
+                    'volume': np.random.randint(1000000, 10000000, len(dates))
+                })
+                
+                # Mock 데이터를 Supabase에 저장 (선택적)
+                # if supabase:
+                #     save_to_supabase(stock_code, data)
             
             # 전략 실행
             strategy = Strategy()
