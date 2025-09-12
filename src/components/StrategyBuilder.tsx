@@ -63,6 +63,7 @@ import {
 import InvestmentSettingsSummary from './InvestmentSettingsSummary'
 import InvestmentFlowManager from './InvestmentFlowManager'
 import StageBasedStrategy from './StageBasedStrategy'
+import StrategyLoader from './StrategyLoader'
 import { supabase } from '../lib/supabase'
 import { authService } from '../services/auth'
 import { InvestmentFlowType } from '../types/investment'
@@ -243,9 +244,12 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
   const [quickTestRunning, setQuickTestRunning] = useState(false)
   const [savedStrategies, setSavedStrategies] = useState<Strategy[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [conditionDialogOpen, setConditionDialogOpen] = useState(false)
   const [currentConditionType, setCurrentConditionType] = useState<'buy' | 'sell'>('buy')
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [isPublic, setIsPublic] = useState(false)
   const [tempCondition, setTempCondition] = useState<Condition>({
     id: '',
     type: 'buy',
@@ -436,6 +440,11 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     }
   }
 
+  // 전략 저장 다이얼로그 열기
+  const openSaveDialog = () => {
+    setSaveDialogOpen(true)
+  }
+
   // 전략 저장 (Supabase에 저장)
   const saveStrategy = async () => {
     // 현재 사용자 가져오기
@@ -567,6 +576,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         is_active: true,
         is_test_mode: false,
         auto_trade_enabled: false,
+        is_public: isPublic,  // 공유 설정 추가
         position_size: strategy.riskManagement.positionSize || 10,
         user_id: user?.id  // 현재 사용자 ID (필수)
       }
@@ -594,7 +604,11 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       if (error) throw error
 
       setSavedStrategies([...savedStrategies, { ...strategy, id: data.id }])
-      alert(`전략 '${strategy.name}'이 저장되었습니다!\n\n백테스팅 페이지에서 이 전략을 선택해 실행할 수 있습니다.`)
+      setSaveDialogOpen(false)
+      setIsPublic(false)  // 초기화
+      
+      const shareMessage = isPublic ? '\n전략이 공개되어 다른 사용자들도 볼 수 있습니다.' : '\n전략은 비공개로 저장되었습니다.'
+      alert(`전략 '${strategy.name}'이 저장되었습니다!${shareMessage}\n\n백테스팅 페이지에서 이 전략을 선택해 실행할 수 있습니다.`)
       
       return data.id // 저장된 전략 ID 반환
     } catch (error: any) {
@@ -634,17 +648,17 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         setSavedStrategies([])
         return
       }
+      
+      setCurrentUser(user) // 현재 사용자 저장
 
       console.log('Loading strategies for user:', user.id)
       
-      // 개발 모드: 모든 사용자의 전략을 불러옴
-      // 프로덕션에서는 .eq('user_id', user.id) 추가 필요
+      // 모든 전략을 불러옴 (is_active 필터 제거)
       const { data, error } = await supabase
         .from('strategies')
         .select('*')
-        // .eq('user_id', user.id)  // 개발 중 주석 처리 - 모든 사용자 전략 조회
-        .eq('is_active', true)
         .order('created_at', { ascending: false })
+        .limit(100) // 최대 100개까지 로드
 
       if (error) throw error
 
@@ -681,17 +695,41 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
   // 전략 불러오기
   const loadStrategy = (savedStrategy: any) => {
-    setStrategy(savedStrategy)
+    console.log('StrategyBuilder - loadStrategy called with:', savedStrategy)
+    
+    // savedStrategy가 이미 strategy_data 형태인 경우와 아닌 경우 처리
+    const strategyData = savedStrategy.strategy_data || savedStrategy
+    
+    // 전략 데이터 구조 확인 및 설정
+    const formattedStrategy = {
+      id: strategyData.id || `custom-${Date.now()}`,
+      name: strategyData.name || '불러온 전략',
+      description: strategyData.description || '',
+      indicators: strategyData.indicators || [],
+      buyConditions: strategyData.buyConditions || [],
+      sellConditions: strategyData.sellConditions || [],
+      riskManagement: strategyData.riskManagement || {
+        stopLoss: -5,
+        takeProfit: 10,
+        trailingStop: false,
+        trailingStopPercent: 3,
+        positionSize: 10,
+        maxPositions: 10
+      }
+    }
+    
+    console.log('Setting strategy to:', formattedStrategy)
+    setStrategy(formattedStrategy)
     
     // 단계별 전략 정보 복원
-    if (savedStrategy.useStageBasedStrategy !== undefined) {
-      setUseStageBasedStrategy(savedStrategy.useStageBasedStrategy)
+    if (strategyData.useStageBasedStrategy !== undefined) {
+      setUseStageBasedStrategy(strategyData.useStageBasedStrategy)
     }
-    if (savedStrategy.buyStageStrategy) {
-      setBuyStageStrategy(savedStrategy.buyStageStrategy)
+    if (strategyData.buyStageStrategy) {
+      setBuyStageStrategy(strategyData.buyStageStrategy)
     }
-    if (savedStrategy.sellStageStrategy) {
-      setSellStageStrategy(savedStrategy.sellStageStrategy)
+    if (strategyData.sellStageStrategy) {
+      setSellStageStrategy(strategyData.sellStageStrategy)
     }
     
     // 투자 유니버스 설정 복원
@@ -794,7 +832,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             <Button
               variant="outlined"
               startIcon={<Save />}
-              onClick={saveStrategy}
+              onClick={openSaveDialog}
             >
               저장
             </Button>
@@ -1752,80 +1790,20 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         />
       </TabPanel>
 
-      {/* 저장된 전략 다이얼로그 */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Supabase에 저장된 전략</DialogTitle>
-        <DialogContent>
-          <List>
-            {savedStrategies.length === 0 ? (
-              <Typography color="textSecondary" sx={{ p: 2, textAlign: 'center' }}>
-                저장된 전략이 없습니다. 새로운 전략을 만들어보세요!
-              </Typography>
-            ) : (
-              savedStrategies.map((saved) => (
-                <ListItem key={saved.id} button onClick={() => loadStrategy(saved)}>
-                  <ListItemIcon>
-                    <ShowChart />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography>{saved.name}</Typography>
-                        {!saved.isOwn && (
-                          <Chip 
-                            label="공유" 
-                            size="small" 
-                            color="info" 
-                            variant="outlined"
-                          />
-                        )}
-                      </Stack>
-                    }
-                    secondary={saved.description || '설명 없음'}
-                  />
-                  <Stack direction="row" spacing={1}>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // 백테스트 실행
-                        window.location.href = `/backtest?strategyId=${saved.id}`
-                      }}
-                    >
-                      <PlayArrow />
-                    </IconButton>
-                    {saved.isOwn && (  // 자신의 전략일 때만 삭제 버튼 표시
-                      <IconButton
-                        size="small"
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          if (confirm(`'${saved.name}' 전략을 삭제하시겠습니까?`)) {
-                            await supabase.from('strategies').delete().eq('id', saved.id)
-                            loadStrategiesFromSupabase()
-                          }
-                        }}
-                      >
-                        <Delete />
-                      </IconButton>
-                    )}
-                  </Stack>
-                </ListItem>
-              ))
-            )}
-          </List>
-          <Button
-            variant="outlined"
-            fullWidth
-            sx={{ mt: 2 }}
-            onClick={() => loadStrategiesFromSupabase()}
-          >
-            새로고침
-          </Button>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>닫기</Button>
-        </DialogActions>
-      </Dialog>
+      {/* 전략 불러오기 다이얼로그 */}
+      <StrategyLoader
+        open={dialogOpen}
+        onClose={() => {
+          console.log('StrategyLoader onClose called')
+          setDialogOpen(false)
+        }}
+        onLoad={(strategyData) => {
+          console.log('StrategyLoader onLoad called with:', strategyData)
+          loadStrategy(strategyData)
+          setDialogOpen(false)
+        }}
+        currentUserId={currentUser?.id}
+      />
 
       {/* 조건 추가 다이얼로그 */}
       <Dialog open={conditionDialogOpen} onClose={() => setConditionDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -1966,6 +1944,78 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         <DialogActions>
           <Button onClick={() => setConditionDialogOpen(false)}>취소</Button>
           <Button onClick={saveCondition} variant="contained">추가</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 전략 저장 다이얼로그 */}
+      <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>전략 저장</DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="전략 이름"
+              value={strategy.name}
+              onChange={(e) => setStrategy({ ...strategy, name: e.target.value })}
+              helperText="전략을 구분할 수 있는 이름을 입력하세요"
+            />
+            
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="전략 설명"
+              value={strategy.description}
+              onChange={(e) => setStrategy({ ...strategy, description: e.target.value })}
+              helperText="전략의 특징이나 사용 방법을 설명하세요"
+            />
+            
+            <Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={isPublic}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">전략 공유</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {isPublic ? 
+                        '다른 사용자들이 이 전략을 볼 수 있습니다' : 
+                        '나만 볼 수 있는 비공개 전략입니다'
+                      }
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
+            
+            {isPublic && (
+              <Alert severity="info" icon={<Info />}>
+                <Typography variant="subtitle2" gutterBottom>
+                  공유 전략 안내
+                </Typography>
+                <Typography variant="body2">
+                  • 다른 사용자들이 전략을 조회하고 복사할 수 있습니다<br/>
+                  • 전략의 상세 설정과 조건이 공개됩니다<br/>
+                  • 언제든지 공유 설정을 변경할 수 있습니다
+                </Typography>
+              </Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSaveDialogOpen(false)}>취소</Button>
+          <Button 
+            onClick={saveStrategy} 
+            variant="contained"
+            disabled={!strategy.name.trim()}
+          >
+            {isPublic ? '공유하며 저장' : '저장'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

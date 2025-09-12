@@ -1,0 +1,28 @@
+# 키움증권 API Windows 브릿지 요구사항
+# Python 3.9+ 권장
+
+# PyQt5 - 키움 OCX 컨트롤용
+PyQt5==5.15.9
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.11.0
+
+# 키움 API 래퍼
+pykiwoom==0.1.29
+
+# 데이터 처리
+pandas==1.5.3
+numpy==1.24.3
+
+# 통신
+websocket-client==1.5.1
+requests==2.31.0
+
+# 보안
+cryptography==41.0.7
+
+# 로깅
+python-json-logger==2.0.7
+
+# 유틸리티
+python-dateutil==2.8.2
+pytz==2023.3

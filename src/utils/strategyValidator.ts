@@ -35,6 +35,15 @@ export function validateStageStrategy(stageStrategy: any): ValidationResult {
           warnings.push(`${index + 1}단계의 지표 설정이 불완전합니다`)
         }
       })
+      
+      // 포지션 비율 검증
+      if (stage.positionPercent !== undefined) {
+        if (stage.positionPercent < 0 || stage.positionPercent > 100) {
+          errors.push(`${index + 1}단계의 비율이 0-100% 범위를 벗어났습니다`)
+        }
+      } else {
+        warnings.push(`${index + 1}단계의 비율 설정이 없습니다`)
+      }
     }
   })
 
