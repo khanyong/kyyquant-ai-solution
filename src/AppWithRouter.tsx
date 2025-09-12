@@ -35,12 +35,15 @@ import AutoTradingPanel from './components/trading/AutoTradingPanel'
 import OrderPanel from './components/trading/OrderPanel'
 import PortfolioPanel from './components/trading/PortfolioPanel'
 import MarketOverview from './components/trading/MarketOverview'
+import KiwoomTradingPanel from './components/trading/KiwoomTradingPanel'
 import Community from './components/community/Community'
 import Settings from './pages/Settings'
 import TradingSettings from './pages/TradingSettings'
+import MyPage from './pages/MyPage'
 import TradingSettingsWithUniverse from './components/TradingSettingsWithUniverse'
 import AdminDashboard from './pages/AdminDashboard'
 import AuthCallback from './pages/AuthCallback'
+import ApiKeyTest from './pages/ApiKeyTest'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 // import { connectWebSocket } from './services/websocket' // Removed - using Supabase
 // import { checkServerStatus } from './services/api' // Removed - using Supabase
@@ -431,6 +434,10 @@ function MainApp() {
                 </Grid>
                 
                 <Grid item xs={12}>
+                  <KiwoomTradingPanel />
+                </Grid>
+                
+                <Grid item xs={12}>
                   <AutoTradingPanel strategies={activeStrategies} />
                 </Grid>
                 
@@ -465,15 +472,17 @@ function MainApp() {
 
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/" element={<MainApp />} />
         <Route path="/backtest/results" element={<BacktestResultsList />} />
         <Route path="/backtest/results/:backtestId" element={<BacktestResults />} />
         <Route path="/investment-settings" element={<TradingSettings />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/mypage" element={<MyPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/api-test" element={<ApiKeyTest />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

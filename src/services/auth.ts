@@ -235,7 +235,7 @@ export const authService = {
     }
   },
 
-  // 프로필 정보 가져오기
+  // 프로필 정보 가져오기 (통합 프로필 정보 포함)
   async getProfile(userId: string) {
     try {
       const { data, error } = await supabase
@@ -251,6 +251,19 @@ export const authService = {
     }
   },
 
+  // 전체 프로필 정보 가져오기 (확장 프로필, API 키, 거래 계좌 포함)
+  async getFullProfile(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_full_profile', { p_user_id: userId })
+
+      if (error) throw error
+      return { fullProfile: data, error: null }
+    } catch (error) {
+      return { fullProfile: null, error: error as Error }
+    }
+  },
+
   // 프로필 업데이트
   async updateProfile(userId: string, updates: { name?: string; kiwoom_account?: string }) {
     try {
@@ -258,6 +271,26 @@ export const authService = {
         .from('profiles')
         .update(updates)
         .eq('id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { profile: data, error: null }
+    } catch (error) {
+      return { profile: null, error: error as Error }
+    }
+  },
+
+  // 확장 프로필 업데이트
+  async updateExtendedProfile(userId: string, updates: any) {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles_extended')
+        .upsert({
+          user_id: userId,
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
         .select()
         .single()
 

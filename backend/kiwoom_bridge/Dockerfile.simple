@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 최소 패키지만 설치
+RUN pip install fastapi uvicorn
+
+# 간단한 main 파일만 복사
+COPY main_simple.py main.py
+
+EXPOSE 8001
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

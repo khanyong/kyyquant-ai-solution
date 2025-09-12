@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # 키움 REST API Bridge 서버
+  kiwoom-bridge:
+    build: .
+    container_name: kiwoom-bridge
+    ports:
+      - "8001:8001"
+    environment:
+      # Supabase 설정
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      # 프론트엔드 URL (CORS)
+      - FRONTEND_URL=${FRONTEND_URL}
+      # 로깅
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+    restart: unless-stopped
+    networks:
+      - trading-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # N8N (이미 설치되어 있다면 주석 처리)
+  # n8n:
+  #   image: n8nio/n8n:latest
+  #   container_name: n8n-trading
+  #   ports:
+  #     - "5678:5678"
+  #   environment:
+  #     - N8N_BASIC_AUTH_ACTIVE=true
+  #     - N8N_BASIC_AUTH_USER=${N8N_USER}
+  #     - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+  #     - N8N_HOST=0.0.0.0
+  #     - N8N_PORT=5678
+  #     - WEBHOOK_URL=http://${NAS_IP}:5678/
+  #   volumes:
+  #     - ./n8n/data:/home/node/.n8n
+  #   restart: unless-stopped
+  #   networks:
+  #     - trading-network
+
+networks:
+  trading-network:
+    driver: bridge

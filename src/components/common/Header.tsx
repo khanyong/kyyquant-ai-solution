@@ -17,7 +17,8 @@ import {
   AccountBalance, 
   Logout,
   Settings,
-  Map
+  Map,
+  Person
 } from '@mui/icons-material'
 import { useAppSelector, useAppDispatch } from '../../hooks/redux'
 import { logout, selectAccount } from '../../store/authSlice'
@@ -99,8 +100,17 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
               variant="outlined"
             />
 
-            <IconButton color="inherit" size="small">
-              <Settings />
+            <IconButton 
+              color="inherit" 
+              size="small"
+              onClick={() => window.location.href = '/mypage'}
+              sx={{ 
+                border: '1px solid',
+                borderColor: 'divider',
+                mr: 1
+              }}
+            >
+              <Person />
             </IconButton>
 
             <Button 
