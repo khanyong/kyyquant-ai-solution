@@ -51,10 +51,19 @@ class Strategy:
         data['MA_short'] = data['close'].rolling(window=short_window).mean()
         data['MA_long'] = data['close'].rolling(window=long_window).mean()
         
-        # 매수/매도 신호 생성
+        # 교차 신호 생성 (크로스오버할 때만 신호)
         data['signal'] = 0
-        data.loc[data['MA_short'] > data['MA_long'], 'signal'] = 1  # 매수
-        data.loc[data['MA_short'] < data['MA_long'], 'signal'] = -1  # 매도
+        data['position'] = 0
+        
+        # 이전 위치 관계 확인
+        data['position'] = (data['MA_short'] > data['MA_long']).astype(int)
+        data['prev_position'] = data['position'].shift(1)
+        
+        # 골든크로스 (상향 교차) - 매수 신호
+        data.loc[(data['position'] == 1) & (data['prev_position'] == 0), 'signal'] = 1
+        
+        # 데드크로스 (하향 교차) - 매도 신호  
+        data.loc[(data['position'] == 0) & (data['prev_position'] == 1), 'signal'] = -1
         
         return data
     
@@ -72,10 +81,15 @@ class Strategy:
         rs = gain / loss
         data['RSI'] = 100 - (100 / (1 + rs))
         
-        # 매수/매도 신호
+        # 매수/매도 신호 (진입 시점만)
         data['signal'] = 0
-        data.loc[data['RSI'] < oversold, 'signal'] = 1  # 과매도 → 매수
-        data.loc[data['RSI'] > overbought, 'signal'] = -1  # 과매수 → 매도
+        data['prev_rsi'] = data['RSI'].shift(1)
+        
+        # 과매도 영역 진입 시 매수
+        data.loc[(data['RSI'] < oversold) & (data['prev_rsi'] >= oversold), 'signal'] = 1
+        
+        # 과매수 영역 진입 시 매도
+        data.loc[(data['RSI'] > overbought) & (data['prev_rsi'] <= overbought), 'signal'] = -1
         
         return data
     
@@ -90,10 +104,15 @@ class Strategy:
         data['Upper'] = data['MA'] + (data['STD'] * num_std)
         data['Lower'] = data['MA'] - (data['STD'] * num_std)
         
-        # 매수/매도 신호
+        # 매수/매도 신호 (밴드 터치 시점만)
         data['signal'] = 0
-        data.loc[data['close'] < data['Lower'], 'signal'] = 1  # 하단 터치 → 매수
-        data.loc[data['close'] > data['Upper'], 'signal'] = -1  # 상단 터치 → 매도
+        data['prev_close'] = data['close'].shift(1)
+        
+        # 하단 밴드 터치 시 매수 (이전에는 밴드 위, 현재는 밴드 아래)
+        data.loc[(data['close'] < data['Lower']) & (data['prev_close'] >= data['Lower']), 'signal'] = 1
+        
+        # 상단 밴드 터치 시 매도 (이전에는 밴드 아래, 현재는 밴드 위)
+        data.loc[(data['close'] > data['Upper']) & (data['prev_close'] <= data['Upper']), 'signal'] = -1
         
         return data
 
