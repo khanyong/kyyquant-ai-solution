@@ -590,13 +590,8 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                                 <Stack direction="row" alignItems="center" spacing={2} mb={1}>
                                   <ShowChart color="primary" />
                                   <Typography variant="h6" fontWeight="bold">
-                                    {koreanName || getIndicatorKoreanName(indicatorName)}
+                                    {koreanName || getIndicatorKoreanName(indicatorName)} ({indicatorName})
                                   </Typography>
-                                  <Chip
-                                    label={indicatorName}
-                                    size="small"
-                                    variant="outlined"
-                                  />
                                   {indicatorInfo?.params && (
                                     <Chip
                                       label={Object.entries(indicatorInfo.params).map(([k, v]) => `${k}: ${v}`).join(', ')}
@@ -899,23 +894,52 @@ function getIndicatorKoreanName(type: string): string {
     'RSI_14': 'RSI-14 (상대강도지수)',
     'RSI_9': 'RSI-9 (단기 상대강도지수)',
     'SMA': '단순 이동평균선',
+    'MA': '이동평균선',
     'MA_5': '5일 이동평균선',
     'MA_20': '20일 이동평균선',
     'MA_60': '60일 이동평균선',
     'MA_120': '120일 이동평균선',
     'EMA': '지수 이동평균선',
-    'MACD': 'MACD',
+    'MACD': 'MACD (이동평균수렴확산)',
     'MACD_SIGNAL': 'MACD 시그널',
     'BB': '볼린저 밴드',
     'BB_UPPER': '볼린저 밴드 상단',
     'BB_LOWER': '볼린저 밴드 하단',
     'BB_MIDDLE': '볼린저 밴드 중심',
     'Stochastic': '스토캐스틱',
+    'STOCH': '스토캐스틱',
     'Volume': '거래량',
     'VOLUME': '거래량',
     'VOLUME_MA_20': '20일 평균 거래량',
     'PRICE': '현재가',
-    'close': '종가'
+    'close': '종가',
+    'open': '시가',
+    'high': '고가',
+    'low': '저가',
+    'Ichimoku': '일목균형표',
+    'ICHIMOKU': '일목균형표',
+    'ICHIMOKU_CONVERSION': '일목균형표 전환선',
+    'ICHIMOKU_BASE': '일목균형표 기준선',
+    'ICHIMOKU_SPAN_A': '일목균형표 선행스팬A',
+    'ICHIMOKU_SPAN_B': '일목균형표 선행스팬B',
+    'ICHIMOKU_LAGGING': '일목균형표 후행스팬',
+    'ATR': 'ATR (평균진폭지표)',
+    'CCI': 'CCI (상품채널지수)',
+    'Williams': '윌리엄스 %R',
+    'WilliamsR': '윌리엄스 %R',
+    'ADX': 'ADX (평균방향성지표)',
+    'OBV': 'OBV (거래량균형지표)',
+    'ROC': 'ROC (변화율)',
+    'MFI': 'MFI (자금흐름지표)',
+    'VWAP': 'VWAP (거래량가중평균가격)',
+    'Parabolic': '파라볼릭 SAR',
+    'ParabolicSAR': '파라볼릭 SAR',
+    'ZigZag': '지그재그',
+    'Envelope': '엔벨로프',
+    'Pivot': '피벗포인트',
+    'Fibonacci': '피보나치',
+    'TRIX': 'TRIX',
+    'DMI': 'DMI (방향성지표)'
   }
 
   return names[type] || type
@@ -977,6 +1001,21 @@ function getDetailedIndicatorInfo(type: string): {
       interpretation: '• 80 이상: 과매수 구간\n• 20 이하: 과매도 구간\n• %K > %D: 매수 신호\n• %K < %D: 매도 신호',
       visualExample: '100 │\n 80 ├──────────\n    │  %K ╭─╮\n    │ %D ╭╯  ╰╮\n 20 ├───╯────╰─\n  0 └──────────→',
       tips: '스토캐스틱은 횡보장에서 효과적이며, 추세장에서는 과매수/과매도 상태가 지속될 수 있습니다.'
+    },
+    'Ichimoku': {
+      koreanName: '일목균형표',
+      description: '일목균형표는 일본에서 개발된 종합적인 추세 지표로, 5개의 선을 이용하여 지지/저항선, 추세 방향, 매매 시점을 한눈에 파악할 수 있습니다.',
+      formula: '전환선 = (9일 최고가 + 9일 최저가) / 2\n기준선 = (26일 최고가 + 26일 최저가) / 2\n선행스팬A = (전환선 + 기준선) / 2 (26일 선행)\n선행스팬B = (52일 최고가 + 52일 최저가) / 2 (26일 선행)\n후행스팬 = 현재 종가 (26일 후행)',
+      interpretation: '• 전환선 > 기준선: 상승 추세\n• 가격 > 구름대: 강세\n• 가격 < 구름대: 약세\n• 구름대 내부: 보합/전환 구간\n• 구름대 두께: 지지/저항 강도',
+      visualExample: '     ╱───── 선행스팬A\n    ╱ 구름대\n───────────── 기준선\n  ╱ ╲   ╱─── 전환선\n ╱   ╲ ╱\n╱─────╲───── 선행스팬B',
+      tips: '일목균형표는 모든 시장 상황을 종합적으로 보여주는 강력한 지표입니다. 구름대의 색깔 변화와 두께를 주의 깊게 관찰하세요.'
+    },
+    'ATR': {
+      koreanName: 'ATR (평균진폭지표)',
+      description: 'ATR은 가격의 변동성을 측정하는 지표로, 일정 기간 동안의 실질 변동폭(True Range)의 평균을 계산합니다.',
+      formula: 'TR = Max(고가-저가, |고가-전일종가|, |저가-전일종가|)\nATR = MA(TR, 14)',
+      interpretation: '• ATR 상승: 변동성 증가\n• ATR 하락: 변동성 감소\n• 손절/익절 설정 기준\n• 포지션 크기 결정',
+      tips: 'ATR은 가격의 방향이 아닌 변동성만을 측정합니다. 추세 지표와 함께 사용하여 진입/청산 수준을 결정하세요.'
     }
   }
 
@@ -1012,7 +1051,15 @@ function getIndicatorSignal(type: string): string {
     'BB': '하단 밴드 터치 매수, 상단 밴드 터치 매도',
     'Stochastic': '%K가 %D 상향돌파 매수, 하향돌파 매도',
     'Volume': '거래량 급증 시 추세 전환 가능성',
-    'PRICE': '설정된 가격 조건에 따라 매매 결정'
+    'PRICE': '설정된 가격 조건에 따라 매매 결정',
+    'Ichimoku': '전환선 > 기준선 매수, 가격 > 구름대 강세',
+    'ICHIMOKU': '전환선 > 기준선 매수, 가격 > 구름대 강세',
+    'ATR': '변동성 기준 손절/익절 설정',
+    'CCI': 'CCI < -100 매수, CCI > 100 매도',
+    'Williams': '%R < -80 매수, %R > -20 매도',
+    'ADX': 'ADX > 25 추세 강화, ADX < 20 추세 약화',
+    'OBV': 'OBV 상승 + 가격 상승 = 상승 지속',
+    'MFI': 'MFI < 20 매수, MFI > 80 매도'
   }
 
   // 정확한 매칭 먼저 시도
