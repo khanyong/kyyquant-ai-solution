@@ -580,7 +580,7 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                           ind.type === indicatorName || ind.id === indicatorName || ind.name === indicatorName
                         )
 
-                        const { description, formula, interpretation, visualExample, tips } = getDetailedIndicatorInfo(indicatorName)
+                        const { koreanName, description, formula, interpretation, visualExample, tips } = getDetailedIndicatorInfo(indicatorName)
 
                         return (
                           <Grid item xs={12} key={index}>
@@ -590,7 +590,7 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                                 <Stack direction="row" alignItems="center" spacing={2} mb={1}>
                                   <ShowChart color="primary" />
                                   <Typography variant="h6" fontWeight="bold">
-                                    {getIndicatorKoreanName(indicatorName)}
+                                    {koreanName || getIndicatorKoreanName(indicatorName)}
                                   </Typography>
                                   <Chip
                                     label={indicatorName}
@@ -923,6 +923,7 @@ function getIndicatorKoreanName(type: string): string {
 
 // 상세한 지표 정보 반환
 function getDetailedIndicatorInfo(type: string): {
+  koreanName?: string
   description: string
   formula?: string
   interpretation: string
@@ -931,6 +932,7 @@ function getDetailedIndicatorInfo(type: string): {
 } {
   const indicators: any = {
     'RSI': {
+      koreanName: 'RSI (상대강도지수)',
       description: 'RSI는 일정 기간 동안의 가격 상승폭과 하락폭의 비율을 계산하여 0~100 사이의 값으로 표현하는 모멘텀 지표입니다. 주가의 과매수/과매도 상태를 판단하는 데 효과적입니다.',
       formula: 'RSI = 100 - (100 / (1 + RS))\nRS = 평균 상승폭 / 평균 하락폭',
       interpretation: '• 70 이상: 과매수 구간 (하락 가능성)\n• 30 이하: 과매도 구간 (상승 가능성)\n• 50 기준: 상승/하락 추세 판단\n• 다이버전스: 가격과 RSI의 방향이 다른 경우',
@@ -938,6 +940,7 @@ function getDetailedIndicatorInfo(type: string): {
       tips: 'RSI는 횡보장에서는 50을 중심으로 오르락을 반복합니다. 강한 상승추세에서는 70 이상에서도 계속 상승할 수 있으므로 다른 지표와 함께 사용하세요.'
     },
     'MACD': {
+      koreanName: 'MACD (이동평균수렴확산)',
       description: 'MACD는 단기 지수이동평균(12일)과 장기 지수이동평균(26일)의 차이를 나타내는 추세 추종 지표입니다. MACD선과 시그널선(9일)의 교차를 통해 매매 시점을 포착합니다.',
       formula: 'MACD = EMA(12) - EMA(26)\n시그널 = EMA(MACD, 9)\n히스토그램 = MACD - 시그널',
       interpretation: '• MACD > 시그널: 상승 추세\n• MACD < 시그널: 하락 추세\n• 골든크로스: MACD가 시그널을 상향 돌파\n• 데드크로스: MACD가 시그널을 하향 돌파\n• 0선 상향/하향: 추세 전환',
@@ -945,6 +948,7 @@ function getDetailedIndicatorInfo(type: string): {
       tips: 'MACD는 추세가 강한 시장에서 효과적이며, 횡보장에서는 거짓 신호가 많습니다. 히스토그램의 크기와 방향도 함께 확인하세요.'
     },
     'BB': {
+      koreanName: '볼린저 밴드',
       description: '볼린저밴드는 이동평균선을 중심으로 표준편차의 2배 거리에 상하한선을 그려 가격의 변동성과 추세를 파악하는 지표입니다. 밴드의 폭이 좁으면 변동성이 낮고, 넓으면 변동성이 높습니다.',
       formula: '중심선 = SMA(20)\n상단밴드 = 중심선 + (2 × 표준편차)\n하단밴드 = 중심선 - (2 × 표준편차)',
       interpretation: '• 상단밴드 터치: 매도 신호\n• 하단밴드 터치: 매수 신호\n• 밴드 폭 축소: 변동성 감소 (돌파 대기)\n• 밴드 폭 확대: 변동성 증가\n• 밴드 외부 이탈: 추세 가속',
@@ -952,6 +956,7 @@ function getDetailedIndicatorInfo(type: string): {
       tips: '밴드 폭이 좁아지는 "스퀘즈" 후 강한 방향성 움직임이 나타날 가능성이 높습니다. 밴드 외부에서 다시 내부로 돌아오는 패턴도 주의 깊게 관찰하세요.'
     },
     'SMA': {
+      koreanName: '단순이동평균선',
       description: '단순이동평균선은 일정 기간 동안의 종가를 단순 평균하여 계산하는 가장 기본적인 추세 지표입니다. 가격의 노이즈를 제거하고 추세를 파악하는 데 사용됩니다.',
       formula: 'SMA(n) = (최근 n일간의 종가 합) / n',
       interpretation: '• 가격 > SMA: 상승 추세\n• 가격 < SMA: 하락 추세\n• 단기 MA > 장기 MA: 골든크로스 (매수)\n• 단기 MA < 장기 MA: 데드크로스 (매도)\n• 지지/저항선 역할',
@@ -959,12 +964,14 @@ function getDetailedIndicatorInfo(type: string): {
       tips: '이동평균선은 후행성 지표이므로 추세 전환 시점을 빨리 포착하지 못합니다. 여러 기간의 이동평균선을 함께 사용하여 추세의 강도를 판단하세요.'
     },
     'Volume': {
+      koreanName: '거래량',
       description: '거래량은 일정 기간 동안 거래된 주식의 수량을 나타내며, 가격 움직임의 강도와 신뢰성을 확인하는 중요한 지표입니다.',
       interpretation: '• 가격 상승 + 거래량 증가: 강세 지속\n• 가격 상승 + 거래량 감소: 상승 한계\n• 가격 하락 + 거래량 증가: 바닥 확인\n• 평균 거래량 대비 2배 이상: 주목',
       visualExample: '거래량\n│██\n│██    ██\n│██ ██ ██    ██\n│██ ██ ██ ██ ██\n└─────────────→\n ↑가격상승  ↑돌파',
       tips: '거래량은 가격보다 선행하는 경향이 있습니다. 거래량이 먼저 증가하면 가격 변동을 예상할 수 있습니다.'
     },
     'Stochastic': {
+      koreanName: '스토캐스틱',
       description: '스토캐스틱은 일정 기간 동안의 최고가와 최저가 범위에서 현재 가격의 상대적 위치를 0~100으로 표현하는 모멘텀 지표입니다.',
       formula: '%K = ((C - L14) / (H14 - L14)) × 100\n%D = MA(%K, 3)\nC: 현재가, L14: 14일 최저가, H14: 14일 최고가',
       interpretation: '• 80 이상: 과매수 구간\n• 20 이하: 과매도 구간\n• %K > %D: 매수 신호\n• %K < %D: 매도 신호',
