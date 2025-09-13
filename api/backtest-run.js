@@ -20,8 +20,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Try environment variable first, fallback to direct URL
-  const NAS_API_URL = process.env.NAS_API_URL || 'http://khanyong.asuscomm.com:8080';
+  // Try environment variable first, fallback to HTTPS URL
+  const NAS_API_URL = process.env.NAS_API_URL || 'https://api.bll-pro.com';
 
   // Check if fetch is available
   if (typeof fetch === 'undefined') {

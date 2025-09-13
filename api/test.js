@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
   // Now test actual NAS connection
   if (req.method === 'POST') {
-    const NAS_API_URL = 'http://khanyong.asuscomm.com:8080';
+    const NAS_API_URL = process.env.NAS_API_URL || 'https://api.bll-pro.com';
 
     try {
       // First test if the host is reachable
