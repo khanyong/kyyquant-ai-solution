@@ -48,6 +48,7 @@ import {
   Info,
   CheckCircle,
   Warning,
+  Assessment,
   Security,
   Delete,
   Edit,
@@ -60,10 +61,10 @@ import {
   AccountTree,
   Autorenew
 } from '@mui/icons-material'
-import InvestmentSettingsSummary from './InvestmentSettingsSummary'
 import InvestmentFlowManager from './InvestmentFlowManager'
 import StageBasedStrategy from './StageBasedStrategy'
 import StrategyLoader from './StrategyLoader'
+import StrategyAnalyzer from './StrategyAnalyzer'
 import { supabase } from '../lib/supabase'
 import { authService } from '../services/auth'
 import { InvestmentFlowType } from '../types/investment'
@@ -873,7 +874,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       <Paper sx={{ mb: 3 }}>
         <Tabs value={currentTab} onChange={handleTabChange} variant="fullWidth">
           <Tab icon={<Build />} iconPosition="start" label="전략 구성" />
-          <Tab icon={<Settings />} iconPosition="start" label="투자 설정 요약" />
+          <Tab icon={<Assessment />} iconPosition="start" label="전략 분석" />
           <Tab icon={<SwapHoriz />} iconPosition="start" label="투자 흐름 관리" />
         </Tabs>
       </Paper>
@@ -1776,9 +1777,12 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         )}
       </TabPanel>
 
-      {/* 투자 설정 요약 탭 */}
+      {/* 전략 분석 탭 */}
       <TabPanel value={currentTab} index={1}>
-        <InvestmentSettingsSummary />
+        <StrategyAnalyzer
+          strategy={strategy}
+          investmentConfig={{}}
+        />
       </TabPanel>
 
       {/* 투자 흐름 관리 탭 */}
