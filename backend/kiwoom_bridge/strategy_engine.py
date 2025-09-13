@@ -105,6 +105,77 @@ class StrategyEngine:
         self._debug_count = 0
         self._max_debug = 10  # 디버그 출력 제한
 
+    def calculate_all_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """모든 기본 지표를 계산하는 메서드"""
+        df = df.copy()
+
+        # PRICE 컬럼 추가
+        df['PRICE'] = df['close']
+        df['price'] = df['close']
+
+        # RSI 계산 (여러 기간)
+        for period in [14, 9, 21]:
+            rsi_data = self.indicator_calc.calculate_rsi(df, period)
+            df[f'rsi_{period}'] = rsi_data
+            df[f'RSI_{period}'] = rsi_data  # 대문자 버전
+
+        # 볼린저 밴드
+        bb_data = self.indicator_calc.calculate_bollinger_bands(df)
+        df['bb_upper'] = bb_data['upper']
+        df['bb_middle'] = bb_data['middle']
+        df['bb_lower'] = bb_data['lower']
+        df['BB_upper'] = bb_data['upper']
+        df['BB_middle'] = bb_data['middle']
+        df['BB_lower'] = bb_data['lower']
+        df['BB_UPPER'] = bb_data['upper']
+        df['BB_MIDDLE'] = bb_data['middle']
+        df['BB_LOWER'] = bb_data['lower']
+
+        # MACD
+        macd_data = self.indicator_calc.calculate_macd(df)
+        df['macd'] = macd_data['macd']
+        df['macd_signal'] = macd_data['signal']
+        df['macd_hist'] = macd_data['histogram']
+        df['MACD'] = macd_data['macd']
+        df['MACD_signal'] = macd_data['signal']
+        df['MACD_hist'] = macd_data['histogram']
+
+        # SMA (여러 기간)
+        for period in [5, 10, 20, 50, 200]:
+            sma_data = self.indicator_calc.calculate_sma(df, period)
+            df[f'sma_{period}'] = sma_data
+            df[f'SMA_{period}'] = sma_data
+
+        # EMA (여러 기간)
+        for period in [12, 26, 50]:
+            ema_data = self.indicator_calc.calculate_ema(df, period)
+            df[f'ema_{period}'] = ema_data
+            df[f'EMA_{period}'] = ema_data
+
+        # Stochastic
+        stoch_data = self.indicator_calc.calculate_stochastic(df)
+        df['stoch_k'] = stoch_data['k']
+        df['stoch_d'] = stoch_data['d']
+        df['Stoch_K'] = stoch_data['k']
+        df['Stoch_D'] = stoch_data['d']
+
+        # ATR
+        atr_data = self.indicator_calc.calculate_atr(df)
+        df['atr_14'] = atr_data
+        df['ATR_14'] = atr_data
+
+        # OBV
+        obv_data = self.indicator_calc.calculate_obv(df)
+        df['obv'] = obv_data
+        df['OBV'] = obv_data
+
+        # Volume Ratio
+        vr_data = self.indicator_calc.calculate_volume_ratio(df)
+        df['vr_20'] = vr_data
+        df['VR_20'] = vr_data
+
+        return df
+
     def prepare_data(self, df: pd.DataFrame, strategy_params: Dict) -> pd.DataFrame:
         """데이터에 필요한 지표들을 계산하여 추가"""
         df = df.copy()
