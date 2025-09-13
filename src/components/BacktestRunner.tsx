@@ -718,9 +718,9 @@ const BacktestRunner: React.FC = () => {
 
       setBacktestId(result.backtest_id);
 
-      // 백테스트가 즉시 완료되는 경우 (status가 'completed'이고 results가 있는 경우)
-      if (result.status === 'completed' && result.results) {
-        const backtestData = result.results;
+      // 백테스트가 즉시 완료되는 경우 (success가 true이고 summary가 있는 경우)
+      if (result.success && result.summary) {
+        const backtestData = result;
         setProgress(100);
         setSuccess(`백테스트가 완료되었습니다.
           총 수익률: ${backtestData.summary?.total_return?.toFixed(2)}%,
@@ -737,7 +737,7 @@ const BacktestRunner: React.FC = () => {
         
         // 전략 이름 찾기 - strategies 배열이나 백엔드 응답에서
         const currentStrategy = strategies.find(s => s.id === config.strategyId);
-        const strategyNameFromBackend = result.results?.strategy_name;
+        const strategyNameFromBackend = result.strategy_name || result.summary?.strategy_name;
         const finalStrategyName = currentStrategy?.name || strategyNameFromBackend || '알 수 없음';
         
         console.log('Strategy name resolution:', {
