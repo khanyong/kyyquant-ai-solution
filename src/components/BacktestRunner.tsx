@@ -98,8 +98,8 @@ const BacktestRunner: React.FC = () => {
   
   const [config, setConfig] = useState<BacktestConfig>({
     strategyId: '',
-    startDate: new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
-    endDate: new Date(),
+    startDate: new Date('2024-09-14'),  // 데이터 시작일
+    endDate: new Date('2025-09-12'),    // 데이터 종료일
     initialCapital: 10000000,
     commission: 0.00015,
     slippage: 0.001,

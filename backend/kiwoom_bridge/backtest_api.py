@@ -400,14 +400,15 @@ async def run_backtest(request: BacktestRequest):
             if supabase:
                 try:
                     print(f"  - Supabase에서 {stock_code} 데이터 조회 중...")
-                    response = supabase.table('stock_prices').select('*').eq(
+                    response = supabase.table('kw_price_daily').select('*').eq(
                         'stock_code', stock_code
-                    ).gte('date', request.start_date).lte('date', request.end_date).order('date').execute()
+                    ).gte('trade_date', request.start_date).lte('trade_date', request.end_date).order('trade_date').execute()
                     
                     if response.data and len(response.data) > 0:
                         print(f"  ✓ Supabase에서 {len(response.data)}개 데이터 로드")
                         data = pd.DataFrame(response.data)
-                        data['date'] = pd.to_datetime(data['date'])
+                        # trade_date를 date로 변환
+                        data['date'] = pd.to_datetime(data['trade_date'])
                         
                         # OHLCV 데이터 확인 및 선택
                         required_cols = ['date', 'close']
@@ -624,14 +625,15 @@ async def analyze_strategy(request: AnalyzeRequest):
             # Supabase에서 데이터 조회
             if supabase:
                 try:
-                    response = supabase.table('stock_prices').select('*').eq(
+                    response = supabase.table('kw_price_daily').select('*').eq(
                         'stock_code', stock_code
-                    ).gte('date', request.start_date).lte('date', request.end_date).execute()
+                    ).gte('trade_date', request.start_date).lte('trade_date', request.end_date).order('trade_date').execute()
 
                     if response.data and len(response.data) > 0:
                         print(f"  [OK] Supabase에서 {len(response.data)}개 데이터 로드")
                         data = pd.DataFrame(response.data)
-                        data['date'] = pd.to_datetime(data['date'])
+                        # trade_date를 date로 변환
+                        data['date'] = pd.to_datetime(data['trade_date'])
 
                         # OHLCV 데이터 확인
                         required_cols = ['date', 'close']

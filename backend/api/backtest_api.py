@@ -823,7 +823,7 @@ class BacktestEngine:
                     return False
         
         # Price 조건 (볼린저밴드 관련)
-        if indicator_id == 'price':
+        if indicator_id.lower() == 'price':
             close_price = row['close']
             if operator == '<' and value == 'BB_LOWER':
                 if 'bb_lower' in row:

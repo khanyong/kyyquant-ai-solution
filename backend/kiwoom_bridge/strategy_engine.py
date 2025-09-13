@@ -109,6 +109,10 @@ class StrategyEngine:
         """데이터에 필요한 지표들을 계산하여 추가"""
         df = df.copy()
 
+        # PRICE 컬럼 추가 (전략 템플릿 호환성)
+        df['PRICE'] = df['close']
+        df['price'] = df['close']
+
         # 전략에서 사용하는 지표들 추출
         indicators = strategy_params.get('indicators', [])
         buy_conditions = strategy_params.get('buyConditions', [])
@@ -148,13 +152,16 @@ class StrategyEngine:
         # 각 지표 계산
         for indicator_str in used_indicators:
             try:
-                if 'sma' in indicator_str or 'ma_' in indicator_str:
+                if 'sma' in indicator_str or 'ma_' in indicator_str or 'ma' == indicator_str:
                     # sma_20 형태에서 기간 추출
                     parts = indicator_str.split('_')
                     if len(parts) > 1 and parts[1].isdigit():
                         period = int(parts[1])
                         df[f'sma_{period}'] = self.indicator_calc.calculate_sma(df, period)
                         df[f'ma_{period}'] = df[f'sma_{period}']  # 별칭
+                        # 대문자 버전도 추가 (전략 템플릿 호환성)
+                        df[f'SMA_{period}'] = df[f'sma_{period}']
+                        df[f'MA_{period}'] = df[f'sma_{period}']
 
                 elif 'ema' in indicator_str:
                     parts = indicator_str.split('_')
@@ -169,18 +176,29 @@ class StrategyEngine:
                         period = int(parts[1])
                     df[f'rsi_{period}'] = self.indicator_calc.calculate_rsi(df, period)
                     df['rsi'] = df[f'rsi_{period}']  # 기본 RSI
+                    # 대문자 버전도 추가 (전략 템플릿 호환성)
+                    df[f'RSI_{period}'] = df[f'rsi_{period}']
+                    df['RSI'] = df[f'rsi_{period}']
 
                 elif 'macd' in indicator_str:
                     macd_data = self.indicator_calc.calculate_macd(df)
                     df['macd'] = macd_data['macd']
                     df['macd_signal'] = macd_data['signal']
                     df['macd_histogram'] = macd_data['histogram']
+                    # 대문자 버전도 추가 (전략 템플릿 호환성)
+                    df['MACD'] = macd_data['macd']
+                    df['MACD_SIGNAL'] = macd_data['signal']
+                    df['MACD_HISTOGRAM'] = macd_data['histogram']
 
                 elif 'bb' in indicator_str or 'bollinger' in indicator_str:
                     bb_data = self.indicator_calc.calculate_bollinger_bands(df)
                     df['bb_upper'] = bb_data['upper']
                     df['bb_middle'] = bb_data['middle']
                     df['bb_lower'] = bb_data['lower']
+                    # 대문자 버전도 추가 (전략 템플릿 호환성)
+                    df['BB_UPPER'] = bb_data['upper']
+                    df['BB_MIDDLE'] = bb_data['middle']
+                    df['BB_LOWER'] = bb_data['lower']
 
                 elif 'stoch' in indicator_str:
                     stoch_data = self.indicator_calc.calculate_stochastic(df)
@@ -209,7 +227,9 @@ class StrategyEngine:
     def evaluate_condition(self, df: pd.DataFrame, idx: int, condition: Dict) -> bool:
         """단일 조건 평가"""
         try:
-            indicator = condition.get('indicator', '').lower()
+            # indicator를 원본 그대로 유지하고, 비교할 때만 lowercase 사용
+            indicator_orig = condition.get('indicator', '')
+            indicator = indicator_orig.lower()
             operator = condition.get('operator', '')
             value = condition.get('value', 0)
 
@@ -231,9 +251,11 @@ class StrategyEngine:
             elif indicator == 'low':
                 current_value = df.iloc[idx]['low']
 
-            # 지표값 가져오기
+            # 지표값 가져오기 - 원본과 lowercase 둘 다 체크
             elif indicator in df.columns:
                 current_value = df.iloc[idx][indicator]
+            elif indicator_orig in df.columns:
+                current_value = df.iloc[idx][indicator_orig]
 
             # indicator_period 형태 처리 (예: rsi_14, sma_20)
             elif '_' in indicator:
@@ -253,10 +275,13 @@ class StrategyEngine:
             try:
                 compare_value = float(value)
             except (ValueError, TypeError):
-                # value가 지표명인 경우
-                value_str = str(value).lower()
+                # value가 지표명인 경우 - 원본과 lowercase 둘 다 체크
+                value_orig = str(value)
+                value_str = value_orig.lower()
                 if value_str in df.columns:
                     compare_value = df.iloc[idx][value_str]
+                elif value_orig in df.columns:
+                    compare_value = df.iloc[idx][value_orig]
                 elif '_' in value_str and value_str in df.columns:
                     compare_value = df.iloc[idx][value_str]
 
