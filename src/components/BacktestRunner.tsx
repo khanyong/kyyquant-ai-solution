@@ -674,8 +674,8 @@ const BacktestRunner: React.FC = () => {
       console.log('Sending backtest request to server...');
       // 프로덕션에서는 Vercel Functions 프록시 사용
       const isProduction = import.meta.env.PROD;
-      const apiUrl = isProduction 
-        ? '/api/backtest/run'  // Vercel Functions 프록시
+      const apiUrl = isProduction
+        ? '/api/backtest-run'  // Vercel Functions 프록시
         : (import.meta.env.VITE_API_URL || 'http://localhost:8001') + '/api/backtest/run';
       const response = await fetch(apiUrl, {
         method: 'POST',
