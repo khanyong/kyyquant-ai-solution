@@ -21,12 +21,16 @@ class KiwoomRestAPI(KiwoomAPIInterface):
     """키움 REST API 구현체"""
     
     def __init__(self):
-        self.base_url = os.getenv('KIWOOM_API_URL', 'https://openapi.kiwoom.com:9443')
-        self.ws_url = os.getenv('KIWOOM_WS_URL', 'ws://openapi.kiwoom.com:9443')
+        # 키움증권 OpenAPI+ REST API URL
+        self.is_demo = os.getenv('KIWOOM_IS_DEMO', 'true').lower() == 'true'
+
+        # 키움증권 REST API URL (문서 참조)
+        self.base_url = 'https://openapi.kiwoom.com:9443'
+        self.ws_url = 'ws://openapi.kiwoom.com:9443'
+
         self.app_key = os.getenv('KIWOOM_APP_KEY')
         self.app_secret = os.getenv('KIWOOM_APP_SECRET')
         self.account_no = os.getenv('KIWOOM_ACCOUNT_NO')
-        self.is_demo = os.getenv('KIWOOM_IS_DEMO', 'true').lower() == 'true'
         
         self.access_token = None
         self.token_expires_at = None
@@ -59,16 +63,24 @@ class KiwoomRestAPI(KiwoomAPIInterface):
         """액세스 토큰 발급 또는 갱신"""
         if self.access_token and self.token_expires_at and datetime.now() < self.token_expires_at:
             return self.access_token
-        
+
+        # 키움증권 API oauth2/token 엔드포인트 사용
         url = f"{self.base_url}/oauth2/token"
+
+        # 문서에 따라 form-urlencoded 사용
+        headers = {
+            "content-type": "application/x-www-form-urlencoded"
+        }
+
         data = {
             "grant_type": "client_credentials",
             "appkey": self.app_key,
             "appsecret": self.app_secret
         }
-        
+
         try:
-            async with self.session.post(url, data=data) as response:
+            # form data로 전송
+            async with self.session.post(url, data=data, headers=headers) as response:
                 if response.status == 200:
                     token_data = await response.json()
                     self.access_token = token_data['access_token']

@@ -103,33 +103,35 @@ python main.py
 ## 📚 사용 가이드
 
 ### 빠른 시작
-1. [투자설정](docs/BACKTEST_GUIDE.md#1-투자설정---유니버스-필터링) - 종목 필터링
-2. [전략빌더](docs/BACKTEST_GUIDE.md#2-전략빌더---매매-전략-생성) - 매매 전략 생성
-3. [백테스트](docs/BACKTEST_GUIDE.md#3-백테스트---전략-검증) - 전략 검증
+1. [투자설정](docs/guides/BACKTEST_GUIDE.md#1-투자설정---유니버스-필터링) - 종목 필터링
+2. [전략빌더](docs/guides/BACKTEST_GUIDE.md#2-전략빌더---매매-전략-생성) - 매매 전략 생성
+3. [백테스트](docs/guides/BACKTEST_GUIDE.md#3-백테스트---전략-검증) - 전략 검증
 
 ### 상세 문서
-- [백테스트 가이드](docs/BACKTEST_GUIDE.md) - 전체 기능 상세 설명
-- [개발 로드맵](DEVELOPMENT_ROADMAP.md) - 프로젝트 진행 상황
-- [투자 데이터 수집](INVESTMENT_DATA_COLLECTION_GUIDE.md) - 데이터 수집 방법
+- [백테스트 가이드](docs/guides/BACKTEST_GUIDE.md) - 전체 기능 상세 설명
+- [개발 로드맵](docs/development/DEVELOPMENT_ROADMAP.md) - 프로젝트 진행 상황
+- [투자 데이터 수집](docs/guides/INVESTMENT_DATA_COLLECTION_GUIDE.md) - 데이터 수집 방법
 
 ## 🏗️ 프로젝트 구조
 
 ```
 auto_stock/
-├── src/
-│   ├── components/       # React 컴포넌트
-│   │   ├── FilteringStrategy.tsx    # 필터링 전략 설정
-│   │   ├── BacktestRunner.tsx       # 백테스트 실행
-│   │   └── StrategyBuilder.tsx      # 전략 생성
-│   ├── services/         # API 및 서비스
-│   │   ├── stockDataService.ts      # 주식 데이터 서비스
-│   │   └── api.ts                   # API 통신
-│   ├── lib/             # 외부 라이브러리 설정
-│   │   └── supabase.ts              # Supabase 클라이언트
-│   └── types/           # TypeScript 타입 정의
-├── docs/                # 문서
-├── .env.example        # 환경 변수 예시
-└── package.json        # 프로젝트 설정
+├── src/                 # 소스 코드
+│   ├── components/      # React 컴포넌트
+│   ├── services/        # API 및 서비스
+│   ├── lib/            # 외부 라이브러리 설정
+│   └── types/          # TypeScript 타입 정의
+├── backend/            # 백엔드 서버
+├── docs/               # 문서
+│   ├── deployment/     # 배포 관련 문서
+│   ├── development/    # 개발 관련 문서
+│   ├── guides/         # 사용 가이드
+│   ├── api/           # API 문서
+│   └── system/        # 시스템 문서
+├── scripts/           # 유틸리티 스크립트
+├── n8n_workflows/     # n8n 워크플로우
+├── supabase/          # Supabase 설정
+└── data/              # 데이터 파일
 ```
 
 ## 🛠️ 기술 스택

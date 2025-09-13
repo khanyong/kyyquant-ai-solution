@@ -18,6 +18,7 @@ from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 from supabase import create_client, Client
+from strategy_engine import strategy_engine
 
 # 환경 변수 로드 - backend 폴더의 .env 파일 먼저, 없으면 상위 디렉토리
 backend_env = os.path.join(os.path.dirname(__file__), '.env')
@@ -299,21 +300,21 @@ def generate_sample_data(stock_codes: List[str], start_date: str, end_date: str)
 
 def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, commission: float, slippage: float) -> Dict:
     """백테스트 실행 로직"""
-    
+
     # 간단한 백테스트 시뮬레이션
     capital = initial_capital
     trades = []
     equity_curve = []
-    
+
     # 전략 파라미터 파싱
     strategy_params = strategy.get('custom_parameters', {})
-    
+
     # 모든 종목의 날짜 통합
     all_dates = set()
     for df in stock_data.values():
         all_dates.update(df.index)
     all_dates = sorted(list(all_dates))
-    
+
     # 포트폴리오 초기화
     portfolio = {
         'cash': initial_capital,
@@ -321,18 +322,25 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
         'position_costs': {},  # 각 포지션의 매수 비용 추적
         'value': initial_capital
     }
-    
+
+    # 각 종목에 대해 지표 계산
+    prepared_stock_data = {}
+    for code, df in stock_data.items():
+        # 전략 엔진으로 지표 계산
+        prepared_df = strategy_engine.prepare_data(df, strategy_params)
+        prepared_stock_data[code] = prepared_df
+        logger.info(f"종목 {code}에 대한 지표 계산 완료")
+
     # 각 날짜별로 백테스트 실행
     for date in all_dates:
         daily_value = portfolio['cash']
-        
-        for code, df in stock_data.items():
+
+        for code, df in prepared_stock_data.items():
             if date in df.index:
                 price = df.loc[date, 'close']
-                
-                # 간단한 전략: RSI < 30 매수, RSI > 70 매도 (예시)
-                # 실제로는 strategy_params를 기반으로 구현
-                signal = generate_signal(df, date, strategy_params)
+
+                # 전략 엔진을 사용하여 실제 신호 생성
+                signal = strategy_engine.generate_signal(df, date, strategy_params)
                 
                 if signal == 'buy' and portfolio['cash'] > price * 100:
                     # 매수
@@ -431,29 +439,8 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
         'equity_curve': equity_curve[-100:]  # 최근 100일만
     }
 
-def generate_signal(df: pd.DataFrame, date, strategy_params: Dict) -> str:
-    """거래 신호 생성"""
-    # TODO: 실제 전략 파라미터를 사용한 신호 생성 구현 필요
-    # 임시로 간단한 기술적 지표 기반 신호 생성
-    
-    # 현재는 매수/매도 신호를 생성하지 않음 (hold만 반환)
-    # 이렇게 하면 백테스트가 일관된 결과를 보여줄 것임
-    return 'hold'
-    
-    # 나중에 실제 전략 구현 시 아래와 같은 방식으로:
-    # if 'buyConditions' in strategy_params:
-    #     # 매수 조건 체크
-    #     for condition in strategy_params['buyConditions']:
-    #         if evaluate_condition(df, date, condition):
-    #             return 'buy'
-    # 
-    # if 'sellConditions' in strategy_params:
-    #     # 매도 조건 체크
-    #     for condition in strategy_params['sellConditions']:
-    #         if evaluate_condition(df, date, condition):
-    #             return 'sell'
-    # 
-    # return 'hold'
+# generate_signal 함수는 이제 strategy_engine에서 처리됨
+# strategy_engine.generate_signal()을 사용
 
 def calculate_max_drawdown(equity_curve: List[Dict]) -> float:
     """최대 낙폭 계산"""

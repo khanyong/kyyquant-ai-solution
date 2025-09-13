@@ -577,7 +577,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         is_active: true,
         is_test_mode: false,
         auto_trade_enabled: false,
-        is_public: isPublic,  // 공유 설정 추가
+        is_public: isPublic,  // 전략 공유 설정
         position_size: strategy.riskManagement.positionSize || 10,
         user_id: user?.id  // 현재 사용자 ID (필수)
       }
@@ -607,7 +607,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       setSavedStrategies([...savedStrategies, { ...strategy, id: data.id }])
       setSaveDialogOpen(false)
       setIsPublic(false)  // 초기화
-      
+
       const shareMessage = isPublic ? '\n전략이 공개되어 다른 사용자들도 볼 수 있습니다.' : '\n전략은 비공개로 저장되었습니다.'
       alert(`전략 '${strategy.name}'이 저장되었습니다!${shareMessage}\n\n백테스팅 페이지에서 이 전략을 선택해 실행할 수 있습니다.`)
       
@@ -697,54 +697,101 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
   // 전략 불러오기
   const loadStrategy = (savedStrategy: any) => {
     console.log('StrategyBuilder - loadStrategy called with:', savedStrategy)
-    
+
     // savedStrategy가 이미 strategy_data 형태인 경우와 아닌 경우 처리
     const strategyData = savedStrategy.strategy_data || savedStrategy
-    
+
+    // 실제 저장된 데이터 구조에 맞게 파싱
+    // 지표 데이터 파싱 (indicators.list 또는 indicators 배열)
+    let indicators = []
+    if (strategyData.indicators) {
+      if (Array.isArray(strategyData.indicators)) {
+        indicators = strategyData.indicators
+      } else if (strategyData.indicators.list && Array.isArray(strategyData.indicators.list)) {
+        indicators = strategyData.indicators.list
+      }
+    }
+
+    // 매수 조건 파싱 (entry_conditions.buy 또는 buyConditions)
+    let buyConditions = []
+    if (strategyData.entry_conditions && strategyData.entry_conditions.buy) {
+      buyConditions = strategyData.entry_conditions.buy
+    } else if (strategyData.buyConditions) {
+      buyConditions = strategyData.buyConditions
+    }
+
+    // 매도 조건 파싱 (exit_conditions.sell 또는 sellConditions)
+    let sellConditions = []
+    if (strategyData.exit_conditions && strategyData.exit_conditions.sell) {
+      sellConditions = strategyData.exit_conditions.sell
+    } else if (strategyData.sellConditions) {
+      sellConditions = strategyData.sellConditions
+    }
+
+    // 리스크 관리 파싱
+    let riskManagement = {
+      stopLoss: -5,
+      takeProfit: 10,
+      trailingStop: false,
+      trailingStopPercent: 3,
+      positionSize: 10,
+      maxPositions: 10
+    }
+
+    if (strategyData.risk_management) {
+      riskManagement = { ...riskManagement, ...strategyData.risk_management }
+    } else if (strategyData.riskManagement) {
+      riskManagement = { ...riskManagement, ...strategyData.riskManagement }
+    }
+
     // 전략 데이터 구조 확인 및 설정
     const formattedStrategy = {
       id: strategyData.id || `custom-${Date.now()}`,
       name: strategyData.name || '불러온 전략',
       description: strategyData.description || '',
-      indicators: strategyData.indicators || [],
-      buyConditions: strategyData.buyConditions || [],
-      sellConditions: strategyData.sellConditions || [],
-      riskManagement: strategyData.riskManagement || {
-        stopLoss: -5,
-        takeProfit: 10,
-        trailingStop: false,
-        trailingStopPercent: 3,
-        positionSize: 10,
-        maxPositions: 10
-      }
+      indicators: indicators,
+      buyConditions: buyConditions,
+      sellConditions: sellConditions,
+      riskManagement: riskManagement
     }
-    
-    console.log('Setting strategy to:', formattedStrategy)
+
+    console.log('Parsed strategy data:')
+    console.log('- Original:', strategyData)
+    console.log('- Formatted:', formattedStrategy)
+    console.log('- Indicators count:', indicators.length)
+    console.log('- Buy conditions count:', buyConditions.length)
+    console.log('- Sell conditions count:', sellConditions.length)
+
     setStrategy(formattedStrategy)
-    
-    // 단계별 전략 정보 복원
-    if (strategyData.useStageBasedStrategy !== undefined) {
-      setUseStageBasedStrategy(strategyData.useStageBasedStrategy)
+
+    // config에서 단계별 전략 정보 복원
+    const config = strategyData.config || {}
+    if (config.useStageBasedStrategy !== undefined) {
+      setUseStageBasedStrategy(config.useStageBasedStrategy)
     }
-    if (strategyData.buyStageStrategy) {
-      setBuyStageStrategy(strategyData.buyStageStrategy)
+    if (config.buyStageStrategy) {
+      setBuyStageStrategy(config.buyStageStrategy)
     }
-    if (strategyData.sellStageStrategy) {
-      setSellStageStrategy(strategyData.sellStageStrategy)
+    if (config.sellStageStrategy) {
+      setSellStageStrategy(config.sellStageStrategy)
     }
-    
-    // 투자 유니버스 설정 복원
-    if (savedStrategy.investmentUniverse) {
+
+    // 투자 유니버스 설정 복원 (config.investmentUniverse 또는 직접)
+    const investmentUniverse = config.investmentUniverse || strategyData.investmentUniverse
+    if (investmentUniverse) {
       const configToRestore = {
-        universe: savedStrategy.investmentUniverse.financialFilters,
-        sectors: savedStrategy.investmentUniverse.sectorFilters,
-        portfolio: savedStrategy.investmentUniverse.portfolioSettings,
-        risk: savedStrategy.investmentUniverse.riskSettings
+        universe: investmentUniverse.financialFilters,
+        sectors: investmentUniverse.sectorFilters,
+        portfolio: investmentUniverse.portfolioSettings,
+        risk: investmentUniverse.riskSettings
       }
       localStorage.setItem('investmentConfig', JSON.stringify(configToRestore))
     }
-    
+
     setDialogOpen(false)
+
+    // 성공 메시지
+    alert(`전략 '${formattedStrategy.name}'을 불러왔습니다!\n\n지표: ${indicators.length}개\n매수조건: ${buyConditions.length}개\n매도조건: ${sellConditions.length}개`)
   }
 
   // 프리셋 전략 적용
