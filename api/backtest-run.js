@@ -1,4 +1,5 @@
-import fetch from 'node-fetch';
+// Vercel Serverless Function - Backtest Proxy
+// Vercel Node.js 18+ has native fetch support
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -26,6 +27,7 @@ export default async function handler(req, res) {
     console.log('Proxying request to:', `${NAS_API_URL}/api/backtest/run`);
     console.log('Request body:', JSON.stringify(req.body));
 
+    // Use native fetch (available in Node.js 18+)
     const response = await fetch(`${NAS_API_URL}/api/backtest/run`, {
       method: 'POST',
       headers: {
@@ -51,7 +53,7 @@ export default async function handler(req, res) {
     return res.status(500).json({
       error: 'Failed to connect to backtest server',
       details: error.message,
-      stack: error.stack
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
