@@ -358,14 +358,14 @@
   "tags": [
     {
       "name": "trading",
-      "createdAt": "2024-01-01T00:00:00.000Z"
+      "createdAt": "2025-09-01T00:00:00.000Z"
     },
     {
       "name": "automation",
-      "createdAt": "2024-01-01T00:00:00.000Z"
+      "createdAt": "2025-09-01T00:00:00.000Z"
     }
   ],
   "triggerCount": 2,
-  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2025-09-13T00:00:00.000Z",
   "versionId": "1"
 }
