@@ -16,6 +16,15 @@ try:
 except ImportError:
     USE_COMPLETE_INDICATORS = False
 
+# Import StrategyEngine for indicator calculations
+try:
+    from strategy_engine import StrategyEngine
+    USE_STRATEGY_ENGINE = True
+    print("[INFO] AdvancedBacktestEngine: strategy_engine.py를 사용합니다.")
+except ImportError:
+    USE_STRATEGY_ENGINE = False
+    print("[WARNING] AdvancedBacktestEngine: strategy_engine.py를 찾을 수 없습니다.")
+
 @dataclass
 class Position:
     """포지션 정보"""
@@ -74,6 +83,22 @@ class TechnicalIndicators:
         for col in required_cols:
             if col not in df.columns:
                 raise ValueError(f"필수 컬럼 누락: {col}")
+
+        # Use StrategyEngine if available for comprehensive indicator calculation
+        if USE_STRATEGY_ENGINE:
+            try:
+                engine = StrategyEngine()
+                df = engine.calculate_all_indicators(df)
+
+                # Ensure PRICE column exists for compatibility
+                if 'PRICE' not in df.columns:
+                    df['PRICE'] = df['close']
+
+                print(f"[INFO] StrategyEngine에서 모든 지표 계산 완료")
+                print(f"[DEBUG] 사용 가능한 컬럼: {list(df.columns)}")
+                return df
+            except Exception as e:
+                print(f"[WARNING] StrategyEngine 사용 실패: {e}. 기본 방법으로 전환.")
 
         # 지표 설정
         indicators = config.get('indicators', [])
@@ -184,6 +209,28 @@ class TechnicalIndicators:
                 high_max = df['high'].rolling(window=period).max()
                 low_min = df['low'].rolling(window=period).min()
                 df[f'WILLR_{period}'] = -100 * (high_max - df['close']) / (high_max - low_min + 1e-10)
+
+        # Add PRICE column for template compatibility
+        df['PRICE'] = df['close']
+
+        # Add uppercase versions of common indicators for compatibility
+        # This ensures both uppercase and lowercase versions are available
+        for col in df.columns:
+            if col.startswith('bb_'):
+                uppercase_name = col.replace('bb_', 'BB_')
+                df[uppercase_name] = df[col]
+            elif col.startswith('rsi_'):
+                uppercase_name = col.replace('rsi_', 'RSI_')
+                df[uppercase_name] = df[col]
+            elif col.startswith('macd'):
+                uppercase_name = col.upper()
+                df[uppercase_name] = df[col]
+            elif col.startswith('sma_'):
+                uppercase_name = col.replace('sma_', 'SMA_')
+                df[uppercase_name] = df[col]
+            elif col.startswith('ema_'):
+                uppercase_name = col.replace('ema_', 'EMA_')
+                df[uppercase_name] = df[col]
 
         return df
 

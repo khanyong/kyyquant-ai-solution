@@ -26,6 +26,15 @@ except ImportError:
     USE_ANALYZER = False
     print("[INFO] 전략 분석기를 사용할 수 없습니다.")
 
+# Import StrategyEngine for indicator calculations
+try:
+    from strategy_engine import StrategyEngine
+    USE_STRATEGY_ENGINE = True
+    print("[INFO] strategy_engine.py를 사용합니다.")
+except ImportError:
+    USE_STRATEGY_ENGINE = False
+    print("[WARNING] strategy_engine.py를 찾을 수 없습니다. 기본 Strategy 클래스 사용.")
+
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
 # Supabase 클라이언트 초기화
@@ -68,10 +77,29 @@ class BacktestResult(BaseModel):
 
 class Strategy:
     """전략 실행 클래스"""
-    
+
     @staticmethod
     async def calculate_indicators(data: pd.DataFrame, indicators: List[Dict]) -> pd.DataFrame:
         """여러 기술적 지표 계산"""
+        # Use StrategyEngine if available
+        if USE_STRATEGY_ENGINE:
+            try:
+                # Create StrategyEngine instance
+                engine = StrategyEngine()
+
+                # Calculate all indicators using strategy_engine
+                data = engine.calculate_all_indicators(data)
+
+                # Ensure PRICE column exists for compatibility
+                if 'PRICE' not in data.columns:
+                    data['PRICE'] = data['close']
+
+                print(f"[INFO] StrategyEngine에서 지표 계산 완료. 컬럼: {list(data.columns)[:20]}...")
+                return data
+            except Exception as e:
+                print(f"[WARNING] StrategyEngine 사용 실패: {e}. 기본 방법으로 전환.")
+
+        # Original indicator calculation logic as fallback
         for indicator in indicators:
             ind_type = indicator.get('type', '')
             params = indicator.get('params', {})
