@@ -270,8 +270,17 @@ class SignalGenerator:
             ind_values = df[indicator]
 
             # 비교 값이 다른 지표인 경우
-            if isinstance(value, str) and value in df.columns:
-                compare_values = df[value]
+            if isinstance(value, str):
+                # 문자열인 경우, 먼저 컬럼명인지 확인
+                if value in df.columns:
+                    compare_values = df[value]
+                else:
+                    # 컬럼명이 아니면 숫자로 변환 시도
+                    try:
+                        compare_values = float(value)
+                    except ValueError:
+                        print(f"경고: 값 '{value}'를 처리할 수 없습니다 (지표도 아니고 숫자도 아님)")
+                        continue
             else:
                 compare_values = float(value)
 

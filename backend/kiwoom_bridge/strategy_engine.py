@@ -139,6 +139,7 @@ class StrategyEngine:
         df['MACD'] = macd_data['macd']
         df['MACD_signal'] = macd_data['signal']
         df['MACD_hist'] = macd_data['histogram']
+        df['MACD_SIGNAL'] = macd_data['signal']  # 전체 대문자 버전 추가
 
         # SMA (여러 기간)
         for period in [5, 10, 20, 50, 200]:
