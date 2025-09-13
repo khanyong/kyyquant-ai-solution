@@ -87,6 +87,7 @@ class TechnicalIndicators:
         # Use StrategyEngine if available for comprehensive indicator calculation
         if USE_STRATEGY_ENGINE:
             try:
+                print(f"[DEBUG] StrategyEngine 사용 시작. DataFrame shape: {df.shape}")
                 engine = StrategyEngine()
                 df = engine.calculate_all_indicators(df)
 
@@ -96,9 +97,18 @@ class TechnicalIndicators:
 
                 print(f"[INFO] StrategyEngine에서 모든 지표 계산 완료")
                 print(f"[DEBUG] 사용 가능한 컬럼: {list(df.columns)}")
+
+                # Check if RSI_14 exists
+                if 'RSI_14' in df.columns:
+                    print(f"[DEBUG] RSI_14 발견! 샘플 값: {df['RSI_14'].iloc[-5:].values}")
+                else:
+                    print(f"[WARNING] RSI_14가 여전히 없습니다. RSI 관련 컬럼: {[col for col in df.columns if 'rsi' in col.lower() or 'RSI' in col]}")
+
                 return df
             except Exception as e:
                 print(f"[WARNING] StrategyEngine 사용 실패: {e}. 기본 방법으로 전환.")
+                import traceback
+                traceback.print_exc()
 
         # 지표 설정
         indicators = config.get('indicators', [])
@@ -471,15 +481,29 @@ class AdvancedBacktestEngine:
 
     def run(self, data: pd.DataFrame, strategy_config: Dict) -> Dict[str, Any]:
         """백테스트 실행"""
+        print(f"[DEBUG] AdvancedBacktestEngine.run 시작")
+        print(f"[DEBUG] 입력 데이터 shape: {data.shape}")
+        print(f"[DEBUG] 입력 데이터 컬럼: {list(data.columns)}")
+        print(f"[DEBUG] USE_COMPLETE_INDICATORS: {USE_COMPLETE_INDICATORS}")
+        print(f"[DEBUG] USE_STRATEGY_ENGINE: {USE_STRATEGY_ENGINE}")
+
         # 지표 계산 - 완전한 지표 모듈 사용 가능 시 우선 사용
         if USE_COMPLETE_INDICATORS:
+            print(f"[DEBUG] CompleteIndicators 사용")
             data = CompleteIndicators.calculate_all(data, strategy_config)
         else:
+            print(f"[DEBUG] TechnicalIndicators 사용")
             data = TechnicalIndicators.calculate_all(data, strategy_config)
+
+        print(f"[DEBUG] 지표 계산 후 데이터 shape: {data.shape}")
+        print(f"[DEBUG] 지표 계산 후 컬럼: {list(data.columns)[:30]}...")
 
         # 신호 생성
         buy_conditions = strategy_config.get('buyConditions', [])
         sell_conditions = strategy_config.get('sellConditions', [])
+
+        print(f"[DEBUG] 매수 조건: {buy_conditions}")
+        print(f"[DEBUG] 매도 조건: {sell_conditions}")
 
         data['buy_signal'] = SignalGenerator.evaluate_conditions(data, buy_conditions, 'buy')
         data['sell_signal'] = SignalGenerator.evaluate_conditions(data, sell_conditions, 'sell')
