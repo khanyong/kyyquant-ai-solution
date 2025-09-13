@@ -1,8 +1,7 @@
 // Vercel Serverless Function - Backtest Proxy
-import https from 'https';
-import http from 'http';
+const http = require('http');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS 설정
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
