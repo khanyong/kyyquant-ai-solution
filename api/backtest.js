@@ -14,13 +14,10 @@ export default async function handler(req, res) {
     return;
   }
 
-  // NAS API URL (HTTP) - 환경변수 또는 하드코딩
+  // NAS API URL (HTTP)
   const NAS_API_URL = process.env.NAS_API_URL || 'http://khanyong.asuscomm.com:8080';
 
   try {
-    console.log('Proxying backtest request to:', `${NAS_API_URL}/api/backtest/run`);
-    console.log('Request body:', req.body);
-
     // 백테스트 요청을 NAS API로 프록시
     const response = await fetch(`${NAS_API_URL}/api/backtest/run`, {
       method: 'POST',
@@ -33,18 +30,15 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('NAS API error:', data);
       return res.status(response.status).json(data);
     }
 
-    console.log('Backtest successful, returning data');
     return res.status(200).json(data);
   } catch (error) {
     console.error('Proxy error:', error);
     return res.status(500).json({
       error: 'Failed to connect to backtest server',
-      details: error.message,
-      nas_url: NAS_API_URL
+      details: error.message
     });
   }
 }
