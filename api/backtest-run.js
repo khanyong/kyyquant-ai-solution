@@ -1,7 +1,7 @@
-// Vercel Serverless Function - Backtest Proxy
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-  // CORS 설정
+  // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -10,93 +10,48 @@ export default async function handler(req, res) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
+  // Handle preflight
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
-  // NAS API URL (HTTP)
-  const NAS_API_URL = process.env.NAS_API_URL || 'http://khanyong.asuscomm.com:8080';
+  // Only allow POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const NAS_API_URL = 'http://khanyong.asuscomm.com:8080';
 
   try {
-    console.log('Proxying backtest request to:', `${NAS_API_URL}/api/backtest/run`);
+    console.log('Proxying request to:', `${NAS_API_URL}/api/backtest/run`);
     console.log('Request body:', JSON.stringify(req.body));
 
-    // Dynamic import for http module
-    const http = await import('http');
-    const url = new URL(`${NAS_API_URL}/api/backtest/run`);
-    const postData = JSON.stringify(req.body);
-
-    return new Promise((resolve) => {
-      const request = http.default.request({
-        hostname: url.hostname,
-        port: url.port || 80,
-        path: url.pathname,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(postData)
-        },
-        timeout: 30000 // 30 seconds timeout
-      }, (response) => {
-        let data = '';
-
-        response.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        response.on('end', () => {
-          try {
-            const jsonData = data ? JSON.parse(data) : {};
-
-            if (response.statusCode >= 200 && response.statusCode < 300) {
-              console.log('Backtest successful');
-              res.status(200).json(jsonData);
-            } else {
-              console.error('NAS API error:', jsonData);
-              res.status(response.statusCode || 500).json(jsonData);
-            }
-          } catch (error) {
-            console.error('JSON parse error:', error);
-            res.status(500).json({
-              error: 'Invalid response from backtest server',
-              details: error.message,
-              rawData: data.substring(0, 500) // First 500 chars for debugging
-            });
-          }
-          resolve();
-        });
-      });
-
-      request.on('error', (error) => {
-        console.error('Request error:', error);
-        res.status(500).json({
-          error: 'Failed to connect to backtest server',
-          details: error.message,
-          nas_url: NAS_API_URL
-        });
-        resolve();
-      });
-
-      request.on('timeout', () => {
-        console.error('Request timeout');
-        request.destroy();
-        res.status(504).json({
-          error: 'Request timeout',
-          details: 'The backtest server did not respond in time'
-        });
-        resolve();
-      });
-
-      request.write(postData);
-      request.end();
+    const response = await fetch(`${NAS_API_URL}/api/backtest/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body),
     });
+
+    const data = await response.text();
+    console.log('Response status:', response.status);
+    console.log('Response data (first 200 chars):', data.substring(0, 200));
+
+    try {
+      const jsonData = JSON.parse(data);
+      return res.status(response.status).json(jsonData);
+    } catch (e) {
+      console.error('JSON parse error:', e);
+      // If not JSON, return as is
+      return res.status(response.status).send(data);
+    }
   } catch (error) {
     console.error('Proxy error:', error);
     return res.status(500).json({
-      error: 'Failed to process request',
+      error: 'Failed to connect to backtest server',
       details: error.message,
-      nas_url: NAS_API_URL
+      stack: error.stack
     });
   }
 }
