@@ -56,6 +56,9 @@ export default async function handler(req, res) {
     const NAS_API_URL = 'http://khanyong.asuscomm.com:8080';
 
     try {
+      // First test if the host is reachable
+      testInfo.nasUrl = NAS_API_URL;
+
       const response = await fetch(`${NAS_API_URL}/api/backtest/run`, {
         method: 'POST',
         headers: {
@@ -73,10 +76,34 @@ export default async function handler(req, res) {
         responseData: responseText.substring(0, 500)
       };
     } catch (error) {
+      // Try a simpler request
+      let alternativeTest = null;
+      try {
+        // Try just accessing the root
+        const simpleResponse = await fetch(`${NAS_API_URL}/`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          }
+        });
+        alternativeTest = {
+          rootAccessible: true,
+          status: simpleResponse.status
+        };
+      } catch (altError) {
+        alternativeTest = {
+          rootAccessible: false,
+          error: altError.message
+        };
+      }
+
       testInfo.nasTest = {
         success: false,
         error: error.message,
-        stack: error.stack
+        errorCause: error.cause,
+        errorCode: error.cause?.code,
+        alternativeTest,
+        stack: error.stack.split('\n').slice(0, 5).join('\n')
       };
     }
   }
