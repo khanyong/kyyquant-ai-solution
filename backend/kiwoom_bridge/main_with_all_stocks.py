@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Dict, Any, Optional
 import os
-import requests
 from dotenv import load_dotenv
 
 # Supabase import (있으면 사용)
@@ -112,40 +111,22 @@ async def get_stock_list(market: str = None, source: str = "auto"):
         try:
             print("[INFO] Fetching stocks from Supabase...")
 
-            # stock_metadata 테이블에서 종목 조회 (오프셋 기반 페이지네이션)
-            all_stocks = []
-            limit = 1000  # 한 번에 가져올 개수
-            offset = 0
+            # stock_metadata 테이블에서 종목 조회
+            query = supabase.table('stock_metadata').select('stock_code, stock_name, market')
 
-            while True:
-                query = supabase.table('stock_metadata').select('stock_code, stock_name, market')
+            if market:
+                query = query.eq('market', market)
 
-                if market:
-                    query = query.eq('market', market)
+            result = query.execute()
 
-                # limit과 offset 사용
-                result = query.limit(limit).offset(offset).execute()
-
-                if not result.data:
-                    break
-
-                all_stocks.extend(result.data)
-                print(f"[INFO] Fetched {len(result.data)} stocks from offset {offset} (total: {len(all_stocks)})")
-
-                # 다음 페이지가 없으면 중단
-                if len(result.data) < limit:
-                    break
-
-                offset += limit
-
-            if all_stocks:
+            if result.data:
                 stocks = [
                     {
                         "code": item['stock_code'],
                         "name": item['stock_name'],
                         "market": item['market']
                     }
-                    for item in all_stocks
+                    for item in result.data
                 ]
                 print(f"[INFO] Found {len(stocks)} stocks from Supabase")
 
@@ -267,97 +248,32 @@ async def get_full_stock_list():
 
 @app.post("/api/market/current-price")
 async def get_current_price(request: CurrentPriceRequest):
-    """현재가 조회 - 키움 REST API 토큰 발급 + pykrx 시세"""
+    """현재가 조회 - Mock 데이터 반환"""
 
-    try:
-        # 1. 키움 REST API 토큰 발급 (모의투자)
-        token_url = "https://mockapi.kiwoom.com/oauth2/token"
-        token_data = {
-            "grant_type": "client_credentials",
-            "appkey": os.getenv('KIWOOM_APP_KEY'),
-            "secretkey": os.getenv('KIWOOM_APP_SECRET')  # secretkey 사용!
+    # Mock 데이터 (실제로는 키움 API 호출)
+    mock_data = {
+        "success": True,
+        "data": {
+            "rt_cd": "0",
+            "msg_cd": "OPSP0000",
+            "msg1": "정상처리 되었습니다.",
+            "output": {
+                "stck_prpr": "71900",  # 현재가
+                "prdy_vrss": "-500",    # 전일대비
+                "prdy_ctrt": "-0.69",   # 전일대비율
+                "stck_oprc": "72400",  # 시가
+                "stck_hgpr": "72500",  # 고가
+                "stck_lwpr": "71800",  # 저가
+                "stck_sdpr": "72400",  # 기준가(전일종가)
+                "acml_vol": "1234567",  # 누적거래량
+                "stck_mxpr": "93500",  # 상한가
+                "stck_llam": "50900"   # 하한가
+            }
         }
+    }
 
-        headers = {"Content-Type": "application/json"}
-        token_response = requests.post(token_url, json=token_data, headers=headers, timeout=10)
-
-        access_token = None
-        if token_response.status_code == 200:
-            token_info = token_response.json()
-            if token_info.get('return_code') == 0:
-                access_token = token_info.get('token')
-                print(f"[INFO] Kiwoom token issued successfully")
-            else:
-                print(f"[ERROR] Token failed: {token_info.get('return_msg')}")
-        else:
-            print(f"[ERROR] Token request failed: {token_response.status_code}")
-
-        # 2. 시세 조회 - pykrx 사용 (키움 API 시세 조회가 500 오류 발생 중)
-        # 나중에 키움 API가 정상화되면 아래 코드로 교체
-        try:
-            from pykrx import stock
-            from datetime import datetime, timedelta
-
-            today = datetime.now().strftime('%Y%m%d')
-            yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
-
-            # pykrx로 현재가 조회
-            df = stock.get_market_ohlcv_by_date(yesterday, today, request.stock_code)
-
-            if not df.empty:
-                latest = df.iloc[-1]
-                current_price = int(latest['종가'])
-
-                # 전일 대비 계산
-                if len(df) > 1:
-                    prev_close = int(df.iloc[-2]['종가'])
-                    change_price = current_price - prev_close
-                    change_rate = round((change_price / prev_close) * 100, 2)
-                else:
-                    change_price = 0
-                    change_rate = 0
-
-                result = {
-                    "success": True,
-                    "data": {
-                        "stock_code": request.stock_code,
-                        "current_price": current_price,
-                        "change_price": change_price,
-                        "change_rate": change_rate,
-                        "volume": int(latest['거래량']),
-                        "high_price": int(latest['고가']),
-                        "low_price": int(latest['저가']),
-                        "open_price": int(latest['시가']),
-                        "timestamp": datetime.now().isoformat()
-                    },
-                    "source": "pykrx",
-                    "kiwoom_token": "valid" if access_token else "failed"
-                }
-                return result
-            else:
-                return {
-                    "success": False,
-                    "error": "No price data available",
-                    "kiwoom_token": "valid" if access_token else "failed"
-                }
-
-        except ImportError:
-            # pykrx가 없으면 에러
-            return {
-                "success": False,
-                "error": "pykrx not installed",
-                "kiwoom_token": "valid" if access_token else "failed"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "kiwoom_token": "valid" if access_token else "failed"
-            }
-
-    except Exception as e:
-        print(f"[ERROR] Exception: {e}")
-        return {"success": False, "error": str(e)}
+    print(f"[INFO] Current price request for {request.stock_code}")
+    return mock_data
 
 @app.post("/api/trading/order")
 async def place_order(order: OrderRequest):

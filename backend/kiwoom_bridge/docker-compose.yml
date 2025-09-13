@@ -11,6 +11,11 @@ services:
       # Supabase 설정
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
+      # 키움 API 설정
+      - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
+      - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}
+      - KIWOOM_ACCOUNT_NO=${KIWOOM_ACCOUNT_NO}
+      - KIWOOM_IS_DEMO=${KIWOOM_IS_DEMO}
       # 프론트엔드 URL (CORS)
       - FRONTEND_URL=${FRONTEND_URL}
       # 로깅
@@ -19,6 +24,11 @@ services:
       - ./logs:/app/logs
       - ./.env:/app/.env
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    extra_hosts:
+      - "openapi.kiwoom.com:211.115.74.81"
     networks:
       - trading-network
     healthcheck:

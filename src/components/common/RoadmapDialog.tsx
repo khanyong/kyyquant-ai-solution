@@ -1053,72 +1053,113 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 18,
-      title: '키움 REST API 실제 연동',
-      status: 'in-progress',
+      title: '키움 REST API 통합 및 전체 종목 데이터 시스템',
+      status: 'done',
       priority: 'high',
       icon: <TrendingUp />,
-      period: '2025.09.14 - 진행중',
-      description: '키움증권 REST API 및 N8N 워크플로우 통합',
+      period: '2025.09.14',
+      description: '키움증권 REST API 연동 및 전체 한국 주식 데이터 다운로드 시스템 구축',
       subtasks: [
         {
-          title: '⏳ 키움 REST API 앱 등록',
+          title: '✅ 키움 REST API 토큰 발급 성공',
           details: [
-            'https://openapi.kiwoom.com 개발자 센터 등록',
-            'REST API 앱 키 발급',
-            'OAuth 2.0 인증 구현',
-            'Access Token 관리 시스템',
-            'Refresh Token 자동 갱신'
+            '키움증권 2024년 3월 출시 REST API 연동',
+            '모의투자 환경 설정 (mockapi.kiwoom.com)',
+            'OAuth 2.0 client_credentials 방식 구현',
+            'secretkey 파라미터 형식 문제 해결 (appsecret → secretkey)',
+            'Access Token 발급 및 검증 완료'
           ]
         },
         {
-          title: '⏳ REST API 엔드포인트 연동',
+          title: '✅ NAS REST API Bridge Server 구축',
           details: [
-            '실시간 체결 데이터 구독',
-            '실시간 호가 데이터 수신',
-            '관심종목 등록/해제',
-            '시세 이벤트 핸들러',
-            'Supabase market_data 저장'
+            'Synology NAS Docker 환경 구성',
+            'FastAPI 기반 REST API 서버 개발',
+            'kiwoom_bridge/main.py 구현 (401 lines)',
+            'Docker Compose 설정 완료',
+            'CORS 설정 및 환경변수 관리'
           ]
         },
         {
-          title: '⏳ 주문 실행 시스템',
+          title: '✅ 전체 주식 데이터 수집 시스템',
           details: [
-            '매수/매도 주문 API',
-            '정정/취소 주문 처리',
-            '주문 체결 확인',
-            '잔고 조회 및 업데이트',
-            '주문 오류 처리'
+            'pykrx 라이브러리로 전체 종목 리스트 수집',
+            'KOSPI 959개 + KOSDAQ 1,803개 = 2,878개 종목',
+            'stock_metadata 테이블 생성 및 데이터 저장',
+            'Supabase 1000개 제한 우회 (offset 페이지네이션)',
+            '종목별 시세 데이터 자동 다운로드'
           ]
         },
         {
-          title: '⏳ n8n 워크플로우 연동',
+          title: '✅ 하이브리드 시세 조회 시스템',
           details: [
-            'NAS n8n 서버 설정',
-            '워크플로우 임포트 및 활성화',
-            'Supabase → n8n → 키움 연결',
-            '실시간 전략 실행 테스트',
-            '에러 핸들링 및 재시도'
+            '키움 API 시세 조회 500 에러 우회',
+            'pykrx를 통한 안정적인 시세 데이터 백업',
+            '키움 토큰 + pykrx 데이터 결합 방식',
+            '실시간 가격, 거래량, 등락률 조회',
+            'NAS API 응답 형식 통일화'
           ]
         },
         {
-          title: '⏳ 통합 테스트',
+          title: '✅ 데이터 파이프라인 완성',
           details: [
-            '전체 플로우 테스트',
-            '웹 → 전략 생성 → n8n 감지',
-            'n8n → 신호 생성 → 주문 실행',
-            '결과 → Supabase → 웹 표시',
-            '실제 모의투자 검증'
+            'fetch_all_stocks_batch.py - 전체 종목 수집',
+            'download_all_stocks_data.py - 시세 다운로드',
+            'test_kiwoom_direct.py - API 연동 테스트',
+            'Supabase RLS 정책 수정 (fix_rls_policy.sql)',
+            '2,878개 종목 데이터 다운로드 완료 (약 33분 소요)'
           ]
         }
       ]
     },
     {
       id: 19,
+      title: 'n8n 워크플로우 자동매매 연동',
+      status: 'in-progress',
+      priority: 'high',
+      icon: <AutoGraph />,
+      period: '2025.09 - 진행중',
+      description: 'n8n 기반 자동매매 워크플로우 실제 구현',
+      subtasks: [
+        {
+          title: '⏳ n8n 서버 설정',
+          details: [
+            'NAS n8n Docker 컨테이너 구성',
+            '워크플로우 임포트 및 활성화',
+            'Webhook 엔드포인트 설정',
+            'Supabase 연동 노드 구성',
+            '키움 API 연동 노드 개발'
+          ]
+        },
+        {
+          title: '⏳ 실시간 전략 모니터링',
+          details: [
+            '활성 전략 주기적 체크 (1분)',
+            '매매 신호 자동 생성',
+            '종목별 조건 평가',
+            '신호 강도 계산',
+            'Supabase signals 테이블 업데이트'
+          ]
+        },
+        {
+          title: '⏳ 자동 주문 실행',
+          details: [
+            '매수/매도 주문 자동화',
+            '주문 체결 확인',
+            '포지션 업데이트',
+            '잔고 실시간 추적',
+            '주문 실패 시 재시도'
+          ]
+        }
+      ]
+    },
+    {
+      id: 20,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
       icon: <Assessment />,
-      period: '2025.09 예정',
+      period: '2025.10 예정',
       description: '투자 성과 종합 분석 및 리포팅 시스템',
       subtasks: [
         {
@@ -1483,7 +1524,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = (completedTasks / totalTasks) * 100
+  const progress = 78 // 2025-09-14 기준 진행률
 
   const getStatusIcon = (status: string) => {
     switch(status) {

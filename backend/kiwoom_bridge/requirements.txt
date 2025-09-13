@@ -8,3 +8,5 @@ python-multipart==0.0.6
 httpx>=0.24.0,<0.26.0
 pandas==2.1.4
 numpy==1.24.3
+requests==2.31.0
+pykrx==1.0.45
