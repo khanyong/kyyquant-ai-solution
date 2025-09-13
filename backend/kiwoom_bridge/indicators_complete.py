@@ -19,6 +19,23 @@ class CompleteIndicators:
             if col not in df.columns:
                 raise ValueError(f"필수 컬럼 누락: {col}")
 
+        # Try to use StrategyEngine first for comprehensive indicator calculation
+        try:
+            from strategy_engine import StrategyEngine
+            print(f"[DEBUG] CompleteIndicators: StrategyEngine 사용")
+            engine = StrategyEngine()
+            df = engine.calculate_all_indicators(df)
+
+            # Ensure PRICE column exists for compatibility
+            if 'PRICE' not in df.columns:
+                df['PRICE'] = df['close']
+
+            print(f"[INFO] CompleteIndicators: StrategyEngine에서 지표 계산 완료")
+            print(f"[DEBUG] 사용 가능한 컬럼: {list(df.columns)[:30]}...")
+            return df
+        except Exception as e:
+            print(f"[WARNING] CompleteIndicators: StrategyEngine 사용 실패: {e}. 기본 방법으로 전환.")
+
         # 지표 설정
         indicators = config.get('indicators', [])
 
@@ -346,6 +363,44 @@ class CompleteIndicators:
                 df[f'Aroon_up_{period}'] = aroon_up
                 df[f'Aroon_down_{period}'] = aroon_down
                 df[f'Aroon_osc_{period}'] = aroon_up - aroon_down
+
+        # 지표가 없어도 전략에서 사용할 수 있는 기본 지표들 계산
+        if len(indicators) == 0:
+            print(f"[DEBUG] CompleteIndicators: 지표 설정이 없음. 기본 지표 계산")
+
+            # RSI 계산 (여러 기간)
+            for period in [14, 9, 21]:
+                if f'RSI_{period}' not in df.columns:
+                    delta = df['close'].diff()
+                    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+                    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+                    rs = gain / loss.replace(0, 1e-10)
+                    df[f'RSI_{period}'] = 100 - (100 / (1 + rs))
+
+            # 볼린저 밴드 계산
+            period = 20
+            std = 2
+            ma = df['close'].rolling(window=period).mean()
+            std_dev = df['close'].rolling(window=period).std()
+            df['BB_upper'] = ma + (std_dev * std)
+            df['BB_lower'] = ma - (std_dev * std)
+            df['BB_middle'] = ma
+
+            # MACD 계산
+            exp1 = df['close'].ewm(span=12, adjust=False).mean()
+            exp2 = df['close'].ewm(span=26, adjust=False).mean()
+            df['MACD'] = exp1 - exp2
+            df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+            df['MACD_hist'] = df['MACD'] - df['MACD_signal']
+
+            # SMA 계산
+            for period in [5, 10, 20, 50, 200]:
+                df[f'SMA_{period}'] = df['close'].rolling(window=period).mean()
+
+            # PRICE 컬럼 추가
+            df['PRICE'] = df['close']
+
+            print(f"[DEBUG] 기본 지표 계산 완료. 컬럼: {list(df.columns)[:30]}...")
 
         return df
 
