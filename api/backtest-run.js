@@ -1,7 +1,6 @@
 // Vercel Serverless Function - Backtest Proxy
-const http = require('http');
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS 설정
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,19 +15,20 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // NAS API URL (HTTP) - 환경변수 또는 하드코딩
+  // NAS API URL (HTTP)
   const NAS_API_URL = process.env.NAS_API_URL || 'http://khanyong.asuscomm.com:8080';
 
   try {
     console.log('Proxying backtest request to:', `${NAS_API_URL}/api/backtest/run`);
-    console.log('Request body:', req.body);
+    console.log('Request body:', JSON.stringify(req.body));
 
-    // Node.js 내장 http 모듈 사용
+    // Dynamic import for http module
+    const http = await import('http');
     const url = new URL(`${NAS_API_URL}/api/backtest/run`);
     const postData = JSON.stringify(req.body);
 
-    return new Promise((resolve, reject) => {
-      const request = http.request({
+    return new Promise((resolve) => {
+      const request = http.default.request({
         hostname: url.hostname,
         port: url.port || 80,
         path: url.pathname,
@@ -36,7 +36,8 @@ module.exports = async function handler(req, res) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(postData)
-        }
+        },
+        timeout: 30000 // 30 seconds timeout
       }, (response) => {
         let data = '';
 
@@ -46,24 +47,24 @@ module.exports = async function handler(req, res) {
 
         response.on('end', () => {
           try {
-            const jsonData = JSON.parse(data);
+            const jsonData = data ? JSON.parse(data) : {};
 
             if (response.statusCode >= 200 && response.statusCode < 300) {
               console.log('Backtest successful');
               res.status(200).json(jsonData);
             } else {
               console.error('NAS API error:', jsonData);
-              res.status(response.statusCode).json(jsonData);
+              res.status(response.statusCode || 500).json(jsonData);
             }
-            resolve();
           } catch (error) {
             console.error('JSON parse error:', error);
             res.status(500).json({
               error: 'Invalid response from backtest server',
-              details: error.message
+              details: error.message,
+              rawData: data.substring(0, 500) // First 500 chars for debugging
             });
-            resolve();
           }
+          resolve();
         });
       });
 
@@ -73,6 +74,16 @@ module.exports = async function handler(req, res) {
           error: 'Failed to connect to backtest server',
           details: error.message,
           nas_url: NAS_API_URL
+        });
+        resolve();
+      });
+
+      request.on('timeout', () => {
+        console.error('Request timeout');
+        request.destroy();
+        res.status(504).json({
+          error: 'Request timeout',
+          details: 'The backtest server did not respond in time'
         });
         resolve();
       });
