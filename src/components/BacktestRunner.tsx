@@ -710,28 +710,30 @@ const BacktestRunner: React.FC = () => {
       const result = await response.json();
       console.log('Backtest result:', result);
       console.log('Result structure:', {
-        hasSuccess: 'success' in result,
-        hasSummary: 'summary' in result,
-        hasIndividualResults: 'individual_results' in result,
-        successValue: result.success
+        hasStatus: 'status' in result,
+        hasResults: 'results' in result,
+        status: result.status,
+        results: result.results
       });
 
       setBacktestId(result.backtest_id);
-      
-      // 백테스트가 즉시 완료되는 경우 (현재 구현 - success 필드 체크)
-      if (result.success && result.summary) {
+
+      // 백테스트가 즉시 완료되는 경우 (status가 'completed'이고 results가 있는 경우)
+      if (result.status === 'completed' && result.results) {
+        const backtestData = result.results;
         setProgress(100);
-        setSuccess(`백테스트가 완료되었습니다. 
-          총 수익률: ${result.summary.total_return?.toFixed(2)}%, 
-          평균 승률: ${result.summary.average_win_rate?.toFixed(2)}%, 
-          최대 손실: ${result.summary.max_drawdown?.toFixed(2)}%`);
+        setSuccess(`백테스트가 완료되었습니다.
+          총 수익률: ${backtestData.summary?.total_return?.toFixed(2)}%,
+          평균 승률: ${backtestData.summary?.average_win_rate?.toFixed(2)}%,
+          최대 손실: ${backtestData.summary?.max_drawdown?.toFixed(2)}%`);
         setIsRunning(false);
-        
+
         // 결과를 state에 저장하고 상세 정보 포맷팅
         console.log('Raw backtest result from server:', result);
-        console.log('Result.summary:', result.summary);
-        console.log('Individual results:', result.individual_results);
-        console.log('First stock result:', result.individual_results?.[0]);
+        console.log('Backtest data:', backtestData);
+        console.log('Summary:', backtestData.summary);
+        console.log('Individual results:', backtestData.individual_results);
+        console.log('First stock result:', backtestData.individual_results?.[0]);
         
         // 전략 이름 찾기 - strategies 배열이나 백엔드 응답에서
         const currentStrategy = strategies.find(s => s.id === config.strategyId);
@@ -743,14 +745,14 @@ const BacktestRunner: React.FC = () => {
           fromBackend: strategyNameFromBackend,
           final: finalStrategyName
         });
-        
+
         // 개별 종목 결과에서 거래 데이터 집계
         const allTrades: any[] = [];
         let totalWinningTrades = 0;
         let totalLosingTrades = 0;
         let totalTradeCount = 0;
-        
-        result.individual_results?.forEach((stockResult: any) => {
+
+        backtestData.individual_results?.forEach((stockResult: any) => {
           const stockTrades = stockResult.result?.trades || [];
           // 각 종목의 승리/패배 거래 수 집계
           totalWinningTrades += stockResult.result?.winning_trades || 0;
@@ -778,17 +780,17 @@ const BacktestRunner: React.FC = () => {
           start_date: config.startDate.toISOString().split('T')[0],
           end_date: config.endDate.toISOString().split('T')[0],
           initial_capital: config.initialCapital,
-          final_capital: config.initialCapital * (1 + (result.summary?.total_return || 0) / 100),
-          total_return: result.summary?.total_return || 0,
-          annual_return: result.summary?.total_return || 0, // 연간 수익률은 별도 계산 필요
-          max_drawdown: result.summary?.max_drawdown || 0,
-          win_rate: result.summary?.average_win_rate || 0,
-          total_trades: result.summary?.total_trades || totalTradeCount || sellTrades.length || result.summary?.processed_count || 0,
-          winning_trades: result.summary?.winning_trades || actualWinningTrades || totalWinningTrades,
-          losing_trades: result.summary?.losing_trades || actualLosingTrades || totalLosingTrades,
-          buy_count: result.summary?.buy_count || buyTrades.length,
-          sell_count: result.summary?.sell_count || sellTrades.length,
-          sharpe_ratio: result.summary?.average_sharpe_ratio || 0,
+          final_capital: config.initialCapital * (1 + (backtestData.summary?.total_return || 0) / 100),
+          total_return: backtestData.summary?.total_return || 0,
+          annual_return: backtestData.summary?.total_return || 0, // 연간 수익률은 별도 계산 필요
+          max_drawdown: backtestData.summary?.max_drawdown || 0,
+          win_rate: backtestData.summary?.average_win_rate || 0,
+          total_trades: backtestData.summary?.total_trades || totalTradeCount || sellTrades.length || backtestData.summary?.processed_count || 0,
+          winning_trades: backtestData.summary?.winning_trades || actualWinningTrades || totalWinningTrades,
+          losing_trades: backtestData.summary?.losing_trades || actualLosingTrades || totalLosingTrades,
+          buy_count: backtestData.summary?.buy_count || buyTrades.length,
+          sell_count: backtestData.summary?.sell_count || sellTrades.length,
+          sharpe_ratio: backtestData.summary?.average_sharpe_ratio || 0,
           volatility: 0, // 변동성은 별도 계산 필요
           // trades 배열 포맷팅
           trades: allTrades.map((trade: any) => ({
