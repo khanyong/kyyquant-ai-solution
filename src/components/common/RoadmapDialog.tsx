@@ -987,11 +987,77 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 17,
+      title: '백테스트 엔진 고도화',
+      status: 'done',
+      priority: 'high',
+      icon: <Assessment />,
+      period: '2025.09.13',
+      description: '멀티 종목 백테스트 및 고급 전략 분석 시스템 구축',
+      subtasks: [
+        {
+          title: '✅ 고급 백테스트 엔진 개발',
+          details: [
+            'backtest_engine_advanced.py 구현 (450+ lines)',
+            '멀티 종목 동시 백테스트 지원',
+            '분할 매수/매도 전략 구현',
+            '슬리피지 및 수수료 정밀 계산',
+            '일별/월별 상세 수익률 분석',
+            '최대낙폭(MDD) 실시간 추적'
+          ]
+        },
+        {
+          title: '✅ 완전한 기술적 지표 라이브러리',
+          details: [
+            'indicators_complete.py 구현 (250+ lines)',
+            'RSI, MACD, 볼린저밴드 지표 구현',
+            '이동평균선 (SMA, EMA, WMA)',
+            'Stochastic, CCI, Williams %R',
+            'ATR, ADX 변동성 지표',
+            '일목균형표 5개 구성요소'
+          ]
+        },
+        {
+          title: '✅ 전략 분석 모듈',
+          details: [
+            'strategy_analyzer.py 구현',
+            '매매 신호 생성 로직 최적화',
+            '조건 조합 평가 시스템',
+            'AND/OR 로직 게이트 처리',
+            '단계별 전략 평가 (3단계)',
+            '신호 강도 점수화 시스템'
+          ]
+        },
+        {
+          title: '✅ 전략 분석 UI 컴포넌트',
+          details: [
+            'StrategyAnalyzer.tsx 구현 (1,100+ lines)',
+            '전략 로직 해석 탭',
+            '지표 설명 자동 생성',
+            '실시간 시뮬레이션 모드',
+            '최적화 제안 시스템 (전략 완성도 점수)',
+            '지표별 맞춤 조언 제공'
+          ]
+        },
+        {
+          title: '✅ 백테스트 API 개선',
+          details: [
+            '실제 주가 데이터 연동',
+            '복수 종목 백테스트 지원',
+            '분봉/일봉 데이터 처리',
+            '성과 지표 자동 계산',
+            'JSON 형식 결과 반환',
+            '백테스트 결과 캐싱'
+          ]
+        }
+      ]
+    },
+    {
+      id: 18,
       title: '키움 REST API 실제 연동',
       status: 'in-progress',
       priority: 'high',
       icon: <TrendingUp />,
-      period: '2025.09.12 - 진행중',
+      period: '2025.09.14 - 진행중',
       description: '키움증권 REST API 및 N8N 워크플로우 통합',
       subtasks: [
         {
@@ -1047,7 +1113,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 18,
+      id: 19,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -1108,7 +1174,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 19,
+      id: 20,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -1169,7 +1235,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 20,
+      id: 21,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1230,7 +1296,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 21,
+      id: 22,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -1291,7 +1357,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 22,
+      id: 23,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1352,7 +1418,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 23,
+      id: 24,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',

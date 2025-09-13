@@ -572,35 +572,127 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                     )
                   }
 
-                  return uniqueIndicators.map((indicatorName: string, index: number) => {
-                    // 지표 정보 찾기
-                    const indicatorInfo = selectedStrategy?.indicators?.find((ind: any) =>
-                      ind.type === indicatorName || ind.id === indicatorName || ind.name === indicatorName
-                    )
+                  return (
+                    <Grid container spacing={3}>
+                      {uniqueIndicators.map((indicatorName: string, index: number) => {
+                        // 지표 정보 찾기
+                        const indicatorInfo = selectedStrategy?.indicators?.find((ind: any) =>
+                          ind.type === indicatorName || ind.id === indicatorName || ind.name === indicatorName
+                        )
 
-                    return (
-                      <Accordion key={index}>
-                        <AccordionSummary expandIcon={<ExpandMore />}>
-                          <Typography>
-                            {indicatorName}
-                            {indicatorInfo?.params && ` (${Object.entries(indicatorInfo.params).map(([k, v]) => `${k}: ${v}`).join(', ')})`}
-                          </Typography>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <Box>
-                            <Typography variant="body2" paragraph>
-                              {getIndicatorDescription(indicatorName)}
-                            </Typography>
-                            <Alert severity="info">
-                              <Typography variant="caption">
-                                <strong>매매 신호:</strong> {getIndicatorSignal(indicatorName)}
-                              </Typography>
-                            </Alert>
-                          </Box>
-                        </AccordionDetails>
-                      </Accordion>
-                    )
-                  })
+                        const { description, formula, interpretation, visualExample, tips } = getDetailedIndicatorInfo(indicatorName)
+
+                        return (
+                          <Grid item xs={12} key={index}>
+                            <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+                              {/* 지표 헤더 */}
+                              <Box sx={{ mb: 2 }}>
+                                <Stack direction="row" alignItems="center" spacing={2} mb={1}>
+                                  <ShowChart color="primary" />
+                                  <Typography variant="h6" fontWeight="bold">
+                                    {getIndicatorKoreanName(indicatorName)}
+                                  </Typography>
+                                  <Chip
+                                    label={indicatorName}
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                  {indicatorInfo?.params && (
+                                    <Chip
+                                      label={Object.entries(indicatorInfo.params).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                                      size="small"
+                                      color="primary"
+                                    />
+                                  )}
+                                </Stack>
+                                <Divider />
+                              </Box>
+
+                              <Grid container spacing={2}>
+                                {/* 기본 설명 */}
+                                <Grid item xs={12} md={6}>
+                                  <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" color="primary" gutterBottom>
+                                      📖 기본 설명
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" paragraph>
+                                      {description}
+                                    </Typography>
+                                  </Box>
+
+                                  {/* 계산식 */}
+                                  {formula && (
+                                    <Box sx={{ mb: 2 }}>
+                                      <Typography variant="subtitle2" color="primary" gutterBottom>
+                                        🧮 계산 방법
+                                      </Typography>
+                                      <Paper sx={{ p: 1.5, bgcolor: 'grey.900', color: 'grey.100' }}>
+                                        <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                                          {formula}
+                                        </Typography>
+                                      </Paper>
+                                    </Box>
+                                  )}
+                                </Grid>
+
+                                {/* 해석 방법 */}
+                                <Grid item xs={12} md={6}>
+                                  <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" color="primary" gutterBottom>
+                                      📊 해석 방법
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" paragraph>
+                                      {interpretation}
+                                    </Typography>
+                                  </Box>
+
+                                  {/* 시각적 예시 */}
+                                  {visualExample && (
+                                    <Box sx={{ mb: 2 }}>
+                                      <Typography variant="subtitle2" color="primary" gutterBottom>
+                                        📈 시각적 표현
+                                      </Typography>
+                                      <Paper sx={{ p: 1.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                                        <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', lineHeight: 1.2 }}>
+                                          {visualExample}
+                                        </Typography>
+                                      </Paper>
+                                    </Box>
+                                  )}
+                                </Grid>
+
+                                {/* 매매 신호 */}
+                                <Grid item xs={12}>
+                                  <Alert severity="success" icon={<TrendingUp />}>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                      <strong>매매 신호</strong>
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      {getIndicatorSignal(indicatorName)}
+                                    </Typography>
+                                  </Alert>
+                                </Grid>
+
+                                {/* 활용 팁 */}
+                                {tips && (
+                                  <Grid item xs={12}>
+                                    <Alert severity="info" icon={<Lightbulb />}>
+                                      <Typography variant="subtitle2" gutterBottom>
+                                        <strong>활용 팁</strong>
+                                      </Typography>
+                                      <Typography variant="body2">
+                                        {tips}
+                                      </Typography>
+                                    </Alert>
+                                  </Grid>
+                                )}
+                              </Grid>
+                            </Paper>
+                          </Grid>
+                        )
+                      })}
+                    </Grid>
+                  )
                 })()}
               </TabPanel>
 
@@ -800,40 +892,105 @@ function determineMarketFit(strategy: any): string {
   return '횡보 시장'
 }
 
+// 지표 한글 이름 변환
+function getIndicatorKoreanName(type: string): string {
+  const names: any = {
+    'RSI': 'RSI (상대강도지수)',
+    'RSI_14': 'RSI-14 (상대강도지수)',
+    'RSI_9': 'RSI-9 (단기 상대강도지수)',
+    'SMA': '단순 이동평균선',
+    'MA_5': '5일 이동평균선',
+    'MA_20': '20일 이동평균선',
+    'MA_60': '60일 이동평균선',
+    'MA_120': '120일 이동평균선',
+    'EMA': '지수 이동평균선',
+    'MACD': 'MACD',
+    'MACD_SIGNAL': 'MACD 시그널',
+    'BB': '볼린저 밴드',
+    'BB_UPPER': '볼린저 밴드 상단',
+    'BB_LOWER': '볼린저 밴드 하단',
+    'BB_MIDDLE': '볼린저 밴드 중심',
+    'Stochastic': '스토캐스틱',
+    'Volume': '거래량',
+    'VOLUME': '거래량',
+    'VOLUME_MA_20': '20일 평균 거래량',
+    'PRICE': '현재가',
+    'close': '종가'
+  }
+
+  return names[type] || type
+}
+
+// 상세한 지표 정보 반환
+function getDetailedIndicatorInfo(type: string): {
+  description: string
+  formula?: string
+  interpretation: string
+  visualExample?: string
+  tips?: string
+} {
+  const indicators: any = {
+    'RSI': {
+      description: 'RSI는 일정 기간 동안의 가격 상승폭과 하락폭의 비율을 계산하여 0~100 사이의 값으로 표현하는 모멘텀 지표입니다. 주가의 과매수/과매도 상태를 판단하는 데 효과적입니다.',
+      formula: 'RSI = 100 - (100 / (1 + RS))\nRS = 평균 상승폭 / 평균 하락폭',
+      interpretation: '• 70 이상: 과매수 구간 (하락 가능성)\n• 30 이하: 과매도 구간 (상승 가능성)\n• 50 기준: 상승/하락 추세 판단\n• 다이버전스: 가격과 RSI의 방향이 다른 경우',
+      visualExample: '100 │\n    │  과매수 영역\n 70 ├─────────────\n    │     ╭─╮\n 50 ├────╯  ╰────\n    │           ╰╮\n 30 ├────────────╯\n    │  과매도 영역\n  0 └──────────────→',
+      tips: 'RSI는 횡보장에서는 50을 중심으로 오르락을 반복합니다. 강한 상승추세에서는 70 이상에서도 계속 상승할 수 있으므로 다른 지표와 함께 사용하세요.'
+    },
+    'MACD': {
+      description: 'MACD는 단기 지수이동평균(12일)과 장기 지수이동평균(26일)의 차이를 나타내는 추세 추종 지표입니다. MACD선과 시그널선(9일)의 교차를 통해 매매 시점을 포착합니다.',
+      formula: 'MACD = EMA(12) - EMA(26)\n시그널 = EMA(MACD, 9)\n히스토그램 = MACD - 시그널',
+      interpretation: '• MACD > 시그널: 상승 추세\n• MACD < 시그널: 하락 추세\n• 골든크로스: MACD가 시그널을 상향 돌파\n• 데드크로스: MACD가 시그널을 하향 돌파\n• 0선 상향/하향: 추세 전환',
+      visualExample: '  +  │     MACD\n     │    ╭───╮\n  0  ├───╯────╰── 시그널\n     │         ╰─╮\n  -  │           ╰─\n     └────────────→\n     ↑ 골든크로스  ↑ 데드크로스',
+      tips: 'MACD는 추세가 강한 시장에서 효과적이며, 횡보장에서는 거짓 신호가 많습니다. 히스토그램의 크기와 방향도 함께 확인하세요.'
+    },
+    'BB': {
+      description: '볼린저밴드는 이동평균선을 중심으로 표준편차의 2배 거리에 상하한선을 그려 가격의 변동성과 추세를 파악하는 지표입니다. 밴드의 폭이 좁으면 변동성이 낮고, 넓으면 변동성이 높습니다.',
+      formula: '중심선 = SMA(20)\n상단밴드 = 중심선 + (2 × 표준편차)\n하단밴드 = 중심선 - (2 × 표준편차)',
+      interpretation: '• 상단밴드 터치: 매도 신호\n• 하단밴드 터치: 매수 신호\n• 밴드 폭 축소: 변동성 감소 (돌파 대기)\n• 밴드 폭 확대: 변동성 증가\n• 밴드 외부 이탈: 추세 가속',
+      visualExample: '     ┌───────────┐ 상단밴드\n     │    ╭─╮    │\n     │   ╭╯  ╰╮   │\n─────├──╯────╰──├──── 중심선\n     │          │\n     └───────────┘ 하단밴드\n      ↑ 스퀘즈 구간',
+      tips: '밴드 폭이 좁아지는 "스퀘즈" 후 강한 방향성 움직임이 나타날 가능성이 높습니다. 밴드 외부에서 다시 내부로 돌아오는 패턴도 주의 깊게 관찰하세요.'
+    },
+    'SMA': {
+      description: '단순이동평균선은 일정 기간 동안의 종가를 단순 평균하여 계산하는 가장 기본적인 추세 지표입니다. 가격의 노이즈를 제거하고 추세를 파악하는 데 사용됩니다.',
+      formula: 'SMA(n) = (최근 n일간의 종가 합) / n',
+      interpretation: '• 가격 > SMA: 상승 추세\n• 가격 < SMA: 하락 추세\n• 단기 MA > 장기 MA: 골든크로스 (매수)\n• 단기 MA < 장기 MA: 데드크로스 (매도)\n• 지지/저항선 역할',
+      visualExample: '가격  ╭─────╮\n     │      ╰─╮\n─────╯────────╰── MA20\n             ╰─── MA60\n     ↑ 골든크로스',
+      tips: '이동평균선은 후행성 지표이므로 추세 전환 시점을 빨리 포착하지 못합니다. 여러 기간의 이동평균선을 함께 사용하여 추세의 강도를 판단하세요.'
+    },
+    'Volume': {
+      description: '거래량은 일정 기간 동안 거래된 주식의 수량을 나타내며, 가격 움직임의 강도와 신뢰성을 확인하는 중요한 지표입니다.',
+      interpretation: '• 가격 상승 + 거래량 증가: 강세 지속\n• 가격 상승 + 거래량 감소: 상승 한계\n• 가격 하락 + 거래량 증가: 바닥 확인\n• 평균 거래량 대비 2배 이상: 주목',
+      visualExample: '거래량\n│██\n│██    ██\n│██ ██ ██    ██\n│██ ██ ██ ██ ██\n└─────────────→\n ↑가격상승  ↑돌파',
+      tips: '거래량은 가격보다 선행하는 경향이 있습니다. 거래량이 먼저 증가하면 가격 변동을 예상할 수 있습니다.'
+    },
+    'Stochastic': {
+      description: '스토캐스틱은 일정 기간 동안의 최고가와 최저가 범위에서 현재 가격의 상대적 위치를 0~100으로 표현하는 모멘텀 지표입니다.',
+      formula: '%K = ((C - L14) / (H14 - L14)) × 100\n%D = MA(%K, 3)\nC: 현재가, L14: 14일 최저가, H14: 14일 최고가',
+      interpretation: '• 80 이상: 과매수 구간\n• 20 이하: 과매도 구간\n• %K > %D: 매수 신호\n• %K < %D: 매도 신호',
+      visualExample: '100 │\n 80 ├──────────\n    │  %K ╭─╮\n    │ %D ╭╯  ╰╮\n 20 ├───╯────╰─\n  0 └──────────→',
+      tips: '스토캐스틱은 횡보장에서 효과적이며, 추세장에서는 과매수/과매도 상태가 지속될 수 있습니다.'
+    }
+  }
+
+  // 기본 지표 찾기
+  for (const [key, value] of Object.entries(indicators)) {
+    if (type.toUpperCase().includes(key.toUpperCase())) {
+      return value as any
+    }
+  }
+
+  // 기본값 반환
+  return {
+    description: '이 지표는 시장의 특정 패턴을 분석하여 매매 시점을 포착하는 데 사용됩니다.',
+    interpretation: '지표의 값과 방향성을 통해 매수/매도 시점을 판단합니다.',
+    tips: '단일 지표만으로 판단하지 말고 여러 지표를 조합하여 사용하세요.'
+  }
+}
+
 function getIndicatorDescription(type: string): string {
-  const descriptions: any = {
-    'RSI': 'RSI(상대강도지수)는 과매수/과매도 상태를 판단하는 모멘텀 지표입니다. 70 이상은 과매수, 30 이하는 과매도로 해석됩니다.',
-    'RSI_14': 'RSI(14일)는 14일 기간의 상대강도지수로, 과매수/과매도 상태를 판단합니다.',
-    'RSI_9': 'RSI(9일)는 단기 모멘텀을 측정하는 상대강도지수입니다.',
-    'SMA': '단순이동평균선은 일정 기간의 종가 평균을 나타냅니다. 추세를 파악하는데 사용됩니다.',
-    'MA_5': '5일 이동평균선은 단기 추세를 나타냅니다.',
-    'MA_20': '20일 이동평균선은 중기 추세를 나타냅니다.',
-    'MA_60': '60일 이동평균선은 장기 추세를 나타냅니다.',
-    'EMA': '지수이동평균선은 최근 데이터에 더 큰 가중치를 부여하는 이동평균입니다.',
-    'MACD': 'MACD는 두 이동평균선의 차이를 이용한 추세 추종 모멘텀 지표입니다.',
-    'MACD_SIGNAL': 'MACD 시그널선은 MACD의 9일 이동평균으로, 매매 신호를 생성합니다.',
-    'BB': '볼린저 밴드는 가격 변동성을 나타내며, 밴드 폭이 좁아지면 변동성이 낮고, 넓어지면 변동성이 높습니다.',
-    'BB_UPPER': '볼린저 밴드 상단선은 저항선 역할을 합니다.',
-    'BB_LOWER': '볼린저 밴드 하단선은 지지선 역할을 합니다.',
-    'BB_MIDDLE': '볼린저 밴드 중간선은 20일 이동평균선입니다.',
-    'Stochastic': '스토캐스틱은 일정 기간의 최고가와 최저가 범위 내에서 현재 가격의 위치를 나타냅니다.',
-    'Volume': '거래량은 시장 참여도와 추세의 강도를 나타냅니다.',
-    'VOLUME': '거래량은 매매 활동의 강도를 보여줍니다.',
-    'VOLUME_MA_20': '20일 평균 거래량은 거래량의 추세를 나타냅니다.',
-    'PRICE': '현재 주가를 의미합니다.',
-    'close': '종가는 하루 거래의 마지막 가격입니다.'
-  }
-
-  // 정확한 매칭 먼저 시도
-  if (descriptions[type]) {
-    return descriptions[type]
-  }
-
-  // 부분 매칭 시도
-  for (const [key, value] of Object.entries(descriptions)) {
-    if (type.toUpperCase().includes(key.toUpperCase())) return value as string
-  }
-  return '이 지표는 시장의 특정 패턴을 분석하는데 사용됩니다.'
+  const info = getDetailedIndicatorInfo(type)
+  return info.description
 }
 
 function getIndicatorSignal(type: string): string {
