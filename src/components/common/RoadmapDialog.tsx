@@ -1114,6 +1114,67 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 19,
+      title: '목표수익률 단계별 매도 시스템',
+      status: 'done',
+      priority: 'high',
+      icon: <TrendingUp />,
+      period: '2025.01.14',
+      description: '다단계 목표수익률 설정 및 부분 매도 전략 시스템 구축',
+      subtasks: [
+        {
+          title: '✅ 단계별 목표수익률 매도 기능',
+          details: [
+            '단순 모드: 단일 목표수익률 전량 매도',
+            '단계별 모드: 3단계 부분 매도 (50%, 30%, 20%)',
+            '각 단계별 목표수익률 개별 설정',
+            'TargetProfitSettingsEnhanced 컴포넌트 구현',
+            '백테스트 엔진 staged profit 로직 구현'
+          ]
+        },
+        {
+          title: '✅ 동적 손절 조정 기능 (Break Even Stop)',
+          details: [
+            '1단계 목표 도달 시: 손절을 본전(매수가)으로',
+            '2단계 목표 도달 시: 손절을 1단계 매도가로',
+            '3단계 목표 도달 시: 손절을 2단계 매도가로',
+            '각 단계별 동적 손절 ON/OFF 토글',
+            'UI 라벨링 개선: "손절→본전", "손절→1단계 매도가" 등'
+          ]
+        },
+        {
+          title: '✅ 단계별 AND/OR 결합 로직',
+          details: [
+            '각 단계마다 독립적인 결합 방식 선택',
+            '지표 조건과 목표수익률 조건의 유연한 조합',
+            'ToggleButtonGroup으로 직관적 선택 UI',
+            'evaluate_conditions_with_profit 메서드 구현',
+            '백테스트 엔진에서 단계별 로직 평가'
+          ]
+        },
+        {
+          title: '✅ UI/UX 개선 및 버그 수정',
+          details: [
+            '3단계 전략에서 목표수익률 UI 미표시 버그 수정',
+            'StageBasedStrategy.tsx에 컴포넌트 통합',
+            'Grid 레이아웃 개선으로 선택 UI 활성화',
+            'TypeScript 타입 오류 수정 (Strategy interface)',
+            'Vercel 배포 오류 해결'
+          ]
+        },
+        {
+          title: '✅ 테스트 및 배포',
+          details: [
+            'test_staged_profit.py 테스트 스크립트 작성',
+            'NAS 서버 백엔드 파일 업로드',
+            'main 브랜치 커밋 및 푸시',
+            'feature/backtest-multi-stock-support 브랜치 병합',
+            '프로덕션 환경 정상 배포 확인'
+          ]
+        }
+      ]
+    },
+    {
+      id: 20,
       title: 'n8n 워크플로우 자동매매 연동',
       status: 'in-progress',
       priority: 'high',
@@ -1154,7 +1215,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 20,
+      id: 21,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -1215,7 +1276,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 20,
+      id: 22,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -1276,7 +1337,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 21,
+      id: 23,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1337,7 +1398,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 22,
+      id: 24,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -1398,7 +1459,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 23,
+      id: 25,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1459,7 +1520,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 24,
+      id: 26,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
@@ -1524,7 +1585,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 78 // 2025-09-14 기준 진행률
+  const progress = 81 // 2025-01-14 기준 진행률 (목표수익률 단계별 매도 시스템 완료)
 
   const getStatusIcon = (status: string) => {
     switch(status) {
