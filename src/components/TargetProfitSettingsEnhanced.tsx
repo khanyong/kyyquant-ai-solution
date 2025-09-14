@@ -108,11 +108,55 @@ const TargetProfitSettingsEnhanced: React.FC<TargetProfitSettingsEnhancedProps> 
   const handleModeChange = (event: React.MouseEvent<HTMLElement>, newMode: 'simple' | 'staged' | null) => {
     if (newMode !== null) {
       setMode(newMode)
+
+      // Ensure proper initialization when switching modes
+      const updatedTargetProfit = {
+        ...targetProfit,
+        mode: newMode
+      }
+
+      // Initialize staged structure if switching to staged mode
+      if (newMode === 'staged' && (!targetProfit.staged || !targetProfit.staged.stages)) {
+        updatedTargetProfit.staged = {
+          enabled: false,
+          stages: [
+            {
+              stage: 1,
+              targetProfit: 3,
+              exitRatio: 50,
+              dynamicStopLoss: false,
+              combineWith: 'OR' as 'AND' | 'OR'
+            },
+            {
+              stage: 2,
+              targetProfit: 5,
+              exitRatio: 30,
+              dynamicStopLoss: false,
+              combineWith: 'OR' as 'AND' | 'OR'
+            },
+            {
+              stage: 3,
+              targetProfit: 10,
+              exitRatio: 20,
+              dynamicStopLoss: false,
+              combineWith: 'OR' as 'AND' | 'OR'
+            }
+          ],
+          combineWith: 'OR' as 'AND' | 'OR'
+        }
+      }
+
+      // Initialize simple structure if switching to simple mode
+      if (newMode === 'simple' && !targetProfit.simple) {
+        updatedTargetProfit.simple = {
+          enabled: false,
+          value: 5,
+          combineWith: 'OR' as 'AND' | 'OR'
+        }
+      }
+
       onChange({
-        targetProfit: {
-          ...targetProfit,
-          mode: newMode
-        },
+        targetProfit: updatedTargetProfit,
         stopLoss
       })
     }
@@ -312,9 +356,9 @@ const TargetProfitSettingsEnhanced: React.FC<TargetProfitSettingsEnhancedProps> 
                 }
               />
 
-              {targetProfit.staged?.enabled && (
+              {targetProfit.staged?.enabled && targetProfit.staged?.stages && (
                 <Box sx={{ mt: 3 }}>
-                  {targetProfit.staged?.stages.map((stage, index) => (
+                  {targetProfit.staged.stages.map((stage, index) => (
                     <Paper key={index} sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                         <Typography variant="subtitle2" color="primary" sx={{ mr: 1 }}>

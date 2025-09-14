@@ -1,0 +1,862 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "KyyQuant AI Solution 프로젝트 초기 설정",
+        "description": "Next.js, Supabase, Vercel 환경 구성 및 KyyQuant AI Solution 기본 프로젝트 구조 설정",
+        "status": "done",
+        "priority": "high",
+        "complexity": 3,
+        "dependencies": [],
+        "details": "Next.js 14 App Router 설정, Supabase 프로젝트 생성, GitHub 레포지토리 초기화, Vercel 배포 설정",
+        "testStrategy": "환경 설정 검증, 빌드 테스트, 배포 파이프라인 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Next.js 프로젝트 초기화",
+            "description": "Next.js 14 with TypeScript, TailwindCSS, shadcn/ui 설정",
+            "status": "done"
+          },
+          {
+            "id": 2,
+            "title": "Supabase 프로젝트 생성 및 연동",
+            "description": "Supabase 계정 생성, 프로젝트 설정, 환경변수 구성",
+            "status": "done"
+          },
+          {
+            "id": 3,
+            "title": "GitHub 레포지토리 설정",
+            "description": "레포지토리 생성, 브랜치 전략 수립, GitHub Actions 설정",
+            "status": "done"
+          },
+          {
+            "id": 4,
+            "title": "Vercel 배포 환경 구성",
+            "description": "Vercel 프로젝트 연결, 환경변수 설정, 자동 배포 구성",
+            "status": "done"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "데이터베이스 스키마 설계",
+        "description": "Supabase PostgreSQL 데이터베이스 스키마 설계 및 구현",
+        "status": "done",
+        "priority": "high",
+        "complexity": 4,
+        "dependencies": [
+          "1"
+        ],
+        "details": "사용자, 계좌, 거래, 포트폴리오, 전략, 실시간 데이터 테이블 설계",
+        "testStrategy": "스키마 검증, 관계 테스트, 성능 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "핵심 테이블 스키마 생성",
+            "description": "users, accounts, trades, positions 테이블 생성",
+            "status": "done"
+          },
+          {
+            "id": 2,
+            "title": "전략 관련 테이블 설계",
+            "description": "strategies, strategy_conditions, screening_filters 테이블",
+            "status": "done"
+          },
+          {
+            "id": 3,
+            "title": "성과 추적 테이블 구현",
+            "description": "daily_performance, period_performance, account_balance 테이블",
+            "status": "done"
+          },
+          {
+            "id": 4,
+            "title": "RLS 정책 및 트리거 설정",
+            "description": "Row Level Security 정책, 자동 업데이트 트리거 구현",
+            "status": "done"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "키움 API 연동 서버 개발",
+        "description": "키움증권 OpenAPI와 연동하는 별도 Python 서버 구축",
+        "status": "in-progress",
+        "priority": "high",
+        "complexity": 5,
+        "dependencies": [
+          "2"
+        ],
+        "details": "Python FastAPI 서버, 키움 OpenAPI 래퍼, WebSocket 실시간 데이터 전송",
+        "testStrategy": "모의투자 계정 테스트, API 호출 검증, 실시간 데이터 스트리밍 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "FastAPI 서버 구조 설정",
+            "description": "FastAPI 프로젝트 구조, 환경 설정, 의존성 관리",
+            "status": "done"
+          },
+          {
+            "id": 2,
+            "title": "키움 OpenAPI 래퍼 구현",
+            "description": "로그인, 주문, 조회, 실시간 데이터 수신 래퍼 함수",
+            "status": "done"
+          },
+          {
+            "id": 3,
+            "title": "Kiwoom to Supabase 데이터 파이프라인",
+            "description": "Kiwoom API → market_data → technical_indicators → trading_signals → orders → positions 데이터 플로우 구현",
+            "status": "done"
+          },
+          {
+            "id": 4,
+            "title": "데이터베이스 스키마 최적화",
+            "description": "7개 트레이딩 테이블 생성, positions 테이블 재구조화 (24 columns), RLS 정책 및 인덱스 설정",
+            "status": "done"
+          },
+          {
+            "id": 5,
+            "title": "REST API 엔드포인트 구현",
+            "description": "거래 주문, 포지션 조회, 잔고 확인, 시장 데이터 조회 API",
+            "status": "pending"
+          },
+          {
+            "id": 6,
+            "title": "WebSocket 실시간 스트리밍",
+            "description": "실시간 시세, 체결 정보, 잔고 업데이트 WebSocket 구현",
+            "status": "pending"
+          },
+          {
+            "id": 7,
+            "title": "Frontend 컴포넌트 개발",
+            "description": "저장된 데이터를 표시할 React 컴포넌트 (차트, 테이블, 대시보드)",
+            "status": "pending"
+          },
+          {
+            "id": 8,
+            "title": "실제 Kiwoom API 통합 테스트",
+            "description": "모의 데이터에서 실제 Kiwoom API로 전환 및 테스트",
+            "status": "pending"
+          },
+          {
+            "id": 9,
+            "title": "자동 매매 로직 구현",
+            "description": "저장된 시그널 기반 자동 주문 실행 시스템",
+            "status": "pending"
+          },
+          {
+            "id": 10,
+            "title": "Railway/Render 배포 설정",
+            "description": "서버 배포, 환경변수 설정, 모니터링 구성",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "사용자 인증 시스템",
+        "description": "Supabase Auth를 활용한 사용자 인증 및 권한 관리",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 3,
+        "dependencies": [
+          "2"
+        ],
+        "details": "이메일/소셜 로그인, JWT 토큰 관리, 권한 기반 접근 제어",
+        "testStrategy": "인증 플로우 테스트, 보안 취약점 검사, 세션 관리 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Supabase Auth 설정",
+            "description": "이메일 인증, OAuth 제공자 설정",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "로그인/회원가입 UI 구현",
+            "description": "로그인, 회원가입, 비밀번호 재설정 페이지",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "보호된 라우트 구현",
+            "description": "미들웨어 설정, 권한 체크, 리다이렉션",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "실시간 대시보드 개발",
+        "description": "포트폴리오, 수익률, 거래 내역을 보여주는 실시간 대시보드",
+        "status": "pending",
+        "priority": "high",
+        "complexity": 4,
+        "dependencies": [
+          "3",
+          "4"
+        ],
+        "details": "실시간 잔고, 포지션, 수익률 차트, 거래 내역 테이블",
+        "testStrategy": "실시간 업데이트 테스트, UI/UX 테스트, 성능 최적화 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "대시보드 레이아웃 구현",
+            "description": "반응형 레이아웃, 네비게이션, 사이드바",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "실시간 잔고/포지션 컴포넌트",
+            "description": "Supabase Realtime 구독, 잔고 카드, 포지션 테이블",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "수익률 차트 구현",
+            "description": "일별/기간별 수익률 차트, Recharts 통합",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "거래 내역 테이블",
+            "description": "페이지네이션, 필터링, 정렬 기능",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "전략 빌더 시스템",
+        "description": "보조지표 기반 매매 전략 생성 및 관리 시스템",
+        "status": "pending",
+        "priority": "high",
+        "complexity": 5,
+        "dependencies": [
+          "5"
+        ],
+        "details": "드래그앤드롭 전략 빌더, 보조지표 조합, 백테스팅 통합",
+        "testStrategy": "전략 생성 테스트, 지표 계산 검증, UI 인터랙션 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "전략 빌더 UI 구현",
+            "description": "드래그앤드롭 인터페이스, 조건 편집기",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "보조지표 라이브러리 구현",
+            "description": "MA, RSI, MACD, Bollinger Bands 등 지표 계산",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "전략 저장/관리 기능",
+            "description": "전략 CRUD, 템플릿 관리, 공유 기능",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "전략 실행 엔진",
+            "description": "전략 조건 평가, 매매 신호 생성",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "백테스팅 시스템",
+        "description": "과거 데이터로 전략 성과를 검증하는 백테스팅 시스템",
+        "status": "pending",
+        "priority": "high",
+        "complexity": 5,
+        "dependencies": [
+          "6"
+        ],
+        "details": "과거 데이터 수집, 전략 시뮬레이션, 성과 분석 리포트",
+        "testStrategy": "백테스팅 정확도 검증, 성과 지표 계산 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "과거 데이터 수집/저장",
+            "description": "일봉, 분봉 데이터 수집 및 저장",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "백테스팅 엔진 구현",
+            "description": "전략 시뮬레이션, 거래 실행 로직",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "성과 분석 모듈",
+            "description": "수익률, 샤프비율, MDD, 승률 계산",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "백테스팅 결과 UI",
+            "description": "결과 차트, 거래 내역, 성과 지표 표시",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "실시간 종목 스크리닝",
+        "description": "보조지표 조건에 따른 실시간 종목 필터링 시스템",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 4,
+        "dependencies": [
+          "6"
+        ],
+        "details": "실시간 지표 계산, 조건 매칭, 알림 시스템",
+        "testStrategy": "스크리닝 정확도 테스트, 실시간 성능 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "스크리닝 필터 관리",
+            "description": "필터 생성/수정/삭제, 조건 설정",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "실시간 지표 계산 엔진",
+            "description": "실시간 가격으로 지표 계산 및 업데이트",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "스크리닝 결과 UI",
+            "description": "실시간 종목 리스트, 조건 충족 표시",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "알림 시스템",
+            "description": "조건 충족시 실시간 알림",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "AI 포트폴리오 매니저",
+        "description": "Claude/ChatGPT API를 활용한 포트폴리오 최적화 시스템",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 4,
+        "dependencies": [
+          "5"
+        ],
+        "details": "포트폴리오 분석, 리밸런싱 제안, 시장 환경 분석",
+        "testStrategy": "AI 응답 검증, 제안 품질 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "AI API 통합",
+            "description": "Claude/OpenAI API 연동, 프롬프트 엔지니어링",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "포트폴리오 분석 모듈",
+            "description": "현재 포트폴리오 상태 분석 및 평가",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "리밸런싱 제안 시스템",
+            "description": "AI 기반 리밸런싱 제안 생성",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "시장 환경 모니터링",
+            "description": "매크로 지표 분석, 섹터 로테이션 제안",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "자동 매매 실행 시스템",
+        "description": "전략 신호에 따른 자동 주문 실행 시스템",
+        "status": "pending",
+        "priority": "high",
+        "complexity": 5,
+        "dependencies": [
+          "6",
+          "7"
+        ],
+        "details": "주문 관리, 리스크 관리, 포지션 사이징",
+        "testStrategy": "모의투자 테스트, 주문 실행 검증, 리스크 관리 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "주문 관리 시스템",
+            "description": "매수/매도 주문 생성 및 관리",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "리스크 관리 모듈",
+            "description": "손절/익절 설정, 최대 손실 제한",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "포지션 사이징",
+            "description": "Kelly Criterion 등 자금 관리",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "주문 실행 모니터링",
+            "description": "주문 상태 추적, 체결 확인",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "성과 분석 및 리포팅",
+        "description": "거래 성과 분석 및 리포트 생성 시스템",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 3,
+        "dependencies": [
+          "10"
+        ],
+        "details": "일별/월별/연별 성과 리포트, 세금 계산",
+        "testStrategy": "계산 정확도 테스트, 리포트 생성 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "성과 지표 계산",
+            "description": "수익률, 샤프비율, MDD 등 계산",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "리포트 생성 엔진",
+            "description": "PDF/Excel 리포트 생성",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "세금 계산기",
+            "description": "양도세 자동 계산",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "알림 및 모니터링",
+        "description": "실시간 알림 및 시스템 모니터링",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 3,
+        "dependencies": [
+          "10"
+        ],
+        "details": "이메일/카카오톡 알림, 시스템 상태 모니터링",
+        "testStrategy": "알림 전송 테스트, 모니터링 정확도 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "알림 시스템 구현",
+            "description": "이메일, 웹 푸시 알림",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "시스템 모니터링",
+            "description": "서버 상태, API 호출 모니터링",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "에러 처리 및 로깅",
+            "description": "에러 추적, 로그 관리",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "테스트 및 최적화",
+        "description": "전체 시스템 테스트 및 성능 최적화",
+        "status": "pending",
+        "priority": "low",
+        "complexity": 4,
+        "dependencies": [
+          "12"
+        ],
+        "details": "단위 테스트, 통합 테스트, 성능 최적화",
+        "testStrategy": "E2E 테스트, 부하 테스트, 보안 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "단위 테스트 작성",
+            "description": "주요 기능별 단위 테스트",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "통합 테스트",
+            "description": "시스템 전체 통합 테스트",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "성능 최적화",
+            "description": "쿼리 최적화, 캐싱 구현",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "보안 점검",
+            "description": "보안 취약점 점검 및 수정",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "문서화 및 배포",
+        "description": "시스템 문서화 및 프로덕션 배포",
+        "status": "pending",
+        "priority": "low",
+        "complexity": 2,
+        "dependencies": [
+          "13"
+        ],
+        "details": "API 문서, 사용자 가이드, 배포 가이드",
+        "testStrategy": "문서 검토, 배포 프로세스 테스트",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "API 문서 작성",
+            "description": "Swagger/OpenAPI 문서",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "사용자 가이드",
+            "description": "사용자 매뉴얼 작성",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "프로덕션 배포",
+            "description": "최종 배포 및 모니터링 설정",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Multi-Account Management System",
+        "description": "Implement multiple account selection system for stock, futures/options, and overseas accounts with Kiwoom Securities integration",
+        "status": "pending",
+        "priority": "high",
+        "complexity": 4,
+        "dependencies": [
+          "3",
+          "4"
+        ],
+        "details": "Core system for managing multiple trading accounts including stock account, futures/options account, overseas stock account. Display actual account numbers when connected to Kiwoom Securities API. Include account balance and portfolio information display.",
+        "testStrategy": "Account switching tests, API integration tests, balance display accuracy tests, multi-account portfolio tests",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Account Selection Dropdown UI",
+            "description": "Create dropdown component to replace current DEMO text with account selector",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Kiwoom Account Integration",
+            "description": "Connect to Kiwoom API to fetch real account numbers and details",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Account Balance Display",
+            "description": "Show real-time account balance and available funds for each account",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Portfolio Information Per Account",
+            "description": "Display holdings and positions specific to each account",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Account Type Management",
+            "description": "Handle different account types (stock, futures/options, overseas)",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Trading Mode Switching System",
+        "description": "Implement multiple trading modes including DEMO, REAL, PAPER, and BACKTEST modes",
+        "status": "pending",
+        "priority": "high",
+        "complexity": 3,
+        "dependencies": [
+          "15"
+        ],
+        "details": "Add DEMO mode for simulation trading, REAL mode for actual trading, PAPER mode for paper trading practice, and BACKTEST mode for historical strategy testing. Each mode should have distinct functionality and safeguards.",
+        "testStrategy": "Mode switching tests, simulation accuracy tests, safety checks for real trading mode, data isolation between modes",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "DEMO Mode Implementation",
+            "description": "Create simulation trading environment with virtual funds",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "REAL Mode Implementation",
+            "description": "Enable actual trading with real funds and safety confirmations",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "PAPER Mode Implementation",
+            "description": "Paper trading with real-time market data but virtual execution",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "BACKTEST Mode Implementation",
+            "description": "Historical data testing mode for strategy validation",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Mode Indicator UI",
+            "description": "Clear visual indicators for current trading mode",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "Account Information Display System",
+        "description": "Comprehensive account information display including balance, returns, holdings, and status",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 3,
+        "dependencies": [
+          "15"
+        ],
+        "details": "Show account balance, display investment returns (daily/monthly/yearly), show number of holdings, display account status (normal/restricted/suspended). Provide detailed account analytics and performance metrics.",
+        "testStrategy": "Data accuracy tests, real-time update tests, calculation verification for returns, status monitoring tests",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Balance Display Component",
+            "description": "Real-time account balance with currency formatting",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Returns Calculator",
+            "description": "Calculate and display daily, monthly, yearly returns",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Holdings Counter",
+            "description": "Display total number of holdings and positions",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Account Status Indicator",
+            "description": "Show account status (normal, restricted, suspended) with alerts",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Performance Metrics Dashboard",
+            "description": "Comprehensive performance analytics per account",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "Quick Account Switching Feature",
+        "description": "Implement instant account switching functionality with portfolio and history views",
+        "status": "pending",
+        "priority": "medium",
+        "complexity": 3,
+        "dependencies": [
+          "15",
+          "17"
+        ],
+        "details": "Enable instant account switching via dropdown without page reload. View portfolio by account with proper data isolation. Check transaction history by account. Maintain user preferences for default account.",
+        "testStrategy": "Switching speed tests, data isolation verification, portfolio accuracy tests, transaction history tests",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Instant Switch Implementation",
+            "description": "Switch accounts without page reload using state management",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Portfolio View by Account",
+            "description": "Display portfolio specific to selected account",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Transaction History Filter",
+            "description": "Filter and display transaction history per account",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Account Preference Storage",
+            "description": "Save and restore user's default account preference",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "Account Type Visual Indicators",
+        "description": "Implement visual indicators and icons for different account types",
+        "status": "pending",
+        "priority": "low",
+        "complexity": 2,
+        "dependencies": [
+          "15"
+        ],
+        "details": "Add visual indicators: 🏦 Real account, 📊 Paper account, 🧪 Test account, 🤖 Auto-trading account. Create consistent color coding and styling for each account type. Implement tooltips with account details.",
+        "testStrategy": "UI consistency tests, accessibility tests, tooltip functionality tests",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Icon System Implementation",
+            "description": "Add icons for each account type (real, paper, test, auto)",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Color Coding System",
+            "description": "Implement consistent color scheme for account types",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Tooltip Implementation",
+            "description": "Add informative tooltips showing account details on hover",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Accessibility Features",
+            "description": "Ensure visual indicators are accessible with proper ARIA labels",
+            "status": "pending"
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "totalTasks": 19,
+      "totalSubtasks": 76,
+      "completedTasks": 0,
+      "completedSubtasks": 0,
+      "techStack": {
+        "frontend": [
+          "Next.js 14",
+          "TypeScript",
+          "TailwindCSS",
+          "shadcn/ui",
+          "Recharts"
+        ],
+        "backend": [
+          "Next.js API Routes",
+          "Vercel Functions",
+          "Python FastAPI"
+        ],
+        "database": [
+          "Supabase (PostgreSQL)",
+          "Redis/Upstash"
+        ],
+        "ai": [
+          "Claude API",
+          "OpenAI API"
+        ],
+        "deployment": [
+          "Vercel",
+          "Railway/Render",
+          "GitHub Actions"
+        ],
+        "trading": [
+          "키움 OpenAPI"
+        ]
+      },
+      "phases": [
+        {
+          "phase": 1,
+          "name": "기초 인프라 구축",
+          "tasks": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "duration": "2-3 weeks"
+        },
+        {
+          "phase": 2,
+          "name": "핵심 기능 개발",
+          "tasks": [
+            "5",
+            "6",
+            "7",
+            "8"
+          ],
+          "duration": "4-5 weeks"
+        },
+        {
+          "phase": 3,
+          "name": "고급 기능 구현",
+          "tasks": [
+            "9",
+            "10",
+            "11"
+          ],
+          "duration": "3-4 weeks"
+        },
+        {
+          "phase": 4,
+          "name": "마무리 및 배포",
+          "tasks": [
+            "12",
+            "13",
+            "14"
+          ],
+          "duration": "2 weeks"
+        }
+      ],
+      "created": "2025-09-03T12:48:24.628Z",
+      "description": "Tasks for master context",
+      "updated": "2025-09-03T12:52:36.304Z"
+    }
+  }
+}
