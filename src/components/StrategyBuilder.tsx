@@ -65,6 +65,7 @@ import InvestmentFlowManager from './InvestmentFlowManager'
 import StageBasedStrategy from './StageBasedStrategy'
 import StrategyLoader from './StrategyLoader'
 import StrategyAnalyzer from './StrategyAnalyzer'
+import TargetProfitSettingsEnhanced from './TargetProfitSettingsEnhanced'
 import { supabase } from '../lib/supabase'
 import { authService } from '../services/auth'
 import { InvestmentFlowType } from '../types/investment'
@@ -100,6 +101,15 @@ interface Strategy {
   indicators: Indicator[]
   buyConditions: Condition[]
   sellConditions: Condition[]
+  targetProfit?: {
+    enabled: boolean
+    value: number
+    combineWith: 'AND' | 'OR'
+  }
+  stopLoss?: {
+    enabled: boolean
+    value: number
+  }
   riskManagement: {
     stopLoss: number
     takeProfit: number
@@ -522,8 +532,11 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         // 매수/매도 조건
         buyConditions: strategy.buyConditions,
         sellConditions: strategy.sellConditions,
+        // 목표 수익률 및 손절
+        targetProfit: strategy.targetProfit,
+        stopLoss: strategy.stopLoss,
         // 리스크 관리
-        stopLoss: strategy.riskManagement.stopLoss,
+        stopLossOld: strategy.riskManagement.stopLoss,
         takeProfit: strategy.riskManagement.takeProfit,
         trailingStop: strategy.riskManagement.trailingStop,
         trailingStopPercent: strategy.riskManagement.trailingStopPercent,
@@ -752,6 +765,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       indicators: indicators,
       buyConditions: buyConditions,
       sellConditions: sellConditions,
+      targetProfit: strategyData.targetProfit || strategyData.config?.targetProfit,
+      stopLoss: strategyData.stopLoss || strategyData.config?.stopLoss,
       riskManagement: riskManagement
     }
 
@@ -1398,6 +1413,15 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 type="buy"
                 availableIndicators={AVAILABLE_INDICATORS}
                 initialStrategy={buyStageStrategy}  // 초기값 전달
+                targetProfit={strategy.targetProfit}
+                stopLoss={strategy.stopLoss}
+                onProfitSettingsChange={(settings) => {
+                  setStrategy({
+                    ...strategy,
+                    targetProfit: settings.targetProfit,
+                    stopLoss: settings.stopLoss
+                  })
+                }}
                 onStrategyChange={(stageStrategy) => {
                   setBuyStageStrategy(stageStrategy)
                   // 기존 strategy 객체에도 반영
@@ -1422,6 +1446,15 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 type="sell"
                 availableIndicators={AVAILABLE_INDICATORS}
                 initialStrategy={sellStageStrategy}  // 초기값 전달
+                targetProfit={strategy.targetProfit}
+                stopLoss={strategy.stopLoss}
+                onProfitSettingsChange={(settings) => {
+                  setStrategy({
+                    ...strategy,
+                    targetProfit: settings.targetProfit,
+                    stopLoss: settings.stopLoss
+                  })
+                }}
                 onStrategyChange={(stageStrategy) => {
                   setSellStageStrategy(stageStrategy)
                   // 기존 strategy 객체에도 반영
@@ -1549,9 +1582,9 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             </Stack>
           </Paper>
 
-          <Paper sx={{ p: 3 }}>
+          <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
-              매도 조건
+              매도 조건 (지표)
             </Typography>
             <Button
               startIcon={<Add />}
@@ -1561,15 +1594,15 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             >
               조건 추가
             </Button>
-            
+
             <Stack spacing={1}>
               {strategy.sellConditions.map((condition, index) => {
                 const indicator = AVAILABLE_INDICATORS.find(i => i.id === condition.indicator)
-                const operatorLabel = condition.indicator === 'ichimoku' && 
+                const operatorLabel = condition.indicator === 'ichimoku' &&
                   (condition.operator.includes('cloud') || condition.operator.includes('tenkan') || condition.operator.includes('chikou'))
                   ? getIchimokuOperators().find(o => o.value === condition.operator)?.label || condition.operator
                   : getStandardOperators().find(o => o.value === condition.operator)?.label || condition.operator
-                
+
                 return (
                   <Chip
                     key={condition.id}
@@ -1581,6 +1614,21 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
               })}
             </Stack>
           </Paper>
+
+          {/* 목표 수익률 설정 추가 */}
+          <TargetProfitSettingsEnhanced
+            targetProfit={strategy.targetProfit}
+            stopLoss={strategy.stopLoss}
+            onChange={(settings) => {
+              setStrategy({
+                ...strategy,
+                targetProfit: settings.targetProfit,
+                stopLoss: settings.stopLoss
+              })
+            }}
+            hasIndicatorConditions={strategy.sellConditions.length > 0}
+            isStageBasedStrategy={false}
+          />
         </Grid>
 
         {/* 리스크 관리 */}

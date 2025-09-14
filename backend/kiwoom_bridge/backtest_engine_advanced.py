@@ -328,6 +328,170 @@ class SignalGenerator:
 
         return pd.Series(0, index=df.index)
 
+    @staticmethod
+    def evaluate_conditions_with_profit(df: pd.DataFrame, strategy_config: Dict,
+                                       signal_type: str, positions: Dict = None,
+                                       stock_code: str = 'TEST') -> pd.Series:
+        """목표 수익률을 포함한 조건 평가 (단계별 목표 지원)"""
+
+        # 1. 기본 지표 조건 평가
+        if signal_type == 'sell':
+            conditions = strategy_config.get('sellConditions', [])
+        else:
+            conditions = strategy_config.get('buyConditions', [])
+
+        base_signal = SignalGenerator.evaluate_conditions(df, conditions, signal_type)
+
+        # 2. 매도 시 목표 수익률 조건 추가 평가
+        if signal_type == 'sell' and positions and stock_code in positions:
+            target_profit = strategy_config.get('targetProfit', {})
+            stop_loss = strategy_config.get('stopLoss', {})
+            position = positions[stock_code]
+
+            # 목표 수익률 신호 생성
+            if target_profit:
+                mode = target_profit.get('mode', 'simple')
+
+                if mode == 'simple' and target_profit.get('simple', {}).get('enabled'):
+                    # 단일 목표 모드
+                    profit_signal = pd.Series(0, index=df.index)
+                    target_value = target_profit['simple'].get('value', 5.0)
+
+                    for idx in df.index:
+                        current_price = df.loc[idx, 'close']
+                        profit_pct = ((current_price - position.avg_price) / position.avg_price) * 100
+
+                        if profit_pct >= target_value:
+                            profit_signal[idx] = -1  # 전량 매도 신호
+
+                    # 기존 조건과 결합
+                    combine_method = target_profit['simple'].get('combineWith', 'OR')
+                    if combine_method == 'AND':
+                        base_signal = base_signal & profit_signal
+                    else:  # OR
+                        base_signal = base_signal | profit_signal
+
+                elif mode == 'staged' and target_profit.get('staged', {}).get('enabled'):
+                    # 단계별 목표 모드
+                    profit_signal = pd.Series(0, index=df.index)
+                    staged_config = target_profit['staged']
+                    stages = staged_config.get('stages', [])
+
+                    # 이미 실행된 단계 추적
+                    if not hasattr(position, 'executed_stages'):
+                        position.executed_stages = []
+
+                    for idx in df.index:
+                        current_price = df.loc[idx, 'close']
+                        profit_pct = ((current_price - position.avg_price) / position.avg_price) * 100
+
+                        # 각 단계별 목표 확인
+                        for stage in stages:
+                            stage_num = stage.get('stage', 1)
+                            stage_target = stage.get('targetProfit', 5.0)
+                            exit_ratio = stage.get('exitRatio', 100) / 100.0
+                            stage_combine = stage.get('combineWith', staged_config.get('combineWith', 'OR'))
+
+                            # 이미 실행된 단계는 스킵
+                            if stage_num in position.executed_stages:
+                                continue
+
+                            if profit_pct >= stage_target:
+                                # 각 단계별 결합 방식 저장
+                                if not hasattr(profit_signal, 'stage_combines'):
+                                    profit_signal.stage_combines = {}
+                                profit_signal.stage_combines[idx] = stage_combine
+
+                                # 부분 매도 신호 (비율 저장)
+                                if not hasattr(profit_signal, 'exit_ratios'):
+                                    profit_signal.exit_ratios = {}
+                                profit_signal.exit_ratios[idx] = exit_ratio
+                                profit_signal[idx] = -exit_ratio  # 음수로 매도 비율 표시
+                                position.executed_stages.append(stage_num)
+
+                                # 동적 손절 조정
+                                if stage.get('dynamicStopLoss', False):
+                                    # 손절선을 현재 단계의 목표 수익률로 상향
+                                    if hasattr(position, 'dynamic_stop_loss'):
+                                        position.dynamic_stop_loss = max(
+                                            position.dynamic_stop_loss,
+                                            position.avg_price * (1 + stage_target / 100)
+                                        )
+                                    else:
+                                        position.dynamic_stop_loss = position.avg_price * (1 + stage_target / 100)
+                                break  # 한 번에 하나의 단계만 실행
+
+                    # 단계별 결합 방식 적용
+                    # profit_signal에 각 인덱스별 결합 방식이 저장되어 있음
+                    combined_signal = pd.Series(0, index=df.index)
+
+                    for idx in df.index:
+                        if profit_signal[idx] != 0:
+                            # 해당 인덱스의 결합 방식 확인
+                            stage_combine = getattr(profit_signal, 'stage_combines', {}).get(idx, 'OR')
+
+                            if stage_combine == 'AND':
+                                # AND: 지표 조건과 목표 수익 모두 충족
+                                if base_signal[idx] != 0:
+                                    combined_signal[idx] = profit_signal[idx]
+                            else:  # OR
+                                # OR: 둘 중 하나만 충족
+                                if profit_signal[idx] != 0:
+                                    combined_signal[idx] = profit_signal[idx]
+                                elif base_signal[idx] != 0:
+                                    combined_signal[idx] = base_signal[idx]
+                        elif base_signal[idx] != 0:
+                            # 목표 수익 미달성 시 지표 조건만 확인
+                            combined_signal[idx] = base_signal[idx]
+
+                    base_signal = combined_signal
+
+            # 손절 조건 (항상 OR로 결합)
+            if stop_loss.get('enabled'):
+                loss_signal = pd.Series(0, index=df.index)
+                loss_value = stop_loss.get('value', 3.0)
+
+                # 트레일링 스톱 확인
+                trailing_stop = stop_loss.get('trailingStop', {})
+
+                for idx in df.index:
+                    current_price = df.loc[idx, 'close']
+                    profit_pct = ((current_price - position.avg_price) / position.avg_price) * 100
+
+                    # 동적 손절 확인 (Break Even Stop)
+                    if hasattr(position, 'dynamic_stop_loss'):
+                        dynamic_loss_pct = ((current_price - position.dynamic_stop_loss) / position.dynamic_stop_loss) * 100
+                        if dynamic_loss_pct <= 0:
+                            loss_signal[idx] = -1  # 동적 손절 매도
+                            continue
+
+                    # 트레일링 스톱 확인
+                    if trailing_stop.get('enabled'):
+                        activation = trailing_stop.get('activation', 5.0)
+                        distance = trailing_stop.get('distance', 2.0)
+
+                        # 최고가 추적
+                        if not hasattr(position, 'peak_price'):
+                            position.peak_price = position.avg_price
+
+                        if profit_pct >= activation:
+                            # 트레일링 스톱 활성화
+                            position.peak_price = max(position.peak_price, current_price)
+                            peak_drop_pct = ((current_price - position.peak_price) / position.peak_price) * 100
+
+                            if peak_drop_pct <= -abs(distance):
+                                loss_signal[idx] = -1  # 트레일링 스톱 매도
+                                continue
+
+                    # 일반 손절
+                    if profit_pct <= -abs(loss_value):
+                        loss_signal[idx] = -1  # 손절 매도
+
+                # 손절은 항상 OR (즉시 실행)
+                base_signal = base_signal | loss_signal
+
+        return base_signal
+
 class AdvancedBacktestEngine:
     """고급 백테스트 엔진"""
 
@@ -514,8 +678,20 @@ class AdvancedBacktestEngine:
         print(f"[DEBUG] 매수 조건: {buy_conditions}")
         print(f"[DEBUG] 매도 조건: {sell_conditions}")
 
+        # 목표 수익률 정보 출력
+        target_profit = strategy_config.get('targetProfit', {})
+        if target_profit.get('enabled'):
+            print(f"[DEBUG] 목표 수익률: {target_profit.get('value')}%, 결합: {target_profit.get('combineWith', 'OR')}")
+
         data['buy_signal'] = SignalGenerator.evaluate_conditions(data, buy_conditions, 'buy')
-        data['sell_signal'] = SignalGenerator.evaluate_conditions(data, sell_conditions, 'sell')
+
+        # 매도 신호는 포지션이 있을 때만 목표 수익률 고려
+        if self.positions:
+            data['sell_signal'] = SignalGenerator.evaluate_conditions_with_profit(
+                data, strategy_config, 'sell', self.positions, 'TEST'
+            )
+        else:
+            data['sell_signal'] = SignalGenerator.evaluate_conditions(data, sell_conditions, 'sell')
 
         # 백테스트 실행
         for i in range(len(data)):
@@ -529,8 +705,28 @@ class AdvancedBacktestEngine:
                 portfolio_value += position.quantity * close
             self.equity_curve.append(portfolio_value)
 
-            # 매도 신호 처리 (매수보다 먼저)
-            if row['sell_signal'] == -1:
+            # 포지션이 있을 때 매도 신호 재계산 (목표 수익률 실시간 체크)
+            if self.positions:
+                current_sell_signal = SignalGenerator.evaluate_conditions_with_profit(
+                    data.iloc[[i]], strategy_config, 'sell', self.positions, 'TEST'
+                )
+                if not current_sell_signal.empty and current_sell_signal.iloc[0] == -1:
+                    for stock_code in list(self.positions.keys()):
+                        position = self.positions[stock_code]
+                        profit_pct = ((close - position.avg_price) / position.avg_price) * 100
+
+                        # 목표 수익률 또는 손절 도달 시 로그
+                        target_profit = strategy_config.get('targetProfit', {})
+                        stop_loss = strategy_config.get('stopLoss', {})
+
+                        if target_profit.get('enabled') and profit_pct >= target_profit.get('value', 5.0):
+                            print(f"[목표 수익률 도달] {stock_code}: {profit_pct:.2f}% >= {target_profit.get('value')}%")
+                        elif stop_loss.get('enabled') and profit_pct <= -abs(stop_loss.get('value', 3.0)):
+                            print(f"[손절 실행] {stock_code}: {profit_pct:.2f}% <= -{stop_loss.get('value')}%")
+
+                        self.execute_sell(stock_code, date, close, strategy_config)
+            elif row['sell_signal'] == -1:
+                # 포지션이 없으면 기본 매도 신호 사용
                 for stock_code in list(self.positions.keys()):
                     self.execute_sell(stock_code, date, close, strategy_config)
 

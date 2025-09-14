@@ -52,6 +52,7 @@ import {
   ArrowUpward,
   Percent
 } from '@mui/icons-material'
+import TargetProfitSettingsEnhanced from './TargetProfitSettingsEnhanced'
 
 interface StageIndicator {
   id: string
@@ -82,13 +83,19 @@ interface StageBasedStrategyProps {
   availableIndicators: any[]
   onStrategyChange?: (strategy: StageStrategy) => void
   initialStrategy?: any  // 초기 전략 설정을 받기 위한 prop
+  targetProfit?: any
+  stopLoss?: any
+  onProfitSettingsChange?: (settings: any) => void
 }
 
 const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
   type,
   availableIndicators,
   onStrategyChange,
-  initialStrategy
+  initialStrategy,
+  targetProfit,
+  stopLoss,
+  onProfitSettingsChange
 }) => {
   const [strategy, setStrategy] = useState<StageStrategy>({
     type,
@@ -907,6 +914,19 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
             </Stack>
           </CardContent>
         </Card>
+
+        {/* 목표 수익률 설정 - 매도 전략일 때만 표시 */}
+        {type === 'sell' && (
+          <Box sx={{ mt: 3 }}>
+            <TargetProfitSettingsEnhanced
+              targetProfit={targetProfit}
+              stopLoss={stopLoss}
+              onChange={onProfitSettingsChange || (() => {})}
+              hasIndicatorConditions={strategy.stages.some(s => s.enabled && s.indicators.length > 0)}
+              isStageBasedStrategy={true}
+            />
+          </Box>
+        )}
       </Paper>
 
       {/* 지표 추가 다이얼로그 */}
