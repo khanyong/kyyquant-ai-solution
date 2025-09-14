@@ -102,13 +102,33 @@ interface Strategy {
   buyConditions: Condition[]
   sellConditions: Condition[]
   targetProfit?: {
-    enabled: boolean
-    value: number
-    combineWith: 'AND' | 'OR'
+    mode: 'simple' | 'staged'
+    simple?: {
+      enabled: boolean
+      value: number
+      combineWith: 'AND' | 'OR'
+    }
+    staged?: {
+      enabled: boolean
+      stages: Array<{
+        stage: number
+        targetProfit: number
+        exitRatio: number
+        dynamicStopLoss?: boolean
+        combineWith?: 'AND' | 'OR'
+      }>
+      combineWith: 'AND' | 'OR'
+    }
   }
   stopLoss?: {
     enabled: boolean
     value: number
+    breakEven?: boolean
+    trailingStop?: {
+      enabled: boolean
+      activation: number
+      distance: number
+    }
   }
   riskManagement: {
     stopLoss: number
@@ -243,6 +263,18 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     indicators: [],
     buyConditions: [],
     sellConditions: [],
+    targetProfit: {
+      mode: 'simple',
+      simple: {
+        enabled: false,
+        value: 5.0,
+        combineWith: 'OR'
+      }
+    },
+    stopLoss: {
+      enabled: false,
+      value: 3.0
+    },
     riskManagement: {
       stopLoss: -5,
       takeProfit: 10,
