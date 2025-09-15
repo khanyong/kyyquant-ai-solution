@@ -678,9 +678,9 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
           buyConditions: strategy.buyConditions || [],
           sellConditions: strategy.sellConditions || [],
           // 목표 수익률 및 손절 설정도 config에 포함
-          targetProfit: normalizedStrategy.targetProfit,
-          stopLoss: normalizedStrategy.stopLoss,
-          stopLossOld: normalizedStrategy.stopLossOld,
+          targetProfit: strategy.targetProfit,
+          stopLoss: strategy.stopLoss,
+          stopLossOld: strategy.riskManagement.stopLoss,
           // 단계별 전략도 포함
           buyStageStrategy: buyStageStrategy,
           sellStageStrategy: sellStageStrategy,

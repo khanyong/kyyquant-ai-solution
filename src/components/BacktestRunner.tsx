@@ -60,6 +60,7 @@ interface Strategy {
   name: string;
   description: string;
   type: string;
+  config?: any;  // config 필드 추가
   parameters: any;
   created_at?: string;
 }
