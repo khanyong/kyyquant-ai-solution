@@ -1047,10 +1047,12 @@ const BacktestRunner: React.FC = () => {
   const resetBacktestState = () => {
     // 백테스트 관련 상태 초기화
     setBacktestResults(null);
+    setBacktestId(null);
     setProgress(0);
     setIsRunning(false);
     setError(null);
     setSuccess(null);
+    setSavedResultId(null);
     // 필요한 경우 다른 상태도 초기화
   };
 
