@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Backup files
+*.backup
+*_backup*
+strategies_backup_*
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Migration reports
+migration_report_*.json
+strategies_backup_*.json
+
+# Environment files (보안상 제외하되, 필요시 .env.example 제공)
+.env.local
+.env.development
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (이미지 빌드 시 불필요)
+docker-compose*.yml
+Dockerfile*

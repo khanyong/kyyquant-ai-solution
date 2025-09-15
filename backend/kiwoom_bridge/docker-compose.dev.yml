@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # 개발용 키움 REST API Bridge 서버
+  # 코드 변경사항이 즉시 반영됩니다
+  kiwoom-bridge-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kiwoom-bridge-dev
+    ports:
+      - "8080:8001"
+    environment:
+      # Supabase 설정
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      # 키움 API 설정
+      - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
+      - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}
+      - KIWOOM_ACCOUNT_NO=${KIWOOM_ACCOUNT_NO}
+      - KIWOOM_IS_DEMO=${KIWOOM_IS_DEMO}
+      # 프론트엔드 URL (CORS)
+      - FRONTEND_URL=${FRONTEND_URL}
+      # 로깅
+      - LOG_LEVEL=DEBUG
+      # 개발 모드
+      - DEV_MODE=true
+    volumes:
+      # 전체 디렉토리 마운트 - 코드 변경 즉시 반영
+      - ./:/app:rw
+      # node_modules 제외 (있는 경우)
+      - /app/__pycache__
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    extra_hosts:
+      - "openapi.kiwoom.com:211.115.74.81"
+    networks:
+      - trading-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # 개발용 추가 설정
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload --log-level debug
+
+networks:
+  trading-network:
+    driver: bridge

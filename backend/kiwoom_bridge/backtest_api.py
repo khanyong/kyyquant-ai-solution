@@ -9,9 +9,31 @@ from typing import List, Dict, Any, Optional
 import pandas as pd
 import numpy as np
 import os
+import sys
 import asyncio
 import aiohttp
 from supabase import create_client, Client
+
+# 코드 버전 정보
+CODE_VERSION = "2025.01.15-v3"
+CODE_BUILD_TIME = datetime.now().isoformat()
+
+# core 모듈 경로 추가
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Core 모듈 우선 임포트
+try:
+    from core import (
+        compute_indicators,
+        evaluate_conditions,
+        _normalize_conditions,
+        convert_legacy_column
+    )
+    USE_CORE = True
+    print(f"[INFO] Core 모듈 로드 성공 (Version: {CODE_VERSION})")
+except ImportError as e:
+    USE_CORE = False
+    print(f"[WARNING] Core 모듈 로드 실패: {e} (Version: {CODE_VERSION})")
+
 try:
     from backtest_engine_advanced import AdvancedBacktestEngine, TechnicalIndicators, SignalGenerator
     USE_ADVANCED_ENGINE = True
@@ -42,8 +64,17 @@ SUPABASE_URL = os.getenv('SUPABASE_URL', '')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
 supabase: Optional[Client] = None
 
+print(f"[BACKTEST API] Initializing Supabase...")
+print(f"  URL: {SUPABASE_URL[:30]}..." if SUPABASE_URL else "  [ERROR] No SUPABASE_URL")
+print(f"  KEY: {SUPABASE_KEY[:20]}..." if SUPABASE_KEY else "  [ERROR] No SUPABASE_KEY")
+
 if SUPABASE_URL and SUPABASE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("[OK] Supabase client created successfully")
+    except Exception as e:
+        print(f"[ERROR] Supabase client creation failed: {e}")
+        print("[경고] Mock 데이터를 사용합니다.")
 else:
     print("[경고] Supabase 환경변수가 설정되지 않았습니다. Mock 데이터를 사용합니다.")
 
@@ -76,90 +107,287 @@ class BacktestResult(BaseModel):
     trades: List[Dict]
 
 class Strategy:
-    """전략 실행 클래스"""
+    """전략 실행 클래스 - Core 모듈 우선 사용"""
+
+    @staticmethod
+    async def execute_strategy(data: pd.DataFrame, strategy_config: Dict[str, Any]) -> pd.DataFrame:
+        """전략 실행 - Core 모듈 사용"""
+        data = data.copy()
+        data['price'] = data['close']  # 가격 별칭
+
+        if USE_CORE:
+            print("[Strategy] Core 모듈로 처리")
+
+            # indicators가 비어있는 경우 자동 추출
+            if not strategy_config.get('indicators') or len(strategy_config.get('indicators', [])) == 0:
+                print("[FIX] indicators가 비어있음. 자동 추출 시작...")
+
+                # 1. 템플릿 ID가 있는 경우
+                if strategy_config.get('templateId'):
+                    template_id = strategy_config['templateId']
+                    print(f"[FIX] 템플릿 {template_id}의 indicators 자동 추가")
+
+                    # 템플릿별 기본 지표
+                    template_indicators = {
+                        'golden-cross': [
+                            {"type": "ma", "params": {"period": 20}},
+                            {"type": "ma", "params": {"period": 60}}
+                        ],
+                        'rsi-reversal': [
+                            {"type": "rsi", "params": {"period": 14}}
+                        ],
+                        'bollinger-band': [
+                            {"type": "bb", "params": {"period": 20, "std": 2}},
+                            {"type": "rsi", "params": {"period": 14}}
+                        ],
+                        'macd-signal': [
+                            {"type": "macd", "params": {"fast": 12, "slow": 26, "signal": 9}}
+                        ]
+                    }
+
+                    if template_id in template_indicators:
+                        strategy_config['indicators'] = template_indicators[template_id]
+                        print(f"[FIX] {len(strategy_config['indicators'])}개 지표 추가됨")
+
+                    # operator 수정 (> → cross_above)
+                    for cond in strategy_config.get('buyConditions', []):
+                        if cond.get('operator') == '>' and 'ma' in cond.get('indicator', '').lower():
+                            cond['operator'] = 'cross_above'
+                            print(f"[FIX] 매수 operator: > → cross_above")
+
+                    for cond in strategy_config.get('sellConditions', []):
+                        if cond.get('operator') == '<' and 'ma' in cond.get('indicator', '').lower():
+                            cond['operator'] = 'cross_below'
+                            print(f"[FIX] 매도 operator: < → cross_below")
+
+                # 2. Stage 전략에서 지표 추출
+                elif strategy_config.get('useStageBasedStrategy') and strategy_config.get('buyStageStrategy'):
+                    print("[FIX] Stage 전략에서 지표 추출")
+                    extracted_indicators = set()
+
+                    # buyStageStrategy에서 추출
+                    buy_stages = strategy_config.get('buyStageStrategy', {}).get('stages', [])
+                    for stage in buy_stages:
+                        for ind in stage.get('indicators', []):
+                            ind_id = ind.get('indicatorId', '')
+                            params = ind.get('params', {})
+
+                            if ind_id == 'stochastic':
+                                extracted_indicators.add(("stochastic", params.get('k', 14), params.get('d', 3)))
+                            elif ind_id == 'macd':
+                                extracted_indicators.add(("macd", params.get('fast', 12), params.get('slow', 26), params.get('signal', 9)))
+                            elif ind_id == 'rsi':
+                                extracted_indicators.add(("rsi", params.get('period', 14)))
+                            elif 'ma' in ind_id:
+                                extracted_indicators.add(("ma", params.get('period', 20)))
+
+                    # sellStageStrategy에서 추출
+                    sell_stages = strategy_config.get('sellStageStrategy', {}).get('stages', [])
+                    for stage in sell_stages:
+                        for ind in stage.get('indicators', []):
+                            ind_id = ind.get('indicatorId', '')
+                            params = ind.get('params', {})
+
+                            if ind_id == 'stochastic':
+                                extracted_indicators.add(("stochastic", params.get('k', 14), params.get('d', 3)))
+                            elif ind_id == 'macd':
+                                extracted_indicators.add(("macd", params.get('fast', 12), params.get('slow', 26), params.get('signal', 9)))
+
+                    # indicators 배열로 변환
+                    indicators_list = []
+                    for ind_info in extracted_indicators:
+                        if ind_info[0] == 'stochastic':
+                            indicators_list.append({"type": "stochastic", "params": {"k": ind_info[1], "d": ind_info[2]}})
+                        elif ind_info[0] == 'macd':
+                            indicators_list.append({"type": "macd", "params": {"fast": ind_info[1], "slow": ind_info[2], "signal": ind_info[3]}})
+                        elif ind_info[0] == 'rsi':
+                            indicators_list.append({"type": "rsi", "params": {"period": ind_info[1]}})
+                        elif ind_info[0] == 'ma':
+                            indicators_list.append({"type": "ma", "params": {"period": ind_info[1]}})
+
+                    strategy_config['indicators'] = indicators_list
+                    print(f"[FIX] {len(indicators_list)}개 지표 추출됨: {indicators_list}")
+
+                # 3. 일반 조건에서 지표명 추출
+                else:
+                    print("[FIX] 조건에서 지표명 추출")
+                    extracted_indicators = set()
+
+                    # buyConditions와 sellConditions에서 지표 추출
+                    for cond in strategy_config.get('buyConditions', []) + strategy_config.get('sellConditions', []):
+                        indicator = cond.get('indicator', '').lower()
+
+                        if 'stochastic' in indicator or 'stoch' in indicator:
+                            extracted_indicators.add('stochastic')
+                        elif 'macd' in indicator:
+                            extracted_indicators.add('macd')
+                        elif 'rsi' in indicator:
+                            extracted_indicators.add('rsi')
+                        elif 'ma_' in indicator:
+                            # ma_20 형태에서 period 추출
+                            parts = indicator.split('_')
+                            if len(parts) > 1 and parts[1].isdigit():
+                                extracted_indicators.add(f'ma_{parts[1]}')
+                        elif 'bb' in indicator:
+                            extracted_indicators.add('bb')
+
+                    # indicators 배열로 변환
+                    indicators_list = []
+                    for ind_name in extracted_indicators:
+                        if ind_name == 'stochastic':
+                            indicators_list.append({"type": "stochastic", "params": {"k": 14, "d": 3}})
+                        elif ind_name == 'macd':
+                            indicators_list.append({"type": "macd", "params": {"fast": 12, "slow": 26, "signal": 9}})
+                        elif ind_name == 'rsi':
+                            indicators_list.append({"type": "rsi", "params": {"period": 14}})
+                        elif ind_name.startswith('ma_'):
+                            period = int(ind_name.split('_')[1])
+                            indicators_list.append({"type": "ma", "params": {"period": period}})
+                        elif ind_name == 'bb':
+                            indicators_list.append({"type": "bb", "params": {"period": 20, "std": 2}})
+
+                    if indicators_list:
+                        strategy_config['indicators'] = indicators_list
+                        print(f"[FIX] {len(indicators_list)}개 지표 추출됨: {indicators_list}")
+
+            # params 구조 자동 수정
+            indicators = strategy_config.get('indicators', [])
+            fixed_indicators = []
+            for ind in indicators:
+                if 'params' not in ind and 'period' in ind:
+                    fixed_ind = {
+                        'type': ind.get('type', 'MA').upper(),
+                        'params': {'period': ind.get('period', 20)}
+                    }
+                    print(f"[FIX] 지표 구조: {ind} → {fixed_ind}")
+                    fixed_indicators.append(fixed_ind)
+                else:
+                    fixed_indicators.append(ind)
+
+            # 조건 정규화
+            buy_conditions = _normalize_conditions(strategy_config.get('buyConditions', []))
+            sell_conditions = _normalize_conditions(strategy_config.get('sellConditions', []))
+
+            config = {
+                **strategy_config,
+                'indicators': fixed_indicators,
+                'buyConditions': buy_conditions,
+                'sellConditions': sell_conditions
+            }
+
+            # 지표 계산
+            data = compute_indicators(data, config)
+
+            # 신호 생성
+            data['buy_signal'] = evaluate_conditions(data, buy_conditions, 'buy')
+            data['sell_signal'] = evaluate_conditions(data, sell_conditions, 'sell')
+            data['signal'] = 0
+            data.loc[data['buy_signal'] == 1, 'signal'] = 1
+            data.loc[data['sell_signal'] == -1, 'signal'] = -1
+
+            buy_count = (data['buy_signal'] == 1).sum()
+            sell_count = (data['sell_signal'] == -1).sum()
+            print(f"[Core] 신호: 매수 {buy_count}, 매도 {sell_count}")
+
+            return data
+
+        elif USE_STRATEGY_ENGINE:
+            # 기존 StrategyEngine 사용
+            try:
+                engine = StrategyEngine()
+                data = engine.prepare_data(data, strategy_config)
+                return data
+            except Exception as e:
+                print(f"[WARNING] StrategyEngine 실패: {e}")
+
+        # 폴백: 기본 지표 계산
+        return await Strategy.calculate_indicators(data, strategy_config.get('indicators', []))
 
     @staticmethod
     async def calculate_indicators(data: pd.DataFrame, indicators: List[Dict]) -> pd.DataFrame:
-        """여러 기술적 지표 계산"""
-        # Use StrategyEngine if available
-        if USE_STRATEGY_ENGINE:
-            try:
-                # Create StrategyEngine instance
-                engine = StrategyEngine()
-
-                # Calculate all indicators using strategy_engine
-                data = engine.calculate_all_indicators(data)
-
-                # Ensure PRICE column exists for compatibility
-                if 'PRICE' not in data.columns:
-                    data['PRICE'] = data['close']
-
-                print(f"[INFO] StrategyEngine에서 지표 계산 완료. 컬럼: {list(data.columns)[:20]}...")
-                return data
-            except Exception as e:
-                print(f"[WARNING] StrategyEngine 사용 실패: {e}. 기본 방법으로 전환.")
-
-        # Original indicator calculation logic as fallback
+        """레거시 지표 계산 메서드"""
+        # 기존 코드 유지...
         for indicator in indicators:
-            ind_type = indicator.get('type', '')
-            params = indicator.get('params', {})
-            
-            if ind_type == 'MA':
+            ind_type = indicator.get('type', '').lower()  # 소문자로 변환
+
+            # 새로운 형식 지원 (period가 indicator 객체에 직접 있는 경우)
+            if 'period' in indicator:
+                params = {'period': indicator.get('period')}
+            else:
+                params = indicator.get('params', {})
+
+            # fast, slow, signal 등도 직접 가져오기
+            if ind_type == 'macd':
+                params = {
+                    'fast': indicator.get('fast', 12),
+                    'slow': indicator.get('slow', 26),
+                    'signal': indicator.get('signal', 9)
+                }
+            elif ind_type == 'bb':
+                params = {
+                    'period': indicator.get('period', 20),
+                    'std': indicator.get('std_dev', indicator.get('std', 2))
+                }
+
+            if ind_type in ['ma', 'sma']:
                 period = params.get('period', 20)
-                data[f'MA_{period}'] = data['close'].rolling(window=period).mean()
-            
-            elif ind_type == 'EMA':
+                data[f'ma_{period}'] = data['close'].rolling(window=period).mean()
+                data[f'sma_{period}'] = data[f'ma_{period}']  # 별칭
+
+            elif ind_type == 'ema':
                 period = params.get('period', 20)
-                data[f'EMA_{period}'] = data['close'].ewm(span=period, adjust=False).mean()
-            
-            elif ind_type == 'RSI':
+                data[f'ema_{period}'] = data['close'].ewm(span=period, adjust=False).mean()
+
+            elif ind_type == 'rsi':
                 period = params.get('period', 14)
                 delta = data['close'].diff()
                 gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
                 loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
                 rs = gain / loss
-                data[f'RSI_{period}'] = 100 - (100 / (1 + rs))
-            
-            elif ind_type == 'MACD':
+                data[f'rsi_{period}'] = 100 - (100 / (1 + rs))
+                if period == 14:
+                    data['rsi'] = data[f'rsi_{period}']  # 기본 rsi
+
+            elif ind_type == 'macd':
                 fast = params.get('fast', 12)
                 slow = params.get('slow', 26)
                 signal = params.get('signal', 9)
-                data['MACD'] = data['close'].ewm(span=fast, adjust=False).mean() - data['close'].ewm(span=slow, adjust=False).mean()
-                data['MACD_signal'] = data['MACD'].ewm(span=signal, adjust=False).mean()
-                data['MACD_hist'] = data['MACD'] - data['MACD_signal']
-            
-            elif ind_type == 'BB':
+                data['macd'] = data['close'].ewm(span=fast, adjust=False).mean() - data['close'].ewm(span=slow, adjust=False).mean()
+                data['macd_signal'] = data['macd'].ewm(span=signal, adjust=False).mean()
+                data['macd_hist'] = data['macd'] - data['macd_signal']
+
+            elif ind_type == 'bb':
                 period = params.get('period', 20)
                 std = params.get('std', 2)
                 ma = data['close'].rolling(window=period).mean()
                 std_dev = data['close'].rolling(window=period).std()
-                data['BB_upper'] = ma + (std_dev * std)
-                data['BB_lower'] = ma - (std_dev * std)
-                data['BB_middle'] = ma
-            
-            elif ind_type == 'Stochastic':
+                data['bb_upper'] = ma + (std_dev * std)
+                data['bb_lower'] = ma - (std_dev * std)
+                data['bb_middle'] = ma
+
+            elif ind_type == 'stochastic':
                 k_period = params.get('k_period', 14)
                 d_period = params.get('d_period', 3)
                 low_min = data['low'].rolling(window=k_period).min()
                 high_max = data['high'].rolling(window=k_period).max()
-                data['Stoch_K'] = 100 * ((data['close'] - low_min) / (high_max - low_min))
-                data['Stoch_D'] = data['Stoch_K'].rolling(window=d_period).mean()
-            
-            elif ind_type == 'ATR':
+                data['stoch_k'] = 100 * ((data['close'] - low_min) / (high_max - low_min))
+                data['stoch_d'] = data['stoch_k'].rolling(window=d_period).mean()
+
+            elif ind_type == 'atr':
                 period = params.get('period', 14)
                 high_low = data['high'] - data['low']
                 high_close = np.abs(data['high'] - data['close'].shift())
                 low_close = np.abs(data['low'] - data['close'].shift())
                 ranges = pd.concat([high_low, high_close, low_close], axis=1)
                 true_range = np.max(ranges, axis=1)
-                data[f'ATR_{period}'] = true_range.rolling(window=period).mean()
-            
-            elif ind_type == 'OBV':
-                data['OBV'] = (np.sign(data['close'].diff()) * data['volume']).fillna(0).cumsum()
-            
-            elif ind_type == 'Volume':
+                data[f'atr_{period}'] = true_range.rolling(window=period).mean()
+
+            elif ind_type == 'obv':
+                data['obv'] = (np.sign(data['close'].diff()) * data['volume']).fillna(0).cumsum()
+
+            elif ind_type == 'volume':
                 period = params.get('period', 20)
-                data[f'Volume_MA_{period}'] = data['volume'].rolling(window=period).mean()
+                data[f'volume_ma_{period}'] = data['volume'].rolling(window=period).mean()
         
         return data
     
@@ -167,39 +395,57 @@ class Strategy:
     async def evaluate_conditions(data: pd.DataFrame, conditions: List[Dict], condition_type: str) -> pd.DataFrame:
         """매수/매도 조건 평가"""
         data[f'{condition_type}_signal'] = 0
-        
+
         if not conditions:
             return data
-        
+
         # 각 조건 평가
         condition_results = []
-        for condition in conditions:
+        for i, condition in enumerate(conditions):
             indicator = condition.get('indicator', '')
             operator = condition.get('operator', '')
             value = condition.get('value', 0)
             combine = condition.get('combineWith', 'AND')
-            
+
             # 지표값 가져오기
-            if indicator in data.columns:
-                ind_values = data[indicator]
-            else:
+            if indicator not in data.columns:
                 continue
-            
+
+            ind_values = data[indicator]
+
+            # 비교 값이 다른 지표인 경우 처리
+            if isinstance(value, str):
+                if value in data.columns:
+                    compare_values = data[value]
+                else:
+                    try:
+                        compare_values = float(value)
+                    except ValueError:
+                        continue
+            else:
+                compare_values = float(value)
+
             # 조건 평가
             if operator == '>':
-                result = ind_values > value
+                result = ind_values > compare_values
             elif operator == '<':
-                result = ind_values < value
+                result = ind_values < compare_values
             elif operator == '>=':
-                result = ind_values >= value
+                result = ind_values >= compare_values
             elif operator == '<=':
-                result = ind_values <= value
+                result = ind_values <= compare_values
             elif operator == '==':
-                result = ind_values == value
+                result = ind_values == compare_values
             elif operator == 'cross_above':
-                result = (ind_values > value) & (ind_values.shift(1) <= value)
+                if isinstance(compare_values, pd.Series):
+                    result = (ind_values > compare_values) & (ind_values.shift(1) <= compare_values.shift(1))
+                else:
+                    result = (ind_values > compare_values) & (ind_values.shift(1) <= compare_values)
             elif operator == 'cross_below':
-                result = (ind_values < value) & (ind_values.shift(1) >= value)
+                if isinstance(compare_values, pd.Series):
+                    result = (ind_values < compare_values) & (ind_values.shift(1) >= compare_values.shift(1))
+                else:
+                    result = (ind_values < compare_values) & (ind_values.shift(1) >= compare_values)
             else:
                 continue
             
@@ -389,9 +635,57 @@ class BacktestEngine:
             trades=trades
         )
 
+@router.get("/version")
+async def get_version():
+    """코드 버전 정보 반환"""
+    import hashlib
+    import json
+
+    # 핵심 파일들의 해시값 계산
+    file_hashes = {}
+    core_files = [
+        'backtest_api.py',
+        'backtest_engine_advanced.py',
+        'core/indicators.py',
+        'core/conditions.py',
+        'core/naming.py'
+    ]
+
+    for file_name in core_files:
+        try:
+            file_path = os.path.join(os.path.dirname(__file__), file_name)
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as f:
+                    content = f.read()
+                    file_hashes[file_name] = hashlib.md5(content).hexdigest()[:8]
+            else:
+                file_hashes[file_name] = "NOT_FOUND"
+        except Exception as e:
+            file_hashes[file_name] = f"ERROR: {str(e)}"
+
+    return {
+        "version": CODE_VERSION,
+        "build_time": CODE_BUILD_TIME,
+        "current_time": datetime.now().isoformat(),
+        "core_module": "LOADED" if USE_CORE else "NOT_LOADED",
+        "advanced_engine": "LOADED" if USE_ADVANCED_ENGINE else "NOT_LOADED",
+        "strategy_engine": "LOADED" if USE_STRATEGY_ENGINE else "NOT_LOADED",
+        "file_hashes": file_hashes,
+        "python_version": sys.version,
+        "working_dir": os.getcwd()
+    }
+
 @router.post("/run")
 async def run_backtest(request: BacktestRequest):
     """백테스트 실행 - 여러 종목 지원"""
+    print(f"\n{'='*60}")
+    print(f"[BACKTEST API CALLED] {datetime.now()}")
+    print(f"[CODE VERSION: {CODE_VERSION}]")
+    print(f"Strategy ID: {request.strategy_id}")
+    print(f"Stock codes: {request.stock_codes}")
+    print(f"Date range: {request.start_date} ~ {request.end_date}")
+    print(f"{'='*60}\n")
+
     try:
         # 1. Supabase에서 전략 정보 조회
         strategy_config = {}
@@ -401,12 +695,12 @@ async def run_backtest(request: BacktestRequest):
                 response = supabase.table('strategies').select('*').eq('id', request.strategy_id).single().execute()
                 if response.data:
                     strategy_config = response.data.get('config', {})
-                    print(f"  ✓ 전략 로드 성공: {response.data.get('name', 'Unknown')}")
+                    print(f"  [OK] 전략 로드 성공: {response.data.get('name', 'Unknown')}")
                     print(f"  - 지표: {len(strategy_config.get('indicators', []))}개")
                     print(f"  - 매수 조건: {len(strategy_config.get('buyConditions', []))}개")
                     print(f"  - 매도 조건: {len(strategy_config.get('sellConditions', []))}개")
             except Exception as e:
-                print(f"  ! 전략 조회 실패: {str(e)}")
+                print(f"  [ERROR] 전략 조회 실패: {str(e)}")
         
         # 2. request.parameters와 병합 (request.parameters가 우선)
         merged_parameters = {**strategy_config, **request.parameters}
@@ -585,6 +879,77 @@ async def run_backtest(request: BacktestRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/debug/strategy")
+async def debug_strategy(request: dict):
+    """전략 디버그 - 조건 테스트"""
+    try:
+        strategy_id = request.get('strategy_id')
+
+        # 전략 로드
+        if supabase and strategy_id:
+            response = supabase.table('strategies').select('*').eq('id', strategy_id).single().execute()
+            if response.data:
+                strategy_config = response.data.get('config', {})
+
+                # 지표와 조건 분석
+                indicators = strategy_config.get('indicators', [])
+                buy_conditions = strategy_config.get('buyConditions', [])
+                sell_conditions = strategy_config.get('sellConditions', [])
+
+                # 문제 체크
+                issues = []
+
+                # 1. 지표 형식 체크
+                for ind in indicators:
+                    if 'period' in ind and 'params' not in ind:
+                        issues.append(f"Indicator has 'period' outside 'params': {ind}")
+                    if not isinstance(ind.get('params', {}), dict):
+                        issues.append(f"Invalid params format in indicator: {ind}")
+
+                # 2. 조건 형식 체크
+                for cond in buy_conditions + sell_conditions:
+                    if 'operator' in cond:
+                        op = cond['operator']
+                        if op in ['cross_above', 'cross_below']:
+                            issues.append(f"Complex operator '{op}' used - may need conversion")
+
+                # 테스트 데이터로 실행
+                test_result = None
+                if USE_CORE:
+                    try:
+                        # 간단한 테스트 데이터 생성
+                        import pandas as pd
+                        import numpy as np
+                        dates = pd.date_range('2024-01-01', '2024-01-10')
+                        test_data = pd.DataFrame({
+                            'date': dates,
+                            'close': np.random.uniform(50000, 60000, len(dates)),
+                            'volume': np.random.uniform(100000, 200000, len(dates))
+                        })
+
+                        # 지표 계산 테스트
+                        from core import compute_indicators
+                        computed_data = compute_indicators(test_data, indicators)
+                        test_result = "Indicators computed successfully"
+                    except Exception as e:
+                        test_result = f"Test failed: {str(e)}"
+
+                return {
+                    "success": True,
+                    "strategy_name": response.data.get('name'),
+                    "indicators_count": len(indicators),
+                    "buy_conditions_count": len(buy_conditions),
+                    "sell_conditions_count": len(sell_conditions),
+                    "issues": issues,
+                    "test_result": test_result,
+                    "config": strategy_config
+                }
+
+        return {"success": False, "message": "Strategy not found"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @router.get("/strategies")
 async def get_strategies():
     """사용 가능한 전략 목록 - Supabase에서 로드"""
@@ -597,7 +962,7 @@ async def get_strategies():
                     "success": True,
                     "strategies": response.data
                 }
-        
+
         # Supabase가 없거나 실패한 경우 빈 목록 반환
         return {
             "success": False,

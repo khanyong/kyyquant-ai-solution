@@ -10,20 +10,43 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
+import sys
+import os
+
+# Core 모듈 경로 추가
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Core 모듈 우선 임포트
+try:
+    from core import (
+        compute_indicators,
+        evaluate_conditions,
+        _normalize_conditions,
+        convert_legacy_column,
+        _iname
+    )
+    USE_CORE = True
+    print("[INFO] AdvancedBacktestEngine: Core 모듈 로드 성공")
+except ImportError as e:
+    USE_CORE = False
+    print(f"[WARNING] AdvancedBacktestEngine: Core 모듈 로드 실패: {e}")
+
+# 폴백: 기존 모듈들
 try:
     from indicators_complete import CompleteIndicators
     USE_COMPLETE_INDICATORS = True
 except ImportError:
     USE_COMPLETE_INDICATORS = False
 
-# Import StrategyEngine for indicator calculations
 try:
     from strategy_engine import StrategyEngine
     USE_STRATEGY_ENGINE = True
-    print("[INFO] AdvancedBacktestEngine: strategy_engine.py를 사용합니다.")
+    if not USE_CORE:
+        print("[INFO] AdvancedBacktestEngine: strategy_engine.py를 사용합니다.")
 except ImportError:
     USE_STRATEGY_ENGINE = False
-    print("[WARNING] AdvancedBacktestEngine: strategy_engine.py를 찾을 수 없습니다.")
+    if not USE_CORE:
+        print("[WARNING] AdvancedBacktestEngine: strategy_engine.py를 찾을 수 없습니다.")
 
 @dataclass
 class Position:
@@ -72,8 +95,45 @@ class Trade:
     profit_pct: Optional[float] = None
     position_size: Optional[int] = None  # 거래 후 포지션 크기
 
+# 유틸리티 함수들
+def _iname(base: str, *params) -> str:
+    """지표명 생성 - 모든 파라미터를 소문자로 변환하여 연결"""
+    parts = [str(base).lower()] + [str(p).lower() for p in params if p is not None]
+    return "_".join(parts)
+
+def _lc(s):
+    """문자열을 소문자로 변환"""
+    return s.lower() if isinstance(s, str) else s
+
+def _normalize_conditions(conditions):
+    """조건 정규화 - 지표명, 연산자, 값을 소문자화"""
+    norm = []
+    for c in conditions or []:
+        c = dict(c)
+        c['indicator'] = _lc(c.get('indicator', ''))
+        c['operator'] = _lc(c.get('operator', ''))
+        v = c.get('value', 0)
+        c['value'] = _lc(v) if isinstance(v, str) else v
+        c['combineWith'] = _lc(c.get('combineWith')) if c.get('combineWith') else None
+        norm.append(c)
+    return norm
+
 class TechnicalIndicators:
-    """정확한 기술적 지표 계산"""
+    """기술적 지표 계산 클래스 - Core 모듈 사용 시 건너뜀"""
+
+    @staticmethod
+    def compute_all(df: pd.DataFrame, config: Dict) -> pd.DataFrame:
+        """Core 모듈 사용 시 위임"""
+        if USE_CORE:
+            return compute_indicators(df, config)
+        # 기존 로직 유지
+        return TechnicalIndicators._legacy_compute(df, config)
+
+    @staticmethod
+    def _legacy_compute(df: pd.DataFrame, config: Dict) -> pd.DataFrame:
+        """레거시 지표 계산"""
+        # 기존 calculate_all 메서드로 위임
+        return TechnicalIndicators.calculate_all(df, config)
 
     @staticmethod
     def calculate_all(df: pd.DataFrame, config: Dict[str, Any]) -> pd.DataFrame:
@@ -91,18 +151,17 @@ class TechnicalIndicators:
                 engine = StrategyEngine()
                 df = engine.calculate_all_indicators(df)
 
-                # Ensure PRICE column exists for compatibility
-                if 'PRICE' not in df.columns:
-                    df['PRICE'] = df['close']
+                # price 별칭 추가
+                df['price'] = df['close']
 
                 print(f"[INFO] StrategyEngine에서 모든 지표 계산 완료")
                 print(f"[DEBUG] 사용 가능한 컬럼: {list(df.columns)}")
 
-                # Check if RSI_14 exists
-                if 'RSI_14' in df.columns:
-                    print(f"[DEBUG] RSI_14 발견! 샘플 값: {df['RSI_14'].iloc[-5:].values}")
+                # Check if rsi_14 exists
+                if 'rsi_14' in df.columns:
+                    print(f"[DEBUG] rsi_14 발견! 샘플 값: {df['rsi_14'].iloc[-5:].values}")
                 else:
-                    print(f"[WARNING] RSI_14가 여전히 없습니다. RSI 관련 컬럼: {[col for col in df.columns if 'rsi' in col.lower() or 'RSI' in col]}")
+                    print(f"[WARNING] rsi_14가 여전히 없습니다. RSI 관련 컬럼: {[col for col in df.columns if 'rsi' in col.lower()]}")
 
                 return df
             except Exception as e:
@@ -119,128 +178,109 @@ class TechnicalIndicators:
 
             if ind_type == 'SMA' or ind_type == 'MA':
                 period = params.get('period', 20)
-                df[f'SMA_{period}'] = df['close'].rolling(window=period).mean()
+                df[_iname('sma', period)] = df['close'].rolling(window=period).mean()
+                df[_iname('ma', period)] = df[_iname('sma', period)]  # 동일 값 제공
 
             elif ind_type == 'EMA':
                 period = params.get('period', 20)
-                df[f'EMA_{period}'] = df['close'].ewm(span=period, adjust=False).mean()
+                df[_iname('ema', period)] = df['close'].ewm(span=period, adjust=False).mean()
 
             elif ind_type == 'RSI':
+                # Wilder RSI 표준 산식
                 period = params.get('period', 14)
                 delta = df['close'].diff()
-                gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-                rs = gain / loss.replace(0, 1e-10)  # Avoid division by zero
-                df[f'RSI_{period}'] = 100 - (100 / (1 + rs))
+                up = delta.clip(lower=0)
+                down = (-delta).clip(lower=0)
+                rma_up = up.ewm(alpha=1/period, adjust=False).mean()
+                rma_down = down.ewm(alpha=1/period, adjust=False).mean()
+                rs = rma_up / rma_down.replace(0, 1e-10)
+                df[_iname('rsi', period)] = 100 - (100 / (1 + rs))
 
             elif ind_type == 'MACD':
-                fast = params.get('fast', 12)
-                slow = params.get('slow', 26)
-                signal = params.get('signal', 9)
+                f = params.get('fast', 12)
+                s = params.get('slow', 26)
+                sig = params.get('signal', 9)
 
-                exp1 = df['close'].ewm(span=fast, adjust=False).mean()
-                exp2 = df['close'].ewm(span=slow, adjust=False).mean()
-                df['MACD'] = exp1 - exp2
-                df['MACD_signal'] = df['MACD'].ewm(span=signal, adjust=False).mean()
-                df['MACD_hist'] = df['MACD'] - df['MACD_signal']
+                macd = df['close'].ewm(span=f, adjust=False).mean() - df['close'].ewm(span=s, adjust=False).mean()
+                df[_iname('macd', f, s)] = macd
+                df[_iname('macd_signal', f, s, sig)] = macd.ewm(span=sig, adjust=False).mean()
+                df[_iname('macd_hist', f, s, sig)] = df[_iname('macd', f, s)] - df[_iname('macd_signal', f, s, sig)]
 
             elif ind_type == 'BB':
-                period = params.get('period', 20)
-                std = params.get('std', 2)
-                ma = df['close'].rolling(window=period).mean()
-                std_dev = df['close'].rolling(window=period).std()
-                df['BB_upper'] = ma + (std_dev * std)
-                df['BB_lower'] = ma - (std_dev * std)
-                df['BB_middle'] = ma
+                p = params.get('period', 20)
+                k = params.get('std', 2)
+                ma = df['close'].rolling(window=p).mean()
+                sd = df['close'].rolling(window=p).std()
+                df[_iname('bb_middle', p)] = ma
+                df[_iname('bb_upper', p, k)] = ma + k * sd
+                df[_iname('bb_lower', p, k)] = ma - k * sd
 
             elif ind_type == 'Stochastic':
                 k_period = params.get('k_period', 14)
                 d_period = params.get('d_period', 3)
                 low_min = df['low'].rolling(window=k_period).min()
                 high_max = df['high'].rolling(window=k_period).max()
-                df['Stoch_K'] = 100 * ((df['close'] - low_min) / (high_max - low_min + 1e-10))
-                df['Stoch_D'] = df['Stoch_K'].rolling(window=d_period).mean()
+                k_fast = 100 * ((df['close'] - low_min) / (high_max - low_min + 1e-10))
+                df[_iname('stoch_k', k_period, d_period)] = k_fast
+                df[_iname('stoch_d', k_period, d_period)] = k_fast.rolling(window=d_period).mean()
 
             elif ind_type == 'ATR':
-                period = params.get('period', 14)
-                high_low = df['high'] - df['low']
-                high_close = np.abs(df['high'] - df['close'].shift())
-                low_close = np.abs(df['low'] - df['close'].shift())
-                ranges = pd.concat([high_low, high_close, low_close], axis=1)
-                true_range = ranges.max(axis=1)
-                df[f'ATR_{period}'] = true_range.rolling(window=period).mean()
+                # Wilder ATR 표준 산식
+                p = params.get('period', 14)
+                tr = pd.concat([
+                    df['high'] - df['low'],
+                    (df['high'] - df['close'].shift()).abs(),
+                    (df['low'] - df['close'].shift()).abs()
+                ], axis=1).max(axis=1)
+                df[_iname('atr', p)] = tr.ewm(alpha=1/p, adjust=False).mean()
 
             elif ind_type == 'OBV':
-                df['OBV'] = (np.sign(df['close'].diff()) * df['volume']).fillna(0).cumsum()
+                df[_iname('obv')] = (np.sign(df['close'].diff()) * df['volume']).fillna(0).cumsum()
 
             elif ind_type == 'ADX':
-                period = params.get('period', 14)
-                # Simplified ADX calculation
-                plus_dm = df['high'].diff()
-                minus_dm = -df['low'].diff()
-                plus_dm[plus_dm < 0] = 0
-                minus_dm[minus_dm < 0] = 0
+                # 표준 ADX 산식 (Wilder 방식)
+                p = params.get('period', 14)
+                upMove = df['high'].diff()
+                downMove = df['low'].shift(1) - df['low']
+                plus_dm = np.where((upMove > downMove) & (upMove > 0), upMove, 0.0)
+                minus_dm = np.where((downMove > upMove) & (downMove > 0), downMove, 0.0)
 
                 tr = pd.concat([
                     df['high'] - df['low'],
-                    np.abs(df['high'] - df['close'].shift()),
-                    np.abs(df['low'] - df['close'].shift())
+                    (df['high'] - df['close'].shift()).abs(),
+                    (df['low'] - df['close'].shift()).abs()
                 ], axis=1).max(axis=1)
 
-                atr = tr.rolling(window=period).mean()
-                plus_di = 100 * (plus_dm.rolling(window=period).mean() / atr)
-                minus_di = 100 * (minus_dm.rolling(window=period).mean() / atr)
-                dx = 100 * np.abs(plus_di - minus_di) / (plus_di + minus_di + 1e-10)
-                df[f'ADX_{period}'] = dx.rolling(window=period).mean()
+                atr = tr.ewm(alpha=1/p, adjust=False).mean()
+                plus_di = 100 * (pd.Series(plus_dm, index=df.index).ewm(alpha=1/p, adjust=False).mean() / atr.replace(0,1e-10))
+                minus_di = 100 * (pd.Series(minus_dm, index=df.index).ewm(alpha=1/p, adjust=False).mean() / atr.replace(0,1e-10))
+                dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0,1e-10)
+                df[_iname('adx', p)] = dx.ewm(alpha=1/p, adjust=False).mean()
 
             elif ind_type == 'CCI':
-                period = params.get('period', 20)
+                p = params.get('period', 20)
                 tp = (df['high'] + df['low'] + df['close']) / 3
-                ma = tp.rolling(window=period).mean()
-                mad = tp.rolling(window=period).apply(lambda x: np.abs(x - x.mean()).mean())
-                df[f'CCI_{period}'] = (tp - ma) / (0.015 * mad + 1e-10)
+                sma_tp = tp.rolling(window=p).mean()
+                mad = tp.rolling(window=p).apply(lambda x: np.abs(x - x.mean()).mean())
+                df[_iname('cci', p)] = (tp - sma_tp) / (0.015 * mad + 1e-10)
 
             elif ind_type == 'MFI':
-                period = params.get('period', 14)
+                p = params.get('period', 14)
                 tp = (df['high'] + df['low'] + df['close']) / 3
                 mf = tp * df['volume']
-
                 pos_mf = pd.Series(np.where(tp > tp.shift(), mf, 0), index=df.index)
                 neg_mf = pd.Series(np.where(tp < tp.shift(), mf, 0), index=df.index)
-
-                pos_mf_sum = pos_mf.rolling(window=period).sum()
-                neg_mf_sum = neg_mf.rolling(window=period).sum()
-
-                mfi = 100 - (100 / (1 + pos_mf_sum / (neg_mf_sum + 1e-10)))
-                df[f'MFI_{period}'] = mfi
+                mfr = pos_mf.rolling(window=p).sum() / (neg_mf.rolling(window=p).sum() + 1e-10)
+                df[_iname('mfi', p)] = 100 - (100 / (1 + mfr))
 
             elif ind_type == 'WILLIAMS_R':
-                period = params.get('period', 14)
-                high_max = df['high'].rolling(window=period).max()
-                low_min = df['low'].rolling(window=period).min()
-                df[f'WILLR_{period}'] = -100 * (high_max - df['close']) / (high_max - low_min + 1e-10)
+                p = params.get('period', 14)
+                hh = df['high'].rolling(window=p).max()
+                ll = df['low'].rolling(window=p).min()
+                df[_iname('willr', p)] = -100 * (hh - df['close']) / (hh - ll + 1e-10)
 
-        # Add PRICE column for template compatibility
-        df['PRICE'] = df['close']
-
-        # Add uppercase versions of common indicators for compatibility
-        # This ensures both uppercase and lowercase versions are available
-        for col in df.columns:
-            if col.startswith('bb_'):
-                uppercase_name = col.replace('bb_', 'BB_')
-                df[uppercase_name] = df[col]
-            elif col.startswith('rsi_'):
-                uppercase_name = col.replace('rsi_', 'RSI_')
-                df[uppercase_name] = df[col]
-            elif col.startswith('macd'):
-                uppercase_name = col.upper()
-                df[uppercase_name] = df[col]
-            elif col.startswith('sma_'):
-                uppercase_name = col.replace('sma_', 'SMA_')
-                df[uppercase_name] = df[col]
-            elif col.startswith('ema_'):
-                uppercase_name = col.replace('ema_', 'EMA_')
-                df[uppercase_name] = df[col]
+        # price 별칭 추가 (close와 동일)
+        df['price'] = df['close']
 
         return df
 
@@ -253,6 +293,9 @@ class SignalGenerator:
         if not conditions:
             return pd.Series(0, index=df.index)
 
+        # 조건 정규화
+        conditions = _normalize_conditions(conditions)
+
         # 각 조건을 평가
         condition_results = []
 
@@ -260,11 +303,15 @@ class SignalGenerator:
             indicator = condition.get('indicator', '')
             operator = condition.get('operator', '')
             value = condition.get('value', 0)
-            combine = condition.get('combineWith', 'AND' if i > 0 else None)
+            combine = condition.get('combineWith', 'and' if i > 0 else None)
 
             # 지표 컬럼 확인
             if indicator not in df.columns:
-                print(f"경고: 지표 {indicator}를 찾을 수 없습니다")
+                # 운영 환경에서는 경고만 출력
+                if signal_type == 'buy':
+                    print(f"경고: 매수 조건의 지표 '{indicator}'를 찾을 수 없습니다")
+                else:
+                    print(f"경고: 매도 조건의 지표 '{indicator}'를 찾을 수 없습니다")
                 continue
 
             ind_values = df[indicator]
@@ -315,9 +362,9 @@ class SignalGenerator:
             final_result = condition_results[0][0]
 
             for i in range(1, len(condition_results)):
-                if condition_results[i][1] == 'AND':
+                if condition_results[i][1] == 'and':
                     final_result = final_result & condition_results[i][0]
-                else:  # OR
+                else:  # or
                     final_result = final_result | condition_results[i][0]
 
             # 신호 생성 (진입 시점만)
@@ -352,10 +399,18 @@ class SignalGenerator:
             if target_profit:
                 mode = target_profit.get('mode', 'simple')
 
-                if mode == 'simple' and target_profit.get('simple', {}).get('enabled'):
-                    # 단일 목표 모드
+                if mode == 'simple' and target_profit.get('enabled'):
+                    # 단일 목표 모드 (이전 버전 호환성)
                     profit_signal = pd.Series(0, index=df.index)
-                    target_value = target_profit['simple'].get('value', 5.0)
+
+                    # simple 모드: enabled가 직접 있거나 simple.enabled가 있는 경우 처리
+                    if target_profit.get('simple'):
+                        target_value = target_profit['simple'].get('value', 5.0)
+                        combine_method = _lc(target_profit['simple'].get('combineWith', 'or'))
+                    else:
+                        # 이전 버전 호환성
+                        target_value = target_profit.get('value', 5.0)
+                        combine_method = _lc(target_profit.get('combineWith', 'or'))
 
                     for idx in df.index:
                         current_price = df.loc[idx, 'close']
@@ -365,10 +420,9 @@ class SignalGenerator:
                             profit_signal[idx] = -1  # 전량 매도 신호
 
                     # 기존 조건과 결합
-                    combine_method = target_profit['simple'].get('combineWith', 'OR')
-                    if combine_method == 'AND':
+                    if combine_method == 'and':
                         base_signal = base_signal & profit_signal
-                    else:  # OR
+                    else:  # or
                         base_signal = base_signal | profit_signal
 
                 elif mode == 'staged' and target_profit.get('staged', {}).get('enabled'):
@@ -390,7 +444,7 @@ class SignalGenerator:
                             stage_num = stage.get('stage', 1)
                             stage_target = stage.get('targetProfit', 5.0)
                             exit_ratio = stage.get('exitRatio', 100) / 100.0
-                            stage_combine = stage.get('combineWith', staged_config.get('combineWith', 'OR'))
+                            stage_combine = _lc(stage.get('combineWith', staged_config.get('combineWith', 'or')))
 
                             # 이미 실행된 단계는 스킵
                             if stage_num in position.executed_stages:
@@ -428,13 +482,13 @@ class SignalGenerator:
                     for idx in df.index:
                         if profit_signal[idx] != 0:
                             # 해당 인덱스의 결합 방식 확인
-                            stage_combine = getattr(profit_signal, 'stage_combines', {}).get(idx, 'OR')
+                            stage_combine = _lc(getattr(profit_signal, 'stage_combines', {}).get(idx, 'or'))
 
-                            if stage_combine == 'AND':
+                            if stage_combine == 'and':
                                 # AND: 지표 조건과 목표 수익 모두 충족
                                 if base_signal[idx] != 0:
                                     combined_signal[idx] = profit_signal[idx]
-                            else:  # OR
+                            else:  # or
                                 # OR: 둘 중 하나만 충족
                                 if profit_signal[idx] != 0:
                                     combined_signal[idx] = profit_signal[idx]
@@ -653,15 +707,54 @@ class AdvancedBacktestEngine:
         return trade
 
     def run(self, data: pd.DataFrame, strategy_config: Dict) -> Dict[str, Any]:
-        """백테스트 실행"""
+        """백테스트 실행 - Core 모듈 우선 사용"""
         print(f"[DEBUG] AdvancedBacktestEngine.run 시작")
         print(f"[DEBUG] 입력 데이터 shape: {data.shape}")
-        print(f"[DEBUG] 입력 데이터 컬럼: {list(data.columns)}")
-        print(f"[DEBUG] USE_COMPLETE_INDICATORS: {USE_COMPLETE_INDICATORS}")
-        print(f"[DEBUG] USE_STRATEGY_ENGINE: {USE_STRATEGY_ENGINE}")
+        print(f"[DEBUG] Core 모듈 사용: {USE_CORE}")
 
-        # 지표 계산 - 완전한 지표 모듈 사용 가능 시 우선 사용
-        if USE_COMPLETE_INDICATORS:
+        # Core 모듈 사용 시
+        if USE_CORE:
+            print("[DEBUG] Core 모듈로 처리")
+
+            # params 구조 자동 수정
+            indicators = strategy_config.get('indicators', [])
+            fixed_indicators = []
+            for ind in indicators:
+                if 'params' not in ind and 'period' in ind:
+                    fixed_ind = {
+                        'type': ind.get('type', 'MA').upper(),
+                        'params': {'period': ind.get('period', 20)}
+                    }
+                    print(f"[FIX] 지표 구조: {ind} → {fixed_ind}")
+                    fixed_indicators.append(fixed_ind)
+                else:
+                    fixed_indicators.append(ind)
+
+            # 조건 가져오기 (정규화는 evaluate_conditions에서 처리)
+            buy_conditions = strategy_config.get('buyConditions', [])
+            sell_conditions = strategy_config.get('sellConditions', [])
+
+            # Core 설정
+            config = {
+                **strategy_config,
+                'indicators': fixed_indicators,
+                'buyConditions': buy_conditions,
+                'sellConditions': sell_conditions
+            }
+
+            # 지표 계산
+            data = compute_indicators(data, config)
+
+            # 신호 생성 (evaluate_conditions는 DataFrame을 반환)
+            data_with_signals = evaluate_conditions(data, buy_conditions, sell_conditions)
+            data = data_with_signals  # DataFrame 전체를 교체
+
+            buy_count = (data['buy_signal'] == 1).sum()
+            sell_count = (data['sell_signal'] == -1).sum()
+            print(f"[Core] 신호: 매수 {buy_count}, 매도 {sell_count}")
+
+        # 폴백: 기존 방식
+        elif USE_COMPLETE_INDICATORS:
             print(f"[DEBUG] CompleteIndicators 사용")
             data = CompleteIndicators.calculate_all(data, strategy_config)
         else:
@@ -671,19 +764,21 @@ class AdvancedBacktestEngine:
         print(f"[DEBUG] 지표 계산 후 데이터 shape: {data.shape}")
         print(f"[DEBUG] 지표 계산 후 컬럼: {list(data.columns)[:30]}...")
 
-        # 신호 생성
-        buy_conditions = strategy_config.get('buyConditions', [])
-        sell_conditions = strategy_config.get('sellConditions', [])
+        # Core 모듈을 사용하지 않는 경우에만 기존 신호 생성
+        if not USE_CORE:
+            # 신호 생성
+            buy_conditions = strategy_config.get('buyConditions', [])
+            sell_conditions = strategy_config.get('sellConditions', [])
 
-        print(f"[DEBUG] 매수 조건: {buy_conditions}")
-        print(f"[DEBUG] 매도 조건: {sell_conditions}")
+            print(f"[DEBUG] 매수 조건: {buy_conditions}")
+            print(f"[DEBUG] 매도 조건: {sell_conditions}")
 
-        # 목표 수익률 정보 출력
-        target_profit = strategy_config.get('targetProfit', {})
-        if target_profit.get('enabled'):
-            print(f"[DEBUG] 목표 수익률: {target_profit.get('value')}%, 결합: {target_profit.get('combineWith', 'OR')}")
+            # 목표 수익률 정보 출력
+            target_profit = strategy_config.get('targetProfit', {})
+            if target_profit.get('enabled'):
+                print(f"[DEBUG] 목표 수익률: {target_profit.get('value')}%, 결합: {target_profit.get('combineWith', 'OR')}")
 
-        data['buy_signal'] = SignalGenerator.evaluate_conditions(data, buy_conditions, 'buy')
+            data['buy_signal'] = SignalGenerator.evaluate_conditions(data, buy_conditions, 'buy')
 
         # 매도 신호는 포지션이 있을 때만 목표 수익률 고려
         if self.positions:
@@ -751,7 +846,7 @@ class AdvancedBacktestEngine:
         return self.analyze_performance()
 
     def analyze_performance(self) -> Dict[str, Any]:
-        """성과 분석"""
+        """Analyze performance"""
         if not self.trades:
             return {
                 'total_return': 0,

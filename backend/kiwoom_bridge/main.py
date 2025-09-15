@@ -9,8 +9,21 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Dict, Any, Optional
 import os
+import sys
 import requests
 from dotenv import load_dotenv
+
+# 버전 정보
+APP_VERSION = "2.1.0-debug"
+BUILD_TIME = datetime.now().isoformat()
+
+print("\n" + "="*70)
+print(f"KIWOOM BRIDGE SERVER STARTING")
+print(f"Version: {APP_VERSION}")
+print(f"Build Time: {BUILD_TIME}")
+print(f"Working Dir: {os.getcwd()}")
+print(f"Python: {sys.version.split()[0]}")
+print("="*70 + "\n")
 
 # Supabase import (있으면 사용)
 try:
@@ -21,10 +34,13 @@ except ImportError:
 
 # backtest API import
 try:
-    from backtest_api import router as backtest_router
+    from backtest_api import router as backtest_router, CODE_VERSION
     BACKTEST_AVAILABLE = True
-except ImportError:
+    print(f"[OK] Backtest API loaded (Version: {CODE_VERSION})")
+except ImportError as e:
     BACKTEST_AVAILABLE = False
+    CODE_VERSION = "N/A"
+    print(f"[ERROR] Backtest API not available: {e}")
 
 load_dotenv()
 
@@ -46,18 +62,29 @@ app.add_middleware(
 # 백테스트 라우터 등록
 if BACKTEST_AVAILABLE:
     app.include_router(backtest_router)
+    print(f"[OK] Backtest router registered at /api/backtest")
+else:
+    print("[WARNING] Backtest router not registered")
 
 # Supabase 클라이언트 초기화
 supabase = None
 if SUPABASE_AVAILABLE:
     try:
-        supabase = create_client(
-            os.getenv('SUPABASE_URL', ''),
-            os.getenv('SUPABASE_KEY', '')
-        )
-        print("[INFO] Supabase connected")
-    except:
-        print("[WARNING] Supabase connection failed")
+        supabase_url = os.getenv('SUPABASE_URL', '')
+        supabase_key = os.getenv('SUPABASE_KEY', '')
+
+        print(f"[DEBUG] Supabase URL: {supabase_url[:30]}..." if supabase_url else "[ERROR] No SUPABASE_URL")
+        print(f"[DEBUG] Supabase KEY: {supabase_key[:20]}..." if supabase_key else "[ERROR] No SUPABASE_KEY")
+
+        if not supabase_url or not supabase_key:
+            print("[ERROR] Supabase credentials missing in .env file!")
+            print("[INFO] Running without Supabase (mock data mode)")
+        else:
+            supabase = create_client(supabase_url, supabase_key)
+            print("[OK] Supabase connected successfully")
+    except Exception as e:
+        print(f"[ERROR] Supabase connection failed: {e}")
+        print("[INFO] Running without Supabase (mock data mode)")
 
 # === Models ===
 class CurrentPriceRequest(BaseModel):
@@ -81,9 +108,14 @@ async def root():
     return {
         "service": "Kiwoom REST API Bridge",
         "status": "running",
-        "version": "2.0.0",
+        "version": APP_VERSION,
+        "backtest_version": CODE_VERSION,
+        "build_time": BUILD_TIME,
         "timestamp": datetime.now().isoformat(),
-        "supabase": "connected" if supabase else "disconnected"
+        "supabase": "connected" if supabase else "disconnected",
+        "backtest_api": "enabled" if BACKTEST_AVAILABLE else "disabled",
+        "working_dir": os.getcwd(),
+        "python_version": sys.version.split()[0]
     }
 
 @app.post("/api/test")
@@ -398,4 +430,10 @@ async def n8n_trading_signal(data: Dict[str, Any]):
 
 if __name__ == "__main__":
     import uvicorn
+    print(f"\n[INFO] Starting server on http://0.0.0.0:8001")
+    print(f"[INFO] App Version: {APP_VERSION}")
+    print(f"[INFO] Backtest Version: {CODE_VERSION}")
+    print(f"[INFO] Backtest API: {'Enabled' if BACKTEST_AVAILABLE else 'Disabled'}")
+    print(f"[INFO] Supabase: {'Connected' if supabase else 'Not Connected'}")
+    print("\n" + "="*70 + "\n")
     uvicorn.run(app, host="0.0.0.0", port=8001)

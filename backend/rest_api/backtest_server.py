@@ -105,6 +105,11 @@ async def health_check():
 async def run_backtest(request: BacktestRequest):
     """백테스트 실행"""
     try:
+        print("\n=== 백테스트 요청 받음 ===")
+        print(f"전략 ID: {request.strategy_id}")
+        print(f"종목: {request.stock_code}")
+        print(f"기간: {request.start_date} ~ {request.end_date}")
+
         logger.info(f"백테스트 시작: {request.strategy_id}")
         
         # 전략 정보 가져오기
@@ -114,7 +119,14 @@ async def run_backtest(request: BacktestRequest):
         
         strategy = strategy_response.data[0]
         logger.info(f"전략 로드: {strategy.get('name', 'Unknown')}")
-        
+
+        # config 필드 확인 및 로그
+        strategy_config = strategy.get('config', {})
+        logger.info(f"전략 config 존재: {bool(strategy_config)}")
+        if strategy_config:
+            logger.info(f"buyConditions 개수: {len(strategy_config.get('buyConditions', []))}")
+            logger.info(f"sellConditions 개수: {len(strategy_config.get('sellConditions', []))}")
+
         # 종목 데이터 가져오기 (로컬 캐시 또는 Supabase)
         stock_data = await load_stock_data(request.stock_codes, request.start_date, request.end_date)
         
@@ -306,8 +318,14 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
     trades = []
     equity_curve = []
 
-    # 전략 파라미터 파싱
-    strategy_params = strategy.get('custom_parameters', {})
+    # 전략 파라미터 파싱 - config 필드 사용
+    strategy_params = strategy.get('config', {})
+
+    # config가 없으면 custom_parameters 시도 (호환성)
+    if not strategy_params:
+        strategy_params = strategy.get('custom_parameters', {})
+
+    logger.info(f"전략 파라미터 로드: buyConditions={len(strategy_params.get('buyConditions', []))}, sellConditions={len(strategy_params.get('sellConditions', []))}")
 
     # 모든 종목의 날짜 통합
     all_dates = set()
@@ -331,6 +349,10 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
         prepared_stock_data[code] = prepared_df
         logger.info(f"종목 {code}에 대한 지표 계산 완료")
 
+        # 계산된 지표 컬럼 확인
+        calculated_columns = [col for col in prepared_df.columns if col not in ['open', 'high', 'low', 'close', 'volume']]
+        logger.info(f"  계산된 지표: {calculated_columns}")
+
     # 각 날짜별로 백테스트 실행
     for date in all_dates:
         daily_value = portfolio['cash']
@@ -341,7 +363,14 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
 
                 # 전략 엔진을 사용하여 실제 신호 생성
                 signal = strategy_engine.generate_signal(df, date, strategy_params)
-                
+
+                # 처음 몇 개 신호 로그 (디버그)
+                if not hasattr(perform_backtest, '_signal_log_count'):
+                    perform_backtest._signal_log_count = 0
+                if perform_backtest._signal_log_count < 20 and signal != 'hold':
+                    perform_backtest._signal_log_count += 1
+                    logger.info(f"신호 발생: {date} {code} {signal} (price={price})")
+
                 if signal == 'buy' and portfolio['cash'] > price * 100:
                     # 매수
                     shares = 100

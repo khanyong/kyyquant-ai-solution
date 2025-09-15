@@ -8,6 +8,25 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
+import sys
+import os
+
+# core 모듈 경로 추가
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Core 모듈 임포트
+try:
+    from core import (
+        compute_indicators,
+        evaluate_conditions,
+        _normalize_conditions,
+        convert_legacy_column
+    )
+    CORE_AVAILABLE = True
+    print("[StrategyEngine] Core 모듈 로드 성공")
+except ImportError as e:
+    print(f"[StrategyEngine] Core 모듈 로드 실패: {e}")
+    CORE_AVAILABLE = False
 
 class IndicatorCalculator:
     """기술적 지표 계산 클래스"""
@@ -97,83 +116,68 @@ class IndicatorCalculator:
 
 
 class StrategyEngine:
-    """전략 실행 엔진"""
+    """전략 실행 엔진 - Core 모듈 우선 사용"""
 
     def __init__(self):
         self.indicator_calc = IndicatorCalculator()
         self.indicators = {}
         self._debug_count = 0
         self._max_debug = 10  # 디버그 출력 제한
+        self.use_core = CORE_AVAILABLE
+        if self.use_core:
+            print("[StrategyEngine] Core 모듈 모드로 동작")
+        else:
+            print("[StrategyEngine] 레거시 모드로 동작")
 
     def calculate_all_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """모든 기본 지표를 계산하는 메서드"""
         df = df.copy()
 
-        # PRICE 컬럼 추가
-        df['PRICE'] = df['close']
-        df['price'] = df['close']
+        # price는 close 컬럼을 직접 사용 (별도 컬럼 생성 안함)
 
         # RSI 계산 (여러 기간)
         for period in [14, 9, 21]:
             rsi_data = self.indicator_calc.calculate_rsi(df, period)
             df[f'rsi_{period}'] = rsi_data
-            df[f'RSI_{period}'] = rsi_data  # 대문자 버전
 
         # 볼린저 밴드
         bb_data = self.indicator_calc.calculate_bollinger_bands(df)
         df['bb_upper'] = bb_data['upper']
         df['bb_middle'] = bb_data['middle']
         df['bb_lower'] = bb_data['lower']
-        df['BB_upper'] = bb_data['upper']
-        df['BB_middle'] = bb_data['middle']
-        df['BB_lower'] = bb_data['lower']
-        df['BB_UPPER'] = bb_data['upper']
-        df['BB_MIDDLE'] = bb_data['middle']
-        df['BB_LOWER'] = bb_data['lower']
 
         # MACD
         macd_data = self.indicator_calc.calculate_macd(df)
         df['macd'] = macd_data['macd']
         df['macd_signal'] = macd_data['signal']
-        df['macd_hist'] = macd_data['histogram']
-        df['MACD'] = macd_data['macd']
-        df['MACD_signal'] = macd_data['signal']
-        df['MACD_hist'] = macd_data['histogram']
-        df['MACD_SIGNAL'] = macd_data['signal']  # 전체 대문자 버전 추가
+        df['macd_histogram'] = macd_data['histogram']
 
         # SMA (여러 기간)
-        for period in [5, 10, 20, 50, 200]:
+        for period in [5, 10, 20, 50, 60, 200]:
             sma_data = self.indicator_calc.calculate_sma(df, period)
             df[f'sma_{period}'] = sma_data
-            df[f'SMA_{period}'] = sma_data
+            df[f'ma_{period}'] = sma_data  # ma_x 형태도 지원
 
         # EMA (여러 기간)
         for period in [12, 26, 50]:
             ema_data = self.indicator_calc.calculate_ema(df, period)
             df[f'ema_{period}'] = ema_data
-            df[f'EMA_{period}'] = ema_data
-
         # Stochastic
         stoch_data = self.indicator_calc.calculate_stochastic(df)
         df['stoch_k'] = stoch_data['k']
         df['stoch_d'] = stoch_data['d']
-        df['Stoch_K'] = stoch_data['k']
-        df['Stoch_D'] = stoch_data['d']
 
         # ATR
         atr_data = self.indicator_calc.calculate_atr(df)
         df['atr_14'] = atr_data
-        df['ATR_14'] = atr_data
 
         # OBV
         obv_data = self.indicator_calc.calculate_obv(df)
         df['obv'] = obv_data
-        df['OBV'] = obv_data
 
         # Volume Ratio
         vr_data = self.indicator_calc.calculate_volume_ratio(df)
         df['vr_20'] = vr_data
-        df['VR_20'] = vr_data
 
         return df
 
@@ -181,22 +185,113 @@ class StrategyEngine:
         """데이터에 필요한 지표들을 계산하여 추가"""
         df = df.copy()
 
-        # PRICE 컬럼 추가 (전략 템플릿 호환성)
-        df['PRICE'] = df['close']
-        df['price'] = df['close']
+        # Core 모듈 사용 가능한 경우
+        if self.use_core:
+            print("[StrategyEngine] Core 모듈로 지표 계산")
+
+            # params 구조 자동 수정
+            indicators = strategy_params.get('indicators', [])
+            fixed_indicators = []
+
+            for ind in indicators:
+                if 'params' not in ind and 'period' in ind:
+                    fixed_ind = {
+                        'type': ind.get('type', 'MA').upper(),
+                        'params': {'period': ind.get('period', 20)}
+                    }
+                    print(f"[FIX] 지표 구조 수정: {ind} → {fixed_ind}")
+                    fixed_indicators.append(fixed_ind)
+                else:
+                    fixed_indicators.append(ind)
+
+            # 조건 정규화
+            buy_conditions = _normalize_conditions(strategy_params.get('buyConditions', []))
+            sell_conditions = _normalize_conditions(strategy_params.get('sellConditions', []))
+
+            # Core 설정으로 계산
+            config = {
+                **strategy_params,
+                'indicators': fixed_indicators,
+                'buyConditions': buy_conditions,
+                'sellConditions': sell_conditions
+            }
+
+            df = compute_indicators(df, config)
+
+            # 신호 생성
+            df['buy_signal'] = evaluate_conditions(df, buy_conditions, 'buy')
+            df['sell_signal'] = evaluate_conditions(df, sell_conditions, 'sell')
+            df['signal'] = 0
+            df.loc[df['buy_signal'] == 1, 'signal'] = 1
+            df.loc[df['sell_signal'] == -1, 'signal'] = -1
+
+            buy_count = (df['buy_signal'] == 1).sum()
+            sell_count = (df['sell_signal'] == -1).sum()
+            print(f"[Core] 신호 생성: 매수 {buy_count}개, 매도 {sell_count}개")
+
+            return df
+
+        # price는 close 컬럼을 직접 사용 (별도 컬럼 생성 안함)
 
         # 전략에서 사용하는 지표들 추출
         indicators = strategy_params.get('indicators', [])
         buy_conditions = strategy_params.get('buyConditions', [])
         sell_conditions = strategy_params.get('sellConditions', [])
 
+        print(f"[prepare_data] indicators array: {indicators[:2] if indicators else 'None'}")
+        print(f"[prepare_data] buyConditions: {buy_conditions[:1] if buy_conditions else 'None'}")
+        print(f"[prepare_data] sellConditions: {sell_conditions[:1] if sell_conditions else 'None'}")
+
         # 모든 조건에서 사용되는 지표 수집
         used_indicators = set()
 
-        # indicators 배열에서 지표 수집
+        # indicators 배열에서 직접 지표 정보 추출하여 계산
         for ind in indicators:
-            ind_type = ind.get('type', '').upper()
-            params = ind.get('params', {})
+            if isinstance(ind, dict):
+                ind_type = ind.get('type', '').lower()
+                period = ind.get('period')
+
+                if ind_type == 'ma' and period:
+                    col_name = f'ma_{period}'
+                    df[col_name] = self.indicator_calc.calculate_sma(df, period)
+                    df[f'sma_{period}'] = df[col_name]  # 별칭
+                    print(f"  계산됨: {col_name}")
+                    used_indicators.add(col_name)
+
+                elif ind_type == 'rsi' and period:
+                    col_name = f'rsi_{period}'
+                    df[col_name] = self.indicator_calc.calculate_rsi(df, period)
+                    if period == 14:
+                        df['rsi'] = df[col_name]  # 기본 rsi 별칭
+                    print(f"  계산됨: {col_name}")
+                    used_indicators.add(col_name)
+
+                elif ind_type == 'macd':
+                    fast = ind.get('fast', 12)
+                    slow = ind.get('slow', 26)
+                    signal = ind.get('signal', 9)
+                    macd_data = self.indicator_calc.calculate_macd(df, fast, slow, signal)
+                    df['macd'] = macd_data['macd']
+                    df['macd_signal'] = macd_data['signal']
+                    df['macd_histogram'] = macd_data['histogram']
+                    print(f"  계산됨: MACD ({fast},{slow},{signal})")
+                    used_indicators.add('macd')
+
+                elif ind_type == 'bb':
+                    period = ind.get('period', 20)
+                    std_dev = ind.get('std_dev', 2)
+                    bb_data = self.indicator_calc.calculate_bollinger_bands(df, period, std_dev)
+                    df['bb_upper'] = bb_data['upper']
+                    df['bb_middle'] = bb_data['middle']
+                    df['bb_lower'] = bb_data['lower']
+                    print(f"  계산됨: BB ({period},{std_dev})")
+                    used_indicators.add('bb')
+
+        # 기존 코드 유지 (구형 포맷 호환성)
+        for ind in indicators:
+            if isinstance(ind, dict) and 'params' in ind:
+                ind_type = ind.get('type', '').upper()
+                params = ind.get('params', {})
 
             # 파라미터에 따라 구체적인 지표명 생성
             if ind_type in ['SMA', 'MA', 'EMA']:
@@ -416,7 +511,22 @@ class StrategyEngine:
     def generate_signal(self, df: pd.DataFrame, date, strategy_params: Dict) -> str:
         """거래 신호 생성"""
         try:
-            # 날짜에 해당하는 인덱스 찾기
+            # Core 모듈 사용 시 사전 계산된 신호 사용
+            if self.use_core and 'signal' in df.columns:
+                if date not in df.index:
+                    return 'hold'
+
+                idx = df.index.get_loc(date)
+                signal_val = df.iloc[idx]['signal']
+
+                if signal_val == 1:
+                    return 'buy'
+                elif signal_val == -1:
+                    return 'sell'
+                else:
+                    return 'hold'
+
+            # 레거시 방식
             if date not in df.index:
                 return 'hold'
 

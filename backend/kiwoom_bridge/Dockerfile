@@ -12,8 +12,15 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# core 모듈 복사 (명시적으로)
+COPY core/ ./core/
+
 # 앱 코드 복사
-COPY . .
+COPY *.py ./
+COPY .env* ./
+
+# 로그 디렉터리 생성
+RUN mkdir -p /app/logs
 
 # 포트 노출
 EXPOSE 8001

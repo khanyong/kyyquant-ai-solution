@@ -6,6 +6,16 @@ export interface ValidationResult {
   warnings: string[]
 }
 
+export interface ConflictCheckResult {
+  hasConflicts: boolean
+  conflicts: {
+    type: 'critical' | 'warning' | 'info'
+    category: string
+    message: string
+    suggestion?: string
+  }[]
+}
+
 // 단계별 전략 검증
 export function validateStageStrategy(stageStrategy: any): ValidationResult {
   const errors: string[] = []
@@ -65,6 +75,188 @@ export function validateStageStrategy(stageStrategy: any): ValidationResult {
     errors,
     warnings
   }
+}
+
+// 전략 충돌 검증 함수
+export function checkStrategyConflicts(strategy: any): ConflictCheckResult {
+  const conflicts: ConflictCheckResult['conflicts'] = []
+
+  // 1. 손절 설정 충돌 검사
+  if (strategy.stopLoss && strategy.stopLossOld !== undefined) {
+    const newStopLoss = strategy.stopLoss?.value || 0
+    const oldStopLoss = strategy.stopLossOld || 0
+
+    // 새 시스템은 양수, 기존 시스템은 음수 사용
+    if (newStopLoss > 0 && oldStopLoss < 0) {
+      // 값이 다른 경우 충돌
+      if (Math.abs(newStopLoss) !== Math.abs(oldStopLoss)) {
+        conflicts.push({
+          type: 'critical',
+          category: '손절 설정',
+          message: `손절 설정이 충돌합니다: 새 시스템(${newStopLoss}%) vs 기존 시스템(${oldStopLoss}%)`,
+          suggestion: '하나의 손절 시스템만 사용하도록 설정을 통합하세요'
+        })
+      }
+    }
+  }
+
+  // 2. 목표 수익률 충돌 검사
+  if (strategy.takeProfit && strategy.targetProfit) {
+    const simpleTakeProfit = strategy.takeProfit
+    const targetProfitEnabled = strategy.targetProfit?.simple?.enabled || strategy.targetProfit?.staged?.enabled
+
+    if (simpleTakeProfit && targetProfitEnabled) {
+      if (strategy.targetProfit?.mode === 'staged') {
+        // 단계별 목표와 단순 목표가 동시에 활성화된 경우
+        conflicts.push({
+          type: 'warning',
+          category: '목표 수익률',
+          message: `단순 목표 수익률(${simpleTakeProfit}%)과 단계별 목표 수익률이 동시에 설정됨`,
+          suggestion: '단계별 목표 수익률 사용 시 takeProfit을 비활성화하거나 제거하세요'
+        })
+      }
+    }
+  }
+
+  // 3. 매수 조건 충돌 검사
+  if (strategy.buyConditions && strategy.buyStageStrategy) {
+    const hasBuyConditions = strategy.buyConditions?.length > 0
+    const hasBuyStages = strategy.buyStageStrategy?.stages?.some((s: any) => s.enabled)
+
+    if (hasBuyConditions && hasBuyStages) {
+      conflicts.push({
+        type: 'critical',
+        category: '매수 조건',
+        message: '단일 매수 조건과 단계별 매수 전략이 동시에 설정됨',
+        suggestion: '하나의 매수 시스템만 사용하세요 (단계별 전략 권장)'
+      })
+    }
+  }
+
+  // 4. 매도 조건 충돌 검사
+  if (strategy.sellConditions && strategy.sellStageStrategy) {
+    const hasSellConditions = strategy.sellConditions?.length > 0
+    const hasSellStages = strategy.sellStageStrategy?.stages?.some((s: any) => s.enabled)
+
+    if (hasSellConditions && hasSellStages) {
+      conflicts.push({
+        type: 'critical',
+        category: '매도 조건',
+        message: '단일 매도 조건과 단계별 매도 전략이 동시에 설정됨',
+        suggestion: '하나의 매도 시스템만 사용하세요'
+      })
+    }
+  }
+
+  // 5. 단계별 매수 비율 검사
+  if (strategy.buyStageStrategy?.stages) {
+    const enabledStages = strategy.buyStageStrategy.stages.filter((s: any) => s.enabled)
+    const totalPercent = enabledStages.reduce((sum: number, s: any) => sum + (s.positionPercent || 0), 0)
+
+    if (totalPercent > 0 && totalPercent !== 100) {
+      conflicts.push({
+        type: 'warning',
+        category: '매수 비율',
+        message: `활성화된 매수 단계의 총 비율이 ${totalPercent}%입니다`,
+        suggestion: '전체 자금을 활용하려면 비율 합계를 100%로 조정하세요'
+      })
+    }
+  }
+
+  // 6. 단계별 매도 비율 검사
+  if (strategy.targetProfit?.staged?.stages) {
+    const stages = strategy.targetProfit.staged.stages
+    const totalExitRatio = stages.reduce((sum: number, s: any) => sum + (s.exitRatio || 0), 0)
+
+    if (totalExitRatio > 0 && totalExitRatio < 100) {
+      conflicts.push({
+        type: 'info',
+        category: '매도 비율',
+        message: `단계별 매도 비율 합계가 ${totalExitRatio}%로 일부 포지션이 남게 됩니다`,
+        suggestion: '의도적인 경우 무시하셔도 됩니다. 완전 청산을 원하면 100%로 조정하세요'
+      })
+    }
+  }
+
+  // 7. 상충되는 지표 조합 검사
+  if (strategy.buyConditions?.length > 0) {
+    const conditions = strategy.buyConditions
+
+    // 동일 지표에 대한 모순된 조건 검사
+    for (let i = 0; i < conditions.length; i++) {
+      for (let j = i + 1; j < conditions.length; j++) {
+        if (conditions[i].indicator === conditions[j].indicator) {
+          // RSI < 30 AND RSI > 70 같은 모순 검사
+          if (conditions[i].operator === '<' && conditions[j].operator === '>' &&
+              conditions[i].value > conditions[j].value) {
+            conflicts.push({
+              type: 'critical',
+              category: '매수 조건',
+              message: `${conditions[i].indicator} 지표에 모순된 조건이 있습니다`,
+              suggestion: '조건을 재검토하고 논리적으로 가능한 조합으로 수정하세요'
+            })
+          }
+        }
+      }
+    }
+  }
+
+  // 8. Trailing Stop 충돌 검사
+  if (strategy.trailingStop !== undefined && strategy.stopLoss?.trailingStop?.enabled) {
+    if (strategy.trailingStop !== strategy.stopLoss.trailingStop.enabled) {
+      conflicts.push({
+        type: 'warning',
+        category: 'Trailing Stop',
+        message: 'Trailing Stop 설정이 두 곳에서 다르게 설정됨',
+        suggestion: '하나의 Trailing Stop 설정만 사용하세요'
+      })
+    }
+  }
+
+  return {
+    hasConflicts: conflicts.length > 0,
+    conflicts
+  }
+}
+
+// 손절 설정 통합 함수
+export function normalizeStopLoss(strategy: any): any {
+  const normalized = { ...strategy }
+
+  // stopLoss와 stopLossOld 통합
+  if (strategy.stopLoss && strategy.stopLossOld !== undefined) {
+    // 새 시스템 우선 사용
+    if (strategy.stopLoss.enabled) {
+      // 새 시스템 값을 음수로 변환하여 기존 시스템과 일치시킴
+      normalized.stopLossOld = -Math.abs(strategy.stopLoss.value)
+    } else if (strategy.stopLossOld) {
+      // 기존 시스템 값을 새 시스템 형식으로 변환
+      normalized.stopLoss = {
+        enabled: true,
+        value: Math.abs(strategy.stopLossOld),
+        breakEven: false,
+        trailingStop: {
+          enabled: strategy.trailingStop || false,
+          distance: strategy.trailingStopPercent || 2,
+          activation: 5
+        }
+      }
+    }
+  } else if (strategy.stopLossOld !== undefined && !strategy.stopLoss) {
+    // stopLossOld만 있는 경우 새 형식으로 변환
+    normalized.stopLoss = {
+      enabled: true,
+      value: Math.abs(strategy.stopLossOld),
+      breakEven: false,
+      trailingStop: {
+        enabled: false,
+        distance: 2,
+        activation: 5
+      }
+    }
+  }
+
+  return normalized
 }
 
 // 투자 유니버스 설정 검증

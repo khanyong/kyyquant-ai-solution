@@ -1,0 +1,94 @@
+{
+  "simple_ma_cross": {
+    "name": "간단한 이동평균 교차",
+    "templateId": "simple-ma-cross",
+    "indicators": [
+      {
+        "type": "MA",
+        "params": {
+          "period": 5
+        }
+      },
+      {
+        "type": "MA",
+        "params": {
+          "period": 20
+        }
+      }
+    ],
+    "buyConditions": [
+      {
+        "indicator": "ma_5",
+        "operator": ">",
+        "value": "ma_20"
+      }
+    ],
+    "sellConditions": [
+      {
+        "indicator": "ma_5",
+        "operator": "<",
+        "value": "ma_20"
+      }
+    ],
+    "position_size": 100,
+    "initial_capital": 10000000
+  },
+  "price_threshold": {
+    "name": "가격 임계값",
+    "templateId": "price-threshold",
+    "indicators": [
+      {
+        "type": "MA",
+        "params": {
+          "period": 20
+        }
+      }
+    ],
+    "buyConditions": [
+      {
+        "indicator": "close",
+        "operator": ">",
+        "value": "ma_20",
+        "multiplier": 1.02
+      }
+    ],
+    "sellConditions": [
+      {
+        "indicator": "close",
+        "operator": "<",
+        "value": "ma_20",
+        "multiplier": 0.98
+      }
+    ],
+    "position_size": 100,
+    "initial_capital": 10000000
+  },
+  "rsi_oversold": {
+    "name": "RSI 과매도",
+    "templateId": "rsi-oversold",
+    "indicators": [
+      {
+        "type": "RSI",
+        "params": {
+          "period": 14
+        }
+      }
+    ],
+    "buyConditions": [
+      {
+        "indicator": "rsi_14",
+        "operator": "<",
+        "value": 30
+      }
+    ],
+    "sellConditions": [
+      {
+        "indicator": "rsi_14",
+        "operator": ">",
+        "value": 70
+      }
+    ],
+    "position_size": 100,
+    "initial_capital": 10000000
+  }
+}

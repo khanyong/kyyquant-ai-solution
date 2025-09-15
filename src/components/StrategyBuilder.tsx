@@ -69,7 +69,15 @@ import TargetProfitSettingsEnhanced from './TargetProfitSettingsEnhanced'
 import { supabase } from '../lib/supabase'
 import { authService } from '../services/auth'
 import { InvestmentFlowType } from '../types/investment'
-import { validateStrategyData, prepareStrategyForSave, checkJsonSize, generateStrategySummary } from '../utils/strategyValidator'
+import {
+  validateStrategyData,
+  prepareStrategyForSave,
+  checkJsonSize,
+  generateStrategySummary,
+  checkStrategyConflicts,
+  normalizeStopLoss,
+  ConflictCheckResult
+} from '../utils/strategyValidator'
 
 interface Indicator {
   id: string
@@ -196,9 +204,10 @@ interface Strategy {
 }
 
 const AVAILABLE_INDICATORS = [
+  { id: 'ma', name: 'MA (이동평균)', type: 'trend', defaultParams: { period: 20 } },
   { id: 'sma', name: 'SMA (단순이동평균)', type: 'trend', defaultParams: { period: 20 } },
   { id: 'ema', name: 'EMA (지수이동평균)', type: 'trend', defaultParams: { period: 20 } },
-  { id: 'bb', name: '볼린저밴드', type: 'volatility', defaultParams: { period: 20, stdDev: 2 } },
+  { id: 'bb', name: '볼린저밴드', type: 'volatility', defaultParams: { period: 20, std: 2 } },
   { id: 'rsi', name: 'RSI', type: 'momentum', defaultParams: { period: 14 } },
   { id: 'macd', name: 'MACD', type: 'momentum', defaultParams: { fast: 12, slow: 26, signal: 9 } },
   { id: 'stochastic', name: '스토캐스틱', type: 'momentum', defaultParams: { k: 14, d: 3 } },
@@ -305,7 +314,29 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
   // 투자 설정 상태
   const [investmentConfig, setInvestmentConfig] = useState<any>(null)
   const [filteredUniverseCount, setFilteredUniverseCount] = useState<number>(0)
+  const [strategyConflicts, setStrategyConflicts] = useState<ConflictCheckResult | null>(null)
   
+  // 전략 변경 시 충돌 검사
+  const checkConflictsDebounced = React.useCallback((updatedStrategy: any) => {
+    const timeoutId = setTimeout(() => {
+      const conflicts = checkStrategyConflicts(updatedStrategy)
+      setStrategyConflicts(conflicts)
+    }, 500) // 500ms 디바운싱
+
+    return () => clearTimeout(timeoutId)
+  }, [])
+
+  // 전략 업데이트 시 충돌 검사 추가
+  React.useEffect(() => {
+    const fullStrategy = {
+      ...strategy,
+      buyStageStrategy,
+      sellStageStrategy
+    }
+    const cleanup = checkConflictsDebounced(fullStrategy)
+    return cleanup
+  }, [strategy, buyStageStrategy, sellStageStrategy, checkConflictsDebounced])
+
   // 투자 설정 불러오기
   React.useEffect(() => {
     const loadInvestmentConfig = () => {
@@ -364,7 +395,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     setTempCondition({
       id: `cond_${Date.now()}`,
       type,
-      indicator: strategy.indicators[0]?.id || 'rsi',
+      indicator: 'rsi_14',
       operator: type === 'buy' ? '<' : '>',
       value: type === 'buy' ? 30 : 70,
       combineWith: strategy[type === 'buy' ? 'buyConditions' : 'sellConditions'].length > 0 ? 'AND' : 'AND'
@@ -500,7 +531,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     }
     // 디버그용 콘솔 로그
     console.log('Saving strategy...', strategy);
-    
+
     // 데이터 검증
     const validationResult = validateStrategyData({
       ...strategy,
@@ -508,17 +539,42 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       buyStageStrategy,
       sellStageStrategy
     })
-    
+
     if (!validationResult.isValid) {
       alert(`전략 저장 실패:\n\n${validationResult.errors.join('\n')}`)
       return null
     }
-    
+
     if (validationResult.warnings.length > 0) {
       const proceed = confirm(`경고:\n${validationResult.warnings.join('\n')}\n\n계속하시겠습니까?`)
       if (!proceed) return null
     }
-    
+
+    // 중복 이름 체크
+    try {
+      const { data: existingStrategies, error: checkError } = await supabase
+        .from('strategies')
+        .select('name')
+        .eq('name', strategy.name.trim())
+
+      if (checkError) {
+        console.error('Error checking duplicate name:', checkError)
+      } else if (existingStrategies && existingStrategies.length > 0) {
+        // 템플릿 이름인 경우 더 친절한 메시지
+        if (strategy.name.startsWith('[템플릿]')) {
+          alert(`템플릿 전략은 수정 후 다른 이름으로 저장해야 합니다.\n\n예시:\n- ${strategy.name}_수정\n- 나의_${strategy.name.replace('[템플릿] ', '')}\n- ${strategy.name.replace('[템플릿] ', '')}_v2`)
+        } else {
+          alert(`이미 동일한 이름의 전략이 존재합니다: "${strategy.name}"\n\n다른 이름을 사용해주세요.`)
+        }
+        return null
+      }
+    } catch (error) {
+      console.error('Error checking duplicate strategy name:', error)
+      // 중복 체크 실패해도 계속 진행할지 묻기
+      const proceed = confirm('전략 이름 중복 확인에 실패했습니다.\n계속 저장하시겠습니까?')
+      if (!proceed) return null
+    }
+
     try {
       // 전략 타입 결정 (대문자로 변경하거나 TECHNICAL로 통일)
       let strategyType = 'TECHNICAL'  // 기본값을 TECHNICAL로 설정
@@ -554,13 +610,21 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
           portfolioSettings: universeSettings.portfolio,
           riskSettings: universeSettings.risk
         } : null,
-        // 기본 지표 파라미터
-        indicators: strategy.indicators.map(ind => ({
-          type: ind.id,
-          name: ind.name,
-          params: ind.params,
-          enabled: ind.enabled
-        })),
+        // 기본 지표 파라미터 - params 구조로 변환
+        indicators: strategy.indicators.map(ind => {
+          // params 구조가 있는지 확인
+          const indicatorConfig: any = {
+            type: ind.id.toLowerCase(), // 소문자로 통일
+            params: ind.params || {}
+          }
+
+          // 레거시 period 필드가 있으면 params로 이동
+          if ('period' in ind && !ind.params) {
+            indicatorConfig.params = { period: (ind as any).period }
+          }
+
+          return indicatorConfig
+        }),
         // 매수/매도 조건
         buyConditions: strategy.buyConditions,
         sellConditions: strategy.sellConditions,
@@ -608,7 +672,20 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         name: strategy.name || '이름 없는 전략',
         description: strategy.description || `${strategy.name} - 전략빌더에서 생성`,
         // type: null,  // type 컬럼은 null로 설정 (체크 제약조건 때문)
-        config: parameters,  // parameters 대신 config 컬럼 사용
+        config: {
+          ...parameters,
+          // 서버가 config 내부에서 직접 조건을 찾으므로 여기에도 포함
+          buyConditions: strategy.buyConditions || [],
+          sellConditions: strategy.sellConditions || [],
+          // 목표 수익률 및 손절 설정도 config에 포함
+          targetProfit: normalizedStrategy.targetProfit,
+          stopLoss: normalizedStrategy.stopLoss,
+          stopLossOld: normalizedStrategy.stopLossOld,
+          // 단계별 전략도 포함
+          buyStageStrategy: buyStageStrategy,
+          sellStageStrategy: sellStageStrategy,
+          useStageBasedStrategy: useStageBasedStrategy
+        },
         indicators: {
           list: strategy.indicators
         },
@@ -745,6 +822,13 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
     // savedStrategy가 이미 strategy_data 형태인 경우와 아닌 경우 처리
     const strategyData = savedStrategy.strategy_data || savedStrategy
+
+    // 템플릿 전략인 경우 이름 변경 안내
+    if (strategyData.name && strategyData.name.startsWith('[템플릿]')) {
+      setTimeout(() => {
+        alert(`템플릿 전략을 불러왔습니다.\n\n저장하려면 이름을 변경해주세요.\n예시:\n- ${strategyData.name.replace('[템플릿] ', '')}_수정\n- 나의_${strategyData.name.replace('[템플릿] ', '')}\n- ${strategyData.name.replace('[템플릿] ', '')}_v2`)
+      }, 500)
+    }
 
     // 실제 저장된 데이터 구조에 맞게 파싱
     // 지표 데이터 파싱 (indicators.list 또는 indicators 배열)
@@ -998,7 +1082,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 onClick={() => {
                   setStrategy({
                     ...strategy,
-                    name: '골든크로스 전략',
+                    name: '[템플릿] 골든크로스',
                     description: '단기 이동평균선이 장기 이동평균선을 상향 돌파할 때 매수',
                     indicators: [],
                     buyConditions: [
@@ -1039,7 +1123,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 onClick={() => {
                   setStrategy({
                     ...strategy,
-                    name: 'RSI 반전 전략',
+                    name: '[템플릿] RSI 반전',
                     description: 'RSI 과매도 구간에서 매수, 과매수 구간에서 매도',
                     indicators: [],
                     buyConditions: [
@@ -1080,7 +1164,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 onClick={() => {
                   setStrategy({
                     ...strategy,
-                    name: '볼린저밴드 돌파',
+                    name: '[템플릿] 볼린저밴드',
                     description: '하단 밴드 터치 후 반등 시 매수, 상단 밴드 돌파 시 매도',
                     indicators: [],
                     buyConditions: [
@@ -1122,7 +1206,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 onClick={() => {
                   setStrategy({
                     ...strategy,
-                    name: 'MACD 시그널',
+                    name: '[템플릿] MACD 시그널',
                     description: 'MACD가 시그널선을 상향 돌파 시 매수',
                     indicators: [],
                     buyConditions: [
@@ -1209,7 +1293,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                   
                   setStrategy({
                     ...strategy,
-                    name: 'RSI + MACD 복합 전략',
+                    name: '[템플릿] 복합 전략 A',
                     description: 'RSI 과매도 → MACD 골든크로스 → 거래량 확인'
                   });
                 }}
@@ -1287,7 +1371,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                   
                   setStrategy({
                     ...strategy,
-                    name: '추세+밴드 복합 전략',
+                    name: '[템플릿] 복합 전략 B',
                     description: '골든크로스 → 볼린저 중단 이하 → RSI 확인'
                   });
                 }}
@@ -1320,7 +1404,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 onClick={() => {
                   setStrategy({
                     ...strategy,
-                    name: '단기 스캘핑',
+                    name: '[템플릿] 스캘핑',
                     description: '5분봉 기준 빠른 진입/청산',
                     indicators: [],
                     buyConditions: [
@@ -1370,7 +1454,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 onClick={() => {
                   setStrategy({
                     ...strategy,
-                    name: '스윙 트레이딩',
+                    name: '[템플릿] 스윙 트레이딩',
                     description: '중기 추세 전환점 포착',
                     indicators: [],
                     buyConditions: [

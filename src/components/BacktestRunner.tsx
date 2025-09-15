@@ -220,6 +220,7 @@ const BacktestRunner: React.FC = () => {
         name: s.name,
         description: s.description || '',
         type: s.config?.strategy_type || s.type || 'custom',  // config 내 strategy_type 사용
+        config: s.config || {},  // config 필드 추가
         parameters: s.config || s.parameters || {},  // config 컬럼 우선 사용
         created_at: s.created_at,
         user_id: s.user_id,  // 사용자 ID 추가
@@ -457,7 +458,10 @@ const BacktestRunner: React.FC = () => {
       }
 
       // 전략 데이터 구성
-      const templateStrategyName = `[템플릿] ${template.name}`;
+      // template.name이 이미 [템플릿]을 포함하고 있는지 확인
+      const templateStrategyName = template.name.startsWith('[템플릿]')
+        ? template.name
+        : `[템플릿] ${template.name}`;
       const strategyData = {
         name: templateStrategyName,
         description: template.description,
@@ -599,8 +603,35 @@ const BacktestRunner: React.FC = () => {
       // 백테스트 실행 요청 준비
       // 선택된 전략의 파라미터 가져오기
       const selectedStrategy = strategies.find(s => s.id === config.strategyId);
-      const strategyParameters = selectedStrategy?.parameters || {};
-      
+
+      if (!selectedStrategy) {
+        console.error('🛑 오류: 선택한 전략을 찾을 수 없습니다!');
+        console.error('Strategy ID:', config.strategyId);
+        console.error('Available strategies:', strategies.map(s => ({ id: s.id, name: s.name })));
+        setError('선택한 전략을 찾을 수 없습니다. 전략 목록을 다시 불러오거나 다른 전략을 선택해주세요.');
+        setIsRunning(false);
+        return;
+      }
+
+      // config 필드에서 파라미터를 가져옴 (parameters가 없을 경우 대비)
+      const strategyConfig = selectedStrategy.config || selectedStrategy.parameters || {};
+
+      console.log('Selected strategy:', selectedStrategy);
+      console.log('Strategy config:', strategyConfig);
+
+      // 디버깅: 매수/매도 조건 상세 확인
+      console.log('=== Strategy Conditions Debug ===');
+      console.log('Buy Conditions:', strategyConfig.buyConditions);
+      console.log('Sell Conditions:', strategyConfig.sellConditions);
+      console.log('Target Profit:', strategyConfig.targetProfit);
+      console.log('Stop Loss:', strategyConfig.stopLoss);
+      console.log('Stop Loss Old:', strategyConfig.stopLossOld);
+      console.log('Buy Stage Strategy:', strategyConfig.buyStageStrategy);
+      console.log('Sell Stage Strategy:', strategyConfig.sellStageStrategy);
+      console.log('Use Stage Based:', strategyConfig.useStageBasedStrategy);
+      console.log('================================');
+
+      // 서버가 strategy['config']에서 직접 조건을 읽으므로 parameters를 사용하지 않음
       const requestPayload: any = {
         strategy_id: config.strategyId,
         start_date: config.startDate.toISOString().split('T')[0],
@@ -610,12 +641,36 @@ const BacktestRunner: React.FC = () => {
         slippage: config.slippage,
         data_interval: config.dataInterval,
         filtering_mode: typeof config.filteringMode === 'object' ? config.filteringMode.mode : config.filteringMode,
-        use_cached_data: true,  // 캐시된 데이터 사용 플래그
-        parameters: {
-          ...strategyParameters,
-          strategy_type: selectedStrategy?.type || 'ma_crossover' // 전략 타입 추가
-        }
+        use_cached_data: true  // 캐시된 데이터 사용 플래그
       };
+
+      // 서버가 DB에서 전략을 로드하므로, DB에 저장된 데이터가 올바른지 확인하기 위해
+      // 클라이언트에서도 전략 config를 확인
+      console.log('⚠️ 중요: 서버는 DB에 저장된 strategy.config를 사용합니다!');
+      console.log('DB에 저장된 config에 매수/매도 조건이 있는지 확인하세요:');
+      console.log('- buyConditions:', strategyConfig.buyConditions);
+      console.log('- sellConditions:', strategyConfig.sellConditions);
+      console.log('- buyStageStrategy:', strategyConfig.buyStageStrategy);
+      console.log('- sellStageStrategy:', strategyConfig.sellStageStrategy);
+      console.log('- useStageBasedStrategy:', strategyConfig.useStageBasedStrategy);
+
+      // 만약 DB에 조건이 없다면 경고
+      if (!strategyConfig || Object.keys(strategyConfig).length === 0) {
+        console.error('🛑 오류: 전략 설정이 비어있습니다!');
+        console.error('Strategy config is empty:', strategyConfig);
+        setError('선택한 전략에 설정이 없습니다. 전략을 다시 저장해주세요.');
+        setIsRunning(false);
+        return;
+      }
+
+      if (!strategyConfig.buyConditions?.length &&
+          !strategyConfig.buyStageStrategy?.stages?.some((s: any) => s.enabled)) {
+        console.error('🛑 오류: DB에 저장된 전략에 매수 조건이 없습니다!');
+        console.error('전략을 다시 저장하거나, 전략 빌더에서 조건을 설정한 후 저장하세요.');
+        setError('선택한 전략에 매수 조건이 없습니다. 전략 빌더에서 조건을 설정 후 다시 저장해주세요.');
+        setIsRunning(false);
+        return;
+      }
       
       // 필터링 모드에 따라 다르게 처리
       const filterMode = typeof config.filteringMode === 'object' ? config.filteringMode.mode : config.filteringMode;
@@ -668,15 +723,38 @@ const BacktestRunner: React.FC = () => {
         }
       }
       
-      console.log('Backtest request payload:', requestPayload);
+      console.log('Backtest request payload:', JSON.stringify(requestPayload, null, 2));
+
+      // 매수/매도 조건이 비어있는지 확인 (strategyConfig에서 확인)
+      if (strategyConfig && ((!strategyConfig.buyConditions || strategyConfig.buyConditions.length === 0) &&
+          (!strategyConfig.buyStageStrategy || !strategyConfig.useStageBasedStrategy))) {
+        console.warn('⚠️ 경고: 매수 조건이 설정되지 않았습니다!');
+        console.warn('Buy Conditions:', strategyConfig.buyConditions);
+        console.warn('Buy Stage Strategy:', strategyConfig.buyStageStrategy);
+        console.warn('Use Stage Based:', strategyConfig.useStageBasedStrategy);
+      }
+
+      if (strategyConfig && ((!strategyConfig.sellConditions || strategyConfig.sellConditions.length === 0) &&
+          !strategyConfig.targetProfit?.simple?.enabled &&
+          !strategyConfig.targetProfit?.staged?.enabled)) {
+        console.warn('⚠️ 경고: 매도 조건이 설정되지 않았습니다!');
+        console.warn('Sell Conditions:', strategyConfig.sellConditions);
+        console.warn('Target Profit:', strategyConfig.targetProfit);
+      }
       
       // 백테스트 실행 요청
       console.log('Sending backtest request to server...');
       // 프로덕션에서는 Vercel Functions 프록시 사용
       const isProduction = import.meta.env.PROD;
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
       const apiUrl = isProduction
         ? '/api/backtest-run'  // Vercel Functions 프록시
-        : (import.meta.env.VITE_API_URL || 'http://localhost:8001') + '/api/backtest/run';
+        : `${baseUrl}/api/backtest/run`;
+
+      console.log('API URL for backtest:', apiUrl);
+      console.log('Base URL:', baseUrl);
+      console.log('VITE_API_URL from env:', import.meta.env.VITE_API_URL);
+      console.log('All env vars:', import.meta.env);
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -841,8 +919,8 @@ const BacktestRunner: React.FC = () => {
       
       // 에러 메시지 개선
       if (err.message && err.message.includes('Failed to fetch')) {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
-        setError(`백테스트 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요. (${apiUrl})`);
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+        setError(`백테스트 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요. (${baseUrl})`);
       } else if (err.message && err.message.includes('종목 데이터를 불러올 수 없습니다')) {
         setError(err.message);
       } else {
@@ -857,8 +935,8 @@ const BacktestRunner: React.FC = () => {
     if (!backtestId) return;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
-      const response = await fetch(`${apiUrl}/api/backtest/stop/${backtestId}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+      const response = await fetch(`${baseUrl}/api/backtest/stop/${backtestId}`, {
         method: 'POST',
       });
 
@@ -892,14 +970,14 @@ const BacktestRunner: React.FC = () => {
       console.log('Saving backtest result...');
       console.log('Current strategies:', strategies);
       console.log('Current strategyId:', config.strategyId);
-      
+
       const strategy = strategies.find(s => s.id === config.strategyId);
       console.log('Found strategy:', strategy);
-      
+
       // backtestResults에 이미 strategy_name이 있으면 그것을 사용, 없으면 strategies에서 찾기
       const strategyName = backtestResults.strategy_name || strategy?.name || 'Unknown Strategy';
       console.log('Strategy name to save:', strategyName);
-      
+
       // 실제 테이블 스키마에 맞춰서 데이터 구성
       const resultToSave = {
         strategy_id: config.strategyId,
@@ -943,19 +1021,41 @@ const BacktestRunner: React.FC = () => {
       };
 
       const { data, error } = await backtestStorageService.saveResult(resultToSave);
-      
+
       if (error) {
         throw error;
       }
 
       setSavedResultId(data.id);
       setSuccess('백테스트 결과가 저장되었습니다.');
+
+      // 저장 성공 후 다이얼로그 닫기
+      setTimeout(() => {
+        setShowResultDialog(false);
+        // 백테스트 상태 초기화
+        resetBacktestState();
+      }, 1500);
     } catch (err: any) {
       console.error('Failed to save backtest result:', err);
       setError('결과 저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const resetBacktestState = () => {
+    // 백테스트 관련 상태 초기화
+    setBacktestResults(null);
+    setProgress(0);
+    setIsRunning(false);
+    setError(null);
+    setSuccess(null);
+    // 필요한 경우 다른 상태도 초기화
+  };
+
+  const handleCloseDialog = () => {
+    setShowResultDialog(false);
+    resetBacktestState();
   };
 
   const navigateToComparison = () => {
@@ -1528,7 +1628,7 @@ const BacktestRunner: React.FC = () => {
       {/* 백테스트 결과 다이얼로그 */}
       <Dialog
         open={showResultDialog}
-        onClose={() => setShowResultDialog(false)}
+        onClose={handleCloseDialog}
         maxWidth="xl"
         fullWidth
         PaperProps={{
@@ -1538,7 +1638,7 @@ const BacktestRunner: React.FC = () => {
         <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h5">백테스트 결과</Typography>
-            <IconButton onClick={() => setShowResultDialog(false)}>
+            <IconButton onClick={handleCloseDialog}>
               <CloseIcon />
             </IconButton>
           </Box>
@@ -1566,7 +1666,7 @@ const BacktestRunner: React.FC = () => {
           </Button>
           <Button
             variant="outlined"
-            onClick={() => setShowResultDialog(false)}
+            onClick={handleCloseDialog}
           >
             닫기
           </Button>

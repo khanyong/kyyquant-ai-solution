@@ -7,7 +7,26 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
-import talib
+import sys
+import os
+
+# kiwoom_bridge의 core 모듈 경로 추가
+kiwoom_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'kiwoom_bridge')
+sys.path.insert(0, kiwoom_path)
+
+# Core 모듈 임포트 시도
+try:
+    from core import (
+        compute_indicators,
+        evaluate_conditions,
+        _normalize_conditions,
+        convert_legacy_column
+    )
+    USE_CORE = True
+    print("[StrategyEngine] Core 모듈 로드 성공")
+except ImportError as e:
+    print(f"[StrategyEngine] Core 모듈 로드 실패: {e}")
+    USE_CORE = False
 
 class IndicatorCalculator:
     """기술적 지표 계산 클래스"""
@@ -91,41 +110,162 @@ class IndicatorCalculator:
 
 
 class StrategyEngine:
-    """전략 실행 엔진"""
+    """전략 실행 엔진 - Core 모듈 우선 사용"""
 
     def __init__(self):
         self.indicator_calc = IndicatorCalculator()
         self.indicators = {}
+        self.use_core = USE_CORE
+        if self.use_core:
+            print("[StrategyEngine] Core 모듈 모드로 동작")
+        else:
+            print("[StrategyEngine] 레거시 모드로 동작")
 
     def prepare_data(self, df: pd.DataFrame, strategy_params: Dict) -> pd.DataFrame:
         """데이터에 필요한 지표들을 계산하여 추가"""
         df = df.copy()
+
+        # Core 모듈 사용 가능한 경우
+        if self.use_core:
+            print("[StrategyEngine] Core 모듈로 지표 계산")
+
+            # params 구조 자동 수정
+            indicators = strategy_params.get('indicators', [])
+            fixed_indicators = []
+
+            for ind in indicators:
+                if 'params' not in ind and 'period' in ind:
+                    fixed_ind = {
+                        'type': ind.get('type', 'MA').upper(),
+                        'params': {'period': ind.get('period', 20)}
+                    }
+                    print(f"[FIX] 지표 구조 수정: {ind} → {fixed_ind}")
+                    fixed_indicators.append(fixed_ind)
+                else:
+                    fixed_indicators.append(ind)
+
+            # 조건 정규화
+            buy_conditions = _normalize_conditions(strategy_params.get('buyConditions', []))
+            sell_conditions = _normalize_conditions(strategy_params.get('sellConditions', []))
+
+            # Core 설정으로 계산
+            config = {
+                **strategy_params,
+                'indicators': fixed_indicators,
+                'buyConditions': buy_conditions,
+                'sellConditions': sell_conditions
+            }
+
+            df = compute_indicators(df, config)
+
+            # 신호 생성
+            df['buy_signal'] = evaluate_conditions(df, buy_conditions, 'buy')
+            df['sell_signal'] = evaluate_conditions(df, sell_conditions, 'sell')
+            df['signal'] = 0
+            df.loc[df['buy_signal'] == 1, 'signal'] = 1
+            df.loc[df['sell_signal'] == -1, 'signal'] = -1
+
+            buy_count = (df['buy_signal'] == 1).sum()
+            sell_count = (df['sell_signal'] == -1).sum()
+            print(f"[Core] 신호 생성: 매수 {buy_count}개, 매도 {sell_count}개")
+
+            return df
 
         # 전략에서 사용하는 지표들 추출
         indicators = strategy_params.get('indicators', [])
         buy_conditions = strategy_params.get('buyConditions', [])
         sell_conditions = strategy_params.get('sellConditions', [])
 
+        print(f"[prepare_data] indicators array: {indicators[:2] if indicators else 'None'}")
+        print(f"[prepare_data] buyConditions: {buy_conditions[:1] if buy_conditions else 'None'}")
+        print(f"[prepare_data] sellConditions: {sell_conditions[:1] if sell_conditions else 'None'}")
+
         # 모든 조건에서 사용되는 지표 수집
         used_indicators = set()
 
+        # indicators 배열에서 지표 타입 추출 (개선)
         for ind in indicators:
-            ind_type = ind.get('type', '').lower()
-            used_indicators.add(ind_type)
+            if isinstance(ind, dict):
+                ind_type = ind.get('type', '').lower()
+                if ind_type:
+                    used_indicators.add(ind_type)
+                    # 특정 period가 있으면 추가 정보로 저장
+                    if 'period' in ind:
+                        used_indicators.add(f"{ind_type}_{ind.get('period')}")
+            elif isinstance(ind, str):
+                # 문자열인 경우 (구형 포맷 호환)
+                used_indicators.add(ind.lower())
 
         for cond in buy_conditions + sell_conditions:
             indicator = cond.get('indicator', '').lower()
             if indicator:
-                # RSI_14 -> RSI 형태로 파싱
+                # rsi_14 -> rsi, ma_20 -> ma 형태로 파싱
                 base_indicator = indicator.split('_')[0]
                 used_indicators.add(base_indicator)
 
-        # 각 지표 계산
+                # value가 지표를 참조하는 경우도 확인
+                value = cond.get('value', '')
+                if isinstance(value, str) and '_' in value:
+                    value_base = value.lower().split('_')[0]
+                    used_indicators.add(value_base)
+
+        print(f"[prepare_data] 사용할 지표들: {used_indicators}")
+
+        # indicators 배열에서 직접 지표 정보 추출하여 계산
+        for ind in indicators:
+            if isinstance(ind, dict):
+                ind_type = ind.get('type', '').lower()
+                period = ind.get('period')
+
+                if ind_type == 'ma' and period:
+                    col_name = f'ma_{period}'
+                    df[col_name] = self.indicator_calc.calculate_sma(df, period)
+                    df[f'sma_{period}'] = df[col_name]  # 별칭
+                    print(f"  계산됨: {col_name}")
+
+                elif ind_type == 'rsi' and period:
+                    col_name = f'rsi_{period}'
+                    df[col_name] = self.indicator_calc.calculate_rsi(df, period)
+                    if period == 14:
+                        df['rsi'] = df[col_name]  # 기본 rsi 별칭
+                    print(f"  계산됨: {col_name}")
+
+                elif ind_type == 'macd':
+                    fast = ind.get('fast', 12)
+                    slow = ind.get('slow', 26)
+                    signal = ind.get('signal', 9)
+                    macd_data = self.indicator_calc.calculate_macd(df, fast, slow, signal)
+                    df['macd'] = macd_data['macd']
+                    df['macd_signal'] = macd_data['signal']
+                    df['macd_histogram'] = macd_data['histogram']
+                    print(f"  계산됨: MACD ({fast},{slow},{signal})")
+
+                elif ind_type == 'bb':
+                    period = ind.get('period', 20)
+                    std_dev = ind.get('std_dev', 2)
+                    bb_data = self.indicator_calc.calculate_bollinger_bands(df, period, std_dev)
+                    df['bb_upper'] = bb_data['upper']
+                    df['bb_middle'] = bb_data['middle']
+                    df['bb_lower'] = bb_data['lower']
+                    print(f"  계산됨: BB ({period},{std_dev})")
+
+                elif ind_type == 'stochastic':
+                    k_period = ind.get('k_period', 14)
+                    d_period = ind.get('d_period', 3)
+                    stoch_data = self.indicator_calc.calculate_stochastic(df, k_period, d_period)
+                    df['stoch_k'] = stoch_data['k']
+                    df['stoch_d'] = stoch_data['d']
+                    print(f"  계산됨: Stochastic K={k_period}, D={d_period}")
+
+        # 기존 코드 (조건에서 사용되는 추가 지표 계산)
         for indicator in used_indicators:
             if 'sma' in indicator or 'ma' in indicator:
                 # 다양한 기간의 SMA 계산
-                for period in [5, 10, 20, 50, 100, 200]:
-                    df[f'sma_{period}'] = self.indicator_calc.calculate_sma(df, period)
+                for period in [5, 10, 20, 50, 60, 100, 200]:
+                    col_name = f'sma_{period}'
+                    df[col_name] = self.indicator_calc.calculate_sma(df, period)
+                    # ma_20 형태도 지원
+                    df[f'ma_{period}'] = df[col_name]
 
             elif 'ema' in indicator:
                 # 다양한 기간의 EMA 계산
@@ -164,9 +304,18 @@ class StrategyEngine:
     def evaluate_condition(self, df: pd.DataFrame, idx: int, condition: Dict) -> bool:
         """단일 조건 평가"""
         try:
+            # 지표명은 모두 소문자로 통일
             indicator = condition.get('indicator', '').lower()
             operator = condition.get('operator', '')
             value = condition.get('value', 0)
+
+            # 디버깅용 로그 (처음 몇 번만)
+            if not hasattr(self, '_eval_debug_count'):
+                self._eval_debug_count = 0
+            if self._eval_debug_count < 10:
+                self._eval_debug_count += 1
+                print(f"[EVAL DEBUG {self._eval_debug_count}] Evaluating: {indicator} {operator} {value}")
+                print(f"  Available columns: {list(df.columns)[:10]}...")
 
             if idx < 0 or idx >= len(df):
                 return False
@@ -180,20 +329,28 @@ class StrategyEngine:
             elif indicator == 'volume':
                 current_value = df.iloc[idx]['volume']
 
-            # RSI
+            # RSI - rsi_14, rsi_9 등
             elif 'rsi' in indicator:
+                # 기본 rsi 컬럼 먼저 시도
                 if 'rsi' in df.columns:
                     current_value = df.iloc[idx]['rsi']
+                else:
+                    # rsi_14 형태로 시도
+                    parts = indicator.split('_')
+                    if len(parts) > 1 and f'rsi_{parts[1]}' in df.columns:
+                        current_value = df.iloc[idx][f'rsi_{parts[1]}']
 
-            # 이동평균
-            elif 'sma' in indicator or 'ma' in indicator:
-                # sma_20 형태에서 기간 추출
+            # 이동평균 - ma_20, sma_60 등
+            elif 'ma' in indicator or 'sma' in indicator:
                 parts = indicator.split('_')
                 if len(parts) > 1:
                     period = parts[1]
-                    col_name = f'sma_{period}'
-                    if col_name in df.columns:
-                        current_value = df.iloc[idx][col_name]
+                    # sma_20, ma_20 모두 시도
+                    for prefix in ['sma', 'ma']:
+                        col_name = f'{prefix}_{period}'
+                        if col_name in df.columns:
+                            current_value = df.iloc[idx][col_name]
+                            break
 
             elif 'ema' in indicator:
                 parts = indicator.split('_')
@@ -212,7 +369,7 @@ class StrategyEngine:
                 elif 'macd' in df.columns:
                     current_value = df.iloc[idx]['macd']
 
-            # 볼린저 밴드
+            # 볼린저 밴드 - bb_upper, bb_lower 등
             elif 'bb' in indicator or 'bollinger' in indicator:
                 if 'upper' in indicator and 'bb_upper' in df.columns:
                     current_value = df.iloc[idx]['bb_upper']
@@ -229,13 +386,48 @@ class StrategyEngine:
                     current_value = df.iloc[idx]['stoch_d']
 
             if current_value is None or pd.isna(current_value):
+                if self._eval_debug_count <= 10:
+                    print(f"  ⚠️ current_value is None for {indicator}")
                 return False
+
+            # value가 다른 지표를 참조하는 경우 처리 (예: ma_20 > ma_60)
+            compare_value = value
+            if isinstance(value, str) and not value.replace('.', '').replace('-', '').isdigit():
+                # 다른 지표를 참조하는 경우 (소문자로 통일)
+                value_indicator = value.lower()
+
+                # 이동평균 처리
+                if 'ma' in value_indicator:
+                    parts = value_indicator.split('_')
+                    if len(parts) > 1:
+                        period = parts[1]
+                        for prefix in ['sma', 'ma']:
+                            col_name = f'{prefix}_{period}'
+                            if col_name in df.columns:
+                                compare_value = df.iloc[idx][col_name]
+                                break
+                # 볼린저 밴드 처리
+                elif 'bb_' in value_indicator:
+                    if value_indicator in df.columns:
+                        compare_value = df.iloc[idx][value_indicator]
+                # MACD 처리
+                elif 'macd' in value_indicator:
+                    if value_indicator in df.columns:
+                        compare_value = df.iloc[idx][value_indicator]
+                # 기타 지표
+                elif value_indicator in df.columns:
+                    compare_value = df.iloc[idx][value_indicator]
+
+                if self._eval_debug_count <= 10:
+                    print(f"  Comparing {indicator}={current_value} with {value_indicator}={compare_value}")
+            else:
+                compare_value = float(value)
 
             # 연산자별 평가
             if operator == '>':
-                return current_value > float(value)
+                return current_value > compare_value
             elif operator == '<':
-                return current_value < float(value)
+                return current_value < compare_value
             elif operator == '=' or operator == '==':
                 return abs(current_value - float(value)) < 0.0001
             elif operator == '>=' or operator == '≥':
@@ -273,9 +465,54 @@ class StrategyEngine:
             print(f"조건 평가 오류: {e}, condition: {condition}")
             return False
 
+    def normalize_strategy_params(self, strategy_params: Dict) -> Dict:
+        """전략 파라미터의 지표명을 소문자로 정규화"""
+        if not strategy_params:
+            return strategy_params
+
+        # buyConditions 정규화
+        if 'buyConditions' in strategy_params:
+            for condition in strategy_params['buyConditions']:
+                if 'indicator' in condition:
+                    condition['indicator'] = condition['indicator'].lower()
+                if 'value' in condition and isinstance(condition['value'], str):
+                    # 숫자가 아닌 문자열은 지표 참조로 간주하여 소문자로 변환
+                    if not condition['value'].replace('.', '').replace('-', '').isdigit():
+                        condition['value'] = condition['value'].lower()
+
+        # sellConditions 정규화
+        if 'sellConditions' in strategy_params:
+            for condition in strategy_params['sellConditions']:
+                if 'indicator' in condition:
+                    condition['indicator'] = condition['indicator'].lower()
+                if 'value' in condition and isinstance(condition['value'], str):
+                    if not condition['value'].replace('.', '').replace('-', '').isdigit():
+                        condition['value'] = condition['value'].lower()
+
+        return strategy_params
+
     def generate_signal(self, df: pd.DataFrame, date, strategy_params: Dict) -> str:
         """거래 신호 생성"""
         try:
+            # Core 모듈 사용 시 사전 계산된 신호 사용
+            if self.use_core and 'signal' in df.columns:
+                if date not in df.index:
+                    return 'hold'
+
+                idx = df.index.get_loc(date)
+                signal_val = df.iloc[idx]['signal']
+
+                if signal_val == 1:
+                    return 'buy'
+                elif signal_val == -1:
+                    return 'sell'
+                else:
+                    return 'hold'
+
+            # 레거시 방식
+            # 전략 파라미터 정규화 (대소문자 통일)
+            strategy_params = self.normalize_strategy_params(strategy_params)
+
             # 날짜에 해당하는 인덱스 찾기
             if date not in df.index:
                 return 'hold'

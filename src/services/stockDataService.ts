@@ -19,7 +19,8 @@ class StockDataService {
   private cache: Map<string, CachedData> = new Map()
   private readonly CACHE_DURATION = 5 * 60 * 1000 // 5분
   private readonly BATCH_SIZE = 10 // 한 번에 처리할 종목 수
-  private readonly MAX_LOCAL_STORAGE_SIZE = 50 * 1024 * 1024 // 50MB
+  private readonly MAX_LOCAL_STORAGE_SIZE = 5 * 1024 * 1024 // 5MB로 축소
+  private readonly MAX_CACHE_ITEMS = 20 // 최대 캐시 항목 수
   
   // 로컬 스토리지 캐시 키 생성
   private getLocalStorageKey(stockCode: string, startDate: string, endDate: string): string {
@@ -37,34 +38,78 @@ class StockDataService {
     return size
   }
   
-  // 오래된 캐시 삭제
+  // 오래된 캐시 삭제 (더 적극적으로)
   private clearOldCache(): void {
     const now = Date.now()
-    const oneWeek = 7 * 24 * 60 * 60 * 1000
-    const keysToDelete: string[] = []
-    
+    const oneDayMs = 24 * 60 * 60 * 1000
+    const stockDataKeys: { key: string; timestamp: number }[] = []
+
+    // 모든 stock_data 키 수집
     for (const key in localStorage) {
       if (key.startsWith('stock_data_')) {
         try {
           const data = JSON.parse(localStorage[key])
-          if (!data.timestamp || now - data.timestamp > oneWeek) {
-            keysToDelete.push(key)
-          }
+          stockDataKeys.push({
+            key,
+            timestamp: data.timestamp || 0
+          })
         } catch (error) {
-          // 파싱 실패한 키도 삭제
-          keysToDelete.push(key)
+          // 파싱 실패한 키는 즉시 삭제
+          localStorage.removeItem(key)
         }
       }
     }
-    
-    // 배치로 삭제
-    keysToDelete.forEach(key => {
+
+    // 타임스탬프 기준 정렬 (오래된 것부터)
+    stockDataKeys.sort((a, b) => a.timestamp - b.timestamp)
+
+    // 1일 이상 오래된 것들 삭제
+    const oldKeys = stockDataKeys.filter(item =>
+      now - item.timestamp > oneDayMs
+    )
+
+    // 캐시 항목 수가 너무 많으면 오래된 것부터 삭제
+    const excessCount = Math.max(0, stockDataKeys.length - this.MAX_CACHE_ITEMS)
+    const keysToDelete = [
+      ...oldKeys.map(item => item.key),
+      ...stockDataKeys.slice(0, excessCount).map(item => item.key)
+    ]
+
+    // 중복 제거 후 삭제
+    const uniqueKeys = [...new Set(keysToDelete)]
+    uniqueKeys.forEach(key => {
       try {
         localStorage.removeItem(key)
+        console.log(`Removed old cache: ${key}`)
       } catch (error) {
         console.warn(`Failed to remove cache key ${key}:`, error)
       }
     })
+
+    if (uniqueKeys.length > 0) {
+      console.log(`Cleared ${uniqueKeys.length} cache items`)
+    }
+  }
+
+  // 모든 stock_data 캐시 삭제
+  private clearAllStockCache(): void {
+    const keysToDelete: string[] = []
+
+    for (const key in localStorage) {
+      if (key.startsWith('stock_data_')) {
+        keysToDelete.push(key)
+      }
+    }
+
+    keysToDelete.forEach(key => {
+      try {
+        localStorage.removeItem(key)
+      } catch (error) {
+        console.warn(`Failed to remove key ${key}:`, error)
+      }
+    })
+
+    console.log(`Cleared all ${keysToDelete.length} stock data cache items`)
   }
   
   // 로컬 스토리지에서 데이터 로드
@@ -75,13 +120,14 @@ class StockDataService {
       
       if (cached) {
         const data = JSON.parse(cached)
-        // 캐시가 1주일 이내인 경우만 사용
-        if (data.timestamp && Date.now() - data.timestamp < 7 * 24 * 60 * 60 * 1000) {
-          console.log(`✓ Local cache hit for ${stockCode}`)
+        // 캐시가 1일 이내인 경우만 사용 (1주일에서 축소)
+        if (data.timestamp && Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
+          console.log(`✓ Cache hit: ${stockCode}`)
           return data.data
         } else {
           // 오래된 캐시 삭제
           localStorage.removeItem(key)
+          console.log(`Cache expired: ${stockCode}`)
         }
       }
     } catch (error) {
@@ -90,37 +136,45 @@ class StockDataService {
     return null
   }
   
-  // 로컬 스토리지에 데이터 저장
+  // 로컬 스토리지에 데이터 저장 (개선된 버전)
   private saveToLocalStorage(stockCode: string, startDate: string, endDate: string, data: StockData[]): void {
     try {
-      // 크기 체크 및 정리
-      if (this.getLocalStorageSize() > this.MAX_LOCAL_STORAGE_SIZE * 0.8) {
-        console.log('LocalStorage approaching limit, clearing old cache...')
-        this.clearOldCache()
-      }
-      
       const key = this.getLocalStorageKey(stockCode, startDate, endDate)
       const cacheData = {
         timestamp: Date.now(),
         data: data
       }
-      
+      const dataStr = JSON.stringify(cacheData)
+
+      // 데이터 크기 체크 (너무 큰 데이터는 저장하지 않음)
+      if (dataStr.length > 500000) { // 500KB 제한
+        console.log(`Data too large to cache for ${stockCode} (${(dataStr.length/1024).toFixed(1)}KB)`)
+        return
+      }
+
       try {
-        localStorage.setItem(key, JSON.stringify(cacheData))
-        console.log(`✓ Saved to local cache: ${stockCode}`)
-      } catch (quotaError) {
-        // 용량 초과 시 오래된 캐시 삭제 후 재시도
-        console.warn('LocalStorage quota exceeded, clearing old cache...')
+        // 먼저 오래된 캐시 정리
         this.clearOldCache()
-        
+
+        // 저장 시도
+        localStorage.setItem(key, dataStr)
+        console.log(`✓ Cached: ${stockCode} (${(dataStr.length/1024).toFixed(1)}KB)`)
+      } catch (quotaError) {
+        // 용량 초과 시 모든 캐시 삭제 후 재시도
+        console.warn('LocalStorage quota exceeded, clearing all stock cache...')
+        this.clearAllStockCache()
+
         try {
-          localStorage.setItem(key, JSON.stringify(cacheData))
+          localStorage.setItem(key, dataStr)
+          console.log(`✓ Cached after clearing: ${stockCode}`)
         } catch (retryError) {
-          console.error('Failed to save to localStorage after clearing:', retryError)
+          // 그래도 실패하면 캐싱 포기 (에러는 무시)
+          console.warn(`Skipping cache for ${stockCode} - storage full`)
         }
       }
     } catch (error) {
-      console.error('Failed to save to localStorage:', error)
+      // 캐시 실패는 치명적이지 않으므로 경고만
+      console.warn('Cache save failed (non-critical):', error)
     }
   }
   

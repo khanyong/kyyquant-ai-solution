@@ -21,6 +21,9 @@ services:
       # 로깅
       - LOG_LEVEL=INFO
     volumes:
+      # 코드 디렉토리 마운트 (개발/디버깅용)
+      # 주의: 프로덕션에서는 보안상 제거 권장
+      - ./:/app
       - ./logs:/app/logs
       - ./.env:/app/.env
     restart: unless-stopped

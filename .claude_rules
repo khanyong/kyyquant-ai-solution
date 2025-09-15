@@ -1,0 +1,41 @@
+# Claude Code Assistant Rules
+
+## BASIC RULES
+
+1. NO EMOJIS in any code, logs, or comments
+   - Use [OK], [ERROR], [WARNING], [INFO] instead
+
+2. ALWAYS CHECK BEFORE MODIFYING
+   - Check file dependencies
+   - Check if Docker rebuild needed
+   - Check environment variables
+
+3. ENCODING AWARENESS
+   - Consider cp949 encoding issues on Windows
+   - Use English for logs when possible
+
+4. TEST BEFORE COMMIT
+   - Create minimal test script
+   - Verify locally first
+   - Check Docker container if applicable
+
+5. ENVIRONMENT SPECIFIC
+   - Local: port 8001
+   - Docker external: port 8080
+   - Frontend env vars must start with VITE_
+
+6. CLEAN CODE
+   - Remove debug logs after fixing
+   - No commented-out code
+   - Clear variable names
+
+## QUICK REFERENCE
+
+Local API: http://localhost:8001
+NAS API: http://192.168.50.150:8080
+Production: https://api.bll-pro.com
+
+Frontend .env priority:
+1. .env.local (highest)
+2. .env.development
+3. .env (lowest)

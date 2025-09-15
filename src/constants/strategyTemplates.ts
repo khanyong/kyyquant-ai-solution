@@ -26,81 +26,91 @@ export interface StrategyTemplate {
 export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
   {
     id: 'golden-cross',
-    name: '골든크로스',
+    name: '[템플릿] 골든크로스',
     description: 'MA20이 MA60을 상향 돌파할 때 매수',
     type: 'basic',
     difficulty: 'beginner',
     icon: 'TrendingUp',
     iconColor: 'success',
     strategy: {
-      indicators: [],
+      indicators: [
+        { type: 'ma', params: { period: 20 } },
+        { type: 'ma', params: { period: 60 } }
+      ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'MA_20', operator: '>', value: 'MA_60', combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'ma_20', operator: 'cross_above', value: 'ma_60', combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '2', type: 'sell', indicator: 'MA_20', operator: '<', value: 'MA_60', combineWith: 'AND' }
+        { id: '2', type: 'sell', indicator: 'ma_20', operator: 'cross_below', value: 'ma_60', combineWith: 'AND' }
       ]
     }
   },
   {
     id: 'rsi-reversal',
-    name: 'RSI 반전',
+    name: '[템플릿] RSI 반전',
     description: 'RSI 과매도/과매수 구간 활용',
     type: 'basic',
     difficulty: 'beginner',
     icon: 'Autorenew',
     iconColor: 'secondary',
     strategy: {
-      indicators: [],
+      indicators: [
+        { type: 'rsi', params: { period: 14 } }
+      ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'RSI_14', operator: '<', value: 30, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'rsi_14', operator: '<', value: 30, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '2', type: 'sell', indicator: 'RSI_14', operator: '>', value: 70, combineWith: 'AND' }
+        { id: '2', type: 'sell', indicator: 'rsi_14', operator: '>', value: 70, combineWith: 'AND' }
       ]
     }
   },
   {
     id: 'bollinger-band',
-    name: '볼린저밴드',
+    name: '[템플릿] 볼린저밴드',
     description: '밴드 하단 매수, 상단 매도',
     type: 'basic',
     difficulty: 'intermediate',
     icon: 'Timeline',
     iconColor: 'info',
     strategy: {
-      indicators: [],
+      indicators: [
+        { type: 'bb', params: { period: 20, std: 2 } },
+        { type: 'rsi', params: { period: 14 } }
+      ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'PRICE', operator: '<', value: 'BB_LOWER', combineWith: 'AND' },
-        { id: '2', type: 'buy', indicator: 'RSI_14', operator: '<', value: 40, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'close', operator: '<', value: 'bb_lower_20_2', combineWith: 'AND' },
+        { id: '2', type: 'buy', indicator: 'rsi_14', operator: '<', value: 40, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '3', type: 'sell', indicator: 'PRICE', operator: '>', value: 'BB_UPPER', combineWith: 'AND' }
+        { id: '3', type: 'sell', indicator: 'close', operator: '>', value: 'bb_upper_20_2', combineWith: 'AND' }
       ]
     }
   },
   {
     id: 'macd-signal',
-    name: 'MACD 시그널',
+    name: '[템플릿] MACD 시그널',
     description: 'MACD 골든/데드 크로스',
     type: 'basic',
     difficulty: 'intermediate',
     icon: 'ShowChart',
     iconColor: 'primary',
     strategy: {
-      indicators: [],
+      indicators: [
+        { type: 'macd', params: { fast: 12, slow: 26, signal: 9 } }
+      ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'MACD', operator: 'cross_above', value: 'MACD_SIGNAL', combineWith: 'AND' },
-        { id: '2', type: 'buy', indicator: 'MACD', operator: '>', value: 0, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'macd', operator: 'cross_above', value: 'macd_signal', combineWith: 'AND' },
+        { id: '2', type: 'buy', indicator: 'macd', operator: '>', value: 0, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '3', type: 'sell', indicator: 'MACD', operator: 'cross_below', value: 'MACD_SIGNAL', combineWith: 'AND' }
+        { id: '3', type: 'sell', indicator: 'macd', operator: 'cross_below', value: 'macd_signal', combineWith: 'AND' }
       ]
     }
   },
   {
     id: 'complex-a',
-    name: '복합 전략 A',
+    name: '[템플릿] 복합 전략 A',
     description: 'RSI → MACD → 거래량 3단계 검증',
     type: 'complex',
     difficulty: 'advanced',
@@ -109,35 +119,35 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     stageStrategy: {
       buyStages: {
         stage1: {
-          indicators: ['RSI_14'],
+          indicators: [{ type: 'rsi', period: 14 }],
           conditions: [
-            { indicator: 'RSI_14', operator: '<', value: 35 }
+            { indicator: 'rsi_14', operator: '<', value: 35 }
           ]
         },
         stage2: {
-          indicators: ['MACD_12_26_9'],
+          indicators: [{ type: 'macd', fast: 12, slow: 26, signal: 9 }],
           conditions: [
-            { indicator: 'MACD', operator: 'cross_above', value: 'MACD_SIGNAL' }
+            { indicator: 'macd', operator: 'cross_above', value: 'macd_signal' }
           ]
         },
         stage3: {
-          indicators: ['VOLUME'],
+          indicators: [{ type: 'ma', period: 20 }],
           conditions: [
-            { indicator: 'VOLUME', operator: '>', value: 'VOLUME_MA_20' }
+            { indicator: 'volume', operator: '>', value: 'volume_ma_20' }
           ]
         }
       },
       sellStages: {
         stage1: {
-          indicators: ['RSI_14'],
+          indicators: [{ type: 'rsi', period: 14 }],
           conditions: [
-            { indicator: 'RSI_14', operator: '>', value: 70 }
+            { indicator: 'rsi_14', operator: '>', value: 70 }
           ]
         },
         stage2: {
-          indicators: ['MACD_12_26_9'],
+          indicators: [{ type: 'macd', fast: 12, slow: 26, signal: 9 }],
           conditions: [
-            { indicator: 'MACD', operator: 'cross_below', value: 'MACD_SIGNAL' }
+            { indicator: 'macd', operator: 'cross_below', value: 'macd_signal' }
           ]
         },
         stage3: {
@@ -149,7 +159,7 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
   },
   {
     id: 'complex-b',
-    name: '복합 전략 B',
+    name: '[템플릿] 복합 전략 B',
     description: '골든크로스 → 볼린저 → RSI 확인',
     type: 'complex',
     difficulty: 'advanced',
@@ -158,35 +168,35 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     stageStrategy: {
       buyStages: {
         stage1: {
-          indicators: ['MA_20', 'MA_60'],
+          indicators: [{ type: 'ma', period: 20 }, { type: 'ma', period: 60 }],
           conditions: [
-            { indicator: 'MA_20', operator: '>', value: 'MA_60' }
+            { indicator: 'ma_20', operator: '>', value: 'ma_60' }
           ]
         },
         stage2: {
-          indicators: ['BB_20_2'],
+          indicators: [{ type: 'bb', period: 20, std_dev: 2 }],
           conditions: [
-            { indicator: 'PRICE', operator: '<', value: 'BB_MIDDLE' }
+            { indicator: 'price', operator: '<', value: 'bb_middle' }
           ]
         },
         stage3: {
-          indicators: ['RSI_14'],
+          indicators: [{ type: 'rsi', period: 14 }],
           conditions: [
-            { indicator: 'RSI_14', operator: '<', value: 50 }
+            { indicator: 'rsi_14', operator: '<', value: 50 }
           ]
         }
       },
       sellStages: {
         stage1: {
-          indicators: ['MA_20', 'MA_60'],
+          indicators: [{ type: 'ma', period: 20 }, { type: 'ma', period: 60 }],
           conditions: [
-            { indicator: 'MA_20', operator: '<', value: 'MA_60' }
+            { indicator: 'ma_20', operator: '<', value: 'ma_60' }
           ]
         },
         stage2: {
-          indicators: ['BB_20_2'],
+          indicators: [{ type: 'bb', period: 20, std_dev: 2 }],
           conditions: [
-            { indicator: 'PRICE', operator: '>', value: 'BB_UPPER' }
+            { indicator: 'price', operator: '>', value: 'bb_upper' }
           ]
         },
         stage3: {
@@ -198,20 +208,23 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
   },
   {
     id: 'scalping',
-    name: '스캘핑',
+    name: '[템플릿] 스캘핑',
     description: '단기 빠른 진입/청산',
     type: 'basic',
     difficulty: 'expert',
     icon: 'Speed',
     iconColor: 'warning',
     strategy: {
-      indicators: [],
+      indicators: [
+        { type: 'ma', period: 5 },
+        { type: 'rsi', period: 9 }
+      ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'PRICE', operator: '>', value: 'MA_5', combineWith: 'AND' },
-        { id: '2', type: 'buy', indicator: 'RSI_9', operator: '<', value: 50, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'price', operator: '>', value: 'ma_5', combineWith: 'AND' },
+        { id: '2', type: 'buy', indicator: 'rsi_9', operator: '<', value: 50, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '3', type: 'sell', indicator: 'RSI_9', operator: '>', value: 70, combineWith: 'AND' }
+        { id: '3', type: 'sell', indicator: 'rsi_9', operator: '>', value: 70, combineWith: 'AND' }
       ],
       riskManagement: {
         stopLoss: -2,
@@ -225,22 +238,27 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
   },
   {
     id: 'swing-trading',
-    name: '스윙 트레이딩',
+    name: '[템플릿] 스윙 트레이딩',
     description: '중기 추세 포착',
     type: 'basic',
     difficulty: 'intermediate',
     icon: 'SwapHoriz',
     iconColor: 'info',
     strategy: {
-      indicators: [],
+      indicators: [
+        { type: 'ma', period: 20 },
+        { type: 'ma', period: 60 },
+        { type: 'rsi', period: 14 },
+        { type: 'macd', fast: 12, slow: 26, signal: 9 }
+      ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'MA_20', operator: '>', value: 'MA_60', combineWith: 'AND' },
-        { id: '2', type: 'buy', indicator: 'RSI_14', operator: '<', value: 60, combineWith: 'AND' },
-        { id: '3', type: 'buy', indicator: 'MACD', operator: '>', value: 0, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'ma_20', operator: '>', value: 'ma_60', combineWith: 'AND' },
+        { id: '2', type: 'buy', indicator: 'rsi_14', operator: '<', value: 60, combineWith: 'AND' },
+        { id: '3', type: 'buy', indicator: 'macd', operator: '>', value: 0, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '4', type: 'sell', indicator: 'MA_20', operator: '<', value: 'MA_60', combineWith: 'AND' },
-        { id: '5', type: 'sell', indicator: 'RSI_14', operator: '>', value: 70, combineWith: 'AND' }
+        { id: '4', type: 'sell', indicator: 'ma_20', operator: '<', value: 'ma_60', combineWith: 'AND' },
+        { id: '5', type: 'sell', indicator: 'rsi_14', operator: '>', value: 70, combineWith: 'AND' }
       ],
       riskManagement: {
         stopLoss: -7,

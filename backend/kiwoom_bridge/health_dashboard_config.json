@@ -1,0 +1,113 @@
+{
+  "health_metrics": {
+    "실시간 모니터링": {
+      "지표_누락_빈도": {
+        "description": "지표 컬럼을 찾지 못한 횟수",
+        "threshold_warning": 5,
+        "threshold_critical": 10,
+        "window": "5분",
+        "alert": "Slack/Email"
+      },
+      "파싱_실패율": {
+        "description": "조건 value 파싱 실패 비율",
+        "threshold_warning": "5%",
+        "threshold_critical": "10%",
+        "calculation": "실패 수 / 전체 조건 평가 수"
+      },
+      "신호_생성률": {
+        "description": "백테스트 중 신호가 0인 비율",
+        "threshold_warning": "80%",
+        "threshold_critical": "95%",
+        "action": "전략 설정 검토 필요"
+      }
+    },
+
+    "TOP_5_문제": {
+      "누락_지표_순위": [
+        "RSI_14 (레거시)",
+        "BB_UPPER (대문자)",
+        "macd_histogram (별칭)",
+        "MA_50 (파라미터)",
+        "PRICE (별칭)"
+      ],
+      "파싱_실패_값": [
+        "SMA_20 (대문자)",
+        "bb_upper (파라미터 누락)",
+        "30.5.2 (잘못된 형식)",
+        "null (빈 값)",
+        "undefined (JS 오류)"
+      ]
+    },
+
+    "일일_통계": {
+      "총_백테스트_수": "count",
+      "성공률": "success_count / total_count",
+      "평균_거래_횟수": "avg(trades_per_backtest)",
+      "가장_많이_사용된_지표": "top_indicators",
+      "가장_적게_거래된_전략": "strategies_with_zero_trades"
+    },
+
+    "경고_수준": {
+      "GREEN": "모든 메트릭 정상",
+      "YELLOW": "일부 경고 임계값 초과",
+      "RED": "치명적 임계값 초과 또는 시스템 오류"
+    },
+
+    "자동_조치": {
+      "지표_누락_10회_초과": "자동으로 레거시 매핑 테이블 업데이트",
+      "신호_0_연속_5회": "전략 설정 검증 Job 실행",
+      "파싱_실패_급증": "입력 검증 강화 모드 활성화"
+    }
+  },
+
+  "grafana_dashboard": {
+    "panels": [
+      {
+        "title": "실시간 오류율",
+        "type": "graph",
+        "queries": [
+          "rate(missing_indicator_count[5m])",
+          "rate(parse_failure_count[5m])",
+          "rate(zero_signal_count[5m])"
+        ]
+      },
+      {
+        "title": "TOP 문제 지표",
+        "type": "table",
+        "query": "topk(5, sum by (indicator) (missing_indicator_count))"
+      },
+      {
+        "title": "전략별 성공률",
+        "type": "heatmap",
+        "query": "success_rate by (strategy_id, time)"
+      },
+      {
+        "title": "평균 거래 횟수",
+        "type": "stat",
+        "query": "avg(trade_count)"
+      }
+    ],
+
+    "alerts": [
+      {
+        "name": "지표 누락 급증",
+        "condition": "rate(missing_indicator_count[5m]) > 10",
+        "action": "PagerDuty"
+      },
+      {
+        "name": "신호 생성 실패",
+        "condition": "zero_signal_ratio > 0.9",
+        "action": "Slack #trading-alerts"
+      }
+    ]
+  },
+
+  "prometheus_metrics": [
+    "backtest_indicator_missing_total",
+    "backtest_parse_failure_total",
+    "backtest_zero_signal_total",
+    "backtest_trade_count_histogram",
+    "backtest_duration_seconds",
+    "backtest_success_rate"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "summary": {
+    "total_return": 0.0,
+    "average_win_rate": 0.0,
+    "average_sharpe_ratio": 0.0,
+    "max_drawdown": 0.0,
+    "stock_count": 1,
+    "processed_count": 1,
+    "total_trades": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "buy_count": 0,
+    "sell_count": 0
+  },
+  "individual_results": [
+    {
+      "stock_code": "005930",
+      "result": {
+        "total_return": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "buy_count": 0,
+        "sell_count": 0,
+        "trades": []
+      }
+    }
+  ],
+  "request": {
+    "strategy_id": "88d01e47-c979-4e80-bef8-746a53f3bbca",
+    "stock_codes": [
+      "005930"
+    ],
+    "start_date": "2024-09-14",
+    "end_date": "2025-09-12",
+    "initial_capital": 10000000.0,
+    "commission": 0.00015,
+    "slippage": 0.001,
+    "data_interval": "1d",
+    "filtering_mode": "pre-filter",
+    "use_cached_data": true,
+    "filter_id": null,
+    "parameters": {}
+  }
+}
