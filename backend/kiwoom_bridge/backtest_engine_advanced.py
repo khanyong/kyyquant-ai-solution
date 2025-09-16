@@ -13,6 +13,23 @@ from datetime import datetime
 import sys
 import os
 
+def convert_numpy_to_native(obj):
+    """Convert numpy types to native Python types for JSON serialization"""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, pd.Timestamp):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: convert_numpy_to_native(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_to_native(item) for item in obj]
+    else:
+        return obj
+
 # Core 모듈 경로 추가
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -995,7 +1012,7 @@ class AdvancedBacktestEngine:
         # 거래 상세 정보
         trade_details = []
         for trade in self.trades:
-            trade_details.append({
+            trade_details.append(convert_numpy_to_native({
                 'date': trade.date.isoformat() if isinstance(trade.date, datetime) else str(trade.date),
                 'stock_code': trade.stock_code,
                 'stock_name': trade.stock_name,
@@ -1007,9 +1024,9 @@ class AdvancedBacktestEngine:
                 'profit': trade.profit,
                 'profit_pct': trade.profit_pct,
                 'position_size': trade.position_size
-            })
+            }))
 
-        return {
+        return convert_numpy_to_native({
             'total_return': total_return,
             'win_rate': win_rate,
             'sharpe_ratio': sharpe_ratio,
@@ -1024,4 +1041,4 @@ class AdvancedBacktestEngine:
             'sell_count': len([t for t in self.trades if 'sell' in t.action]),
             'trades': trade_details,
             'equity_curve': self.equity_curve
-        }
+        })

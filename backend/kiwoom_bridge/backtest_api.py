@@ -14,6 +14,23 @@ import asyncio
 import aiohttp
 from supabase import create_client, Client
 
+def convert_numpy_to_native(obj):
+    """Convert numpy types to native Python types for JSON serialization"""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, pd.Timestamp):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: convert_numpy_to_native(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_to_native(item) for item in obj]
+    else:
+        return obj
+
 # 코드 버전 정보
 CODE_VERSION = "2025.01.15-v3"
 CODE_BUILD_TIME = datetime.now().isoformat()
@@ -527,13 +544,13 @@ class BacktestEngine:
                     entry_cost = total_cost  # 실제 지불 비용 저장
                     capital -= total_cost
                     
-                    trades.append({
+                    trades.append(convert_numpy_to_native({
                         'date': date,
                         'type': 'buy',
                         'price': actual_price,
                         'shares': shares,
                         'cost': total_cost
-                    })
+                    }))
             
             # 매도 신호
             elif signal == -1 and position > 0:
@@ -545,7 +562,7 @@ class BacktestEngine:
                 profit = proceeds - entry_cost
                 profit_pct = (profit / entry_cost) * 100 if entry_cost > 0 else 0
                 
-                trades.append({
+                trades.append(convert_numpy_to_native({
                     'date': date,
                     'type': 'sell',
                     'price': actual_price,
@@ -553,7 +570,7 @@ class BacktestEngine:
                     'proceeds': proceeds,
                     'profit': profit,
                     'profit_pct': profit_pct
-                })
+                }))
                 
                 capital += proceeds
                 position = 0
@@ -569,7 +586,7 @@ class BacktestEngine:
             profit = proceeds - entry_cost
             profit_pct = (profit / entry_cost) * 100 if entry_cost > 0 else 0
             
-            trades.append({
+            trades.append(convert_numpy_to_native({
                 'date': data.iloc[-1]['date'],
                 'type': 'sell',
                 'price': final_price,
@@ -578,7 +595,7 @@ class BacktestEngine:
                 'profit': profit,
                 'profit_pct': profit_pct,
                 'forced': True  # 강제 청산 표시
-            })
+            }))
         
         # 성과 계산
         total_return = ((capital - initial_capital) / initial_capital) * 100
@@ -803,18 +820,18 @@ async def run_backtest(request: BacktestRequest):
                 )
                 result_dict = engine.run(data, merged_parameters)
 
-                # BacktestResult 형식으로 변환
+                # BacktestResult 형식으로 변환 (numpy 타입 변환 포함)
                 result = BacktestResult(
-                    total_return=result_dict['total_return'],
-                    win_rate=result_dict['win_rate'],
-                    sharpe_ratio=result_dict['sharpe_ratio'],
-                    max_drawdown=result_dict['max_drawdown'],
-                    total_trades=result_dict['total_trades'],
-                    winning_trades=result_dict['winning_trades'],
-                    losing_trades=result_dict['losing_trades'],
-                    buy_count=result_dict.get('buy_count', 0),
-                    sell_count=result_dict.get('sell_count', 0),
-                    trades=result_dict['trades']
+                    total_return=convert_numpy_to_native(result_dict['total_return']),
+                    win_rate=convert_numpy_to_native(result_dict['win_rate']),
+                    sharpe_ratio=convert_numpy_to_native(result_dict['sharpe_ratio']),
+                    max_drawdown=convert_numpy_to_native(result_dict['max_drawdown']),
+                    total_trades=convert_numpy_to_native(result_dict['total_trades']),
+                    winning_trades=convert_numpy_to_native(result_dict['winning_trades']),
+                    losing_trades=convert_numpy_to_native(result_dict['losing_trades']),
+                    buy_count=convert_numpy_to_native(result_dict.get('buy_count', 0)),
+                    sell_count=convert_numpy_to_native(result_dict.get('sell_count', 0)),
+                    trades=convert_numpy_to_native(result_dict['trades'])
                 )
             else:
                 # 기본 백테스트 엔진 사용
