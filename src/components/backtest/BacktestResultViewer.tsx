@@ -85,6 +85,12 @@ interface BacktestResult {
   strategy_config: any;
   investment_config: any;
   filtering_config: any;
+  data_source?: string;  // 데이터 소스: "supabase", "mock", "external"
+  data_source_detail?: {  // 데이터 소스 상세
+    supabase: number;
+    mock: number;
+    unknown: number;
+  };
 }
 
 interface Trade {
@@ -501,6 +507,59 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
         {/* 통계 분석 탭 */}
         <TabPanel value={tabValue} index={2}>
           <Grid container spacing={3}>
+            {/* 데이터 소스 정보 */}
+            {(result.data_source || result.data_source_detail) && (
+              <Grid item xs={12}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      데이터 소스
+                    </Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    <Stack spacing={1}>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Typography>주 데이터 소스:</Typography>
+                        <Chip
+                          label={
+                            result.data_source === 'supabase' ? '실제 시장 데이터 (Supabase)' :
+                            result.data_source === 'mock' ? '시뮬레이션 데이터 (Mock)' :
+                            '알 수 없음'
+                          }
+                          color={result.data_source === 'supabase' ? 'success' : 'warning'}
+                          variant="outlined"
+                        />
+                      </Box>
+                      {result.data_source_detail && (
+                        <Box display="flex" alignItems="center" gap={2}>
+                          <Typography variant="body2">상세:</Typography>
+                          {result.data_source_detail.supabase > 0 && (
+                            <Chip
+                              label={`실제 데이터: ${result.data_source_detail.supabase}개`}
+                              size="small"
+                              color="success"
+                            />
+                          )}
+                          {result.data_source_detail.mock > 0 && (
+                            <Chip
+                              label={`Mock 데이터: ${result.data_source_detail.mock}개`}
+                              size="small"
+                              color="warning"
+                            />
+                          )}
+                          {result.data_source_detail.unknown > 0 && (
+                            <Chip
+                              label={`알 수 없음: ${result.data_source_detail.unknown}개`}
+                              size="small"
+                            />
+                          )}
+                        </Box>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
