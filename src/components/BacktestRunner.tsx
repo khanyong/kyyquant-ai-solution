@@ -691,7 +691,7 @@ const BacktestRunner: React.FC = () => {
       
       if (filterMode === 'pre-filter') {
         // 사전 필터링 모드: 필터에서 가져온 종목 코드 사용
-        if (effectiveFilterId) {
+        if (effectiveFilterId && effectiveFilterId !== null && effectiveFilterId !== '') {
           requestPayload.filter_id = effectiveFilterId;
           console.log('Using pre-filter mode with filter_id:', effectiveFilterId);
         }
@@ -724,7 +724,15 @@ const BacktestRunner: React.FC = () => {
         }
       }
       
-      console.log('Backtest request payload:', JSON.stringify(requestPayload, null, 2));
+      // null 또는 undefined 필드 제거
+      const cleanPayload = Object.entries(requestPayload).reduce((acc, [key, value]) => {
+        if (value !== null && value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as any);
+
+      console.log('Backtest request payload:', JSON.stringify(cleanPayload, null, 2));
 
       // 매수/매도 조건이 비어있는지 확인 (strategyConfig에서 확인)
       if (strategyConfig && ((!strategyConfig.buyConditions || strategyConfig.buyConditions.length === 0) &&
@@ -761,7 +769,7 @@ const BacktestRunner: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestPayload),
+        body: JSON.stringify(cleanPayload),
       });
 
       console.log('Response status:', response.status);

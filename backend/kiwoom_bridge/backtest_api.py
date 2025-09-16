@@ -108,10 +108,10 @@ class BacktestRequest(BaseModel):
     initial_capital: float = 10000000  # 1천만원
     commission: float = 0.00015
     slippage: float = 0.001
-    data_interval: str = "1d"
-    filtering_mode: str = "pre-filter"
-    use_cached_data: bool = True
-    filter_id: str = None
+    data_interval: Optional[str] = "1d"
+    filtering_mode: Optional[str] = "pre-filter"
+    use_cached_data: Optional[bool] = True
+    filter_id: Optional[str] = None
     parameters: Dict[str, Any] = {}
 
 class BacktestResult(BaseModel):
@@ -346,6 +346,10 @@ class Strategy:
                 buy_dates = data[data['buy_signal'] == 1].index[:3]
                 print(f"[Core] 매수 신호 날짜: {[d.strftime('%Y-%m-%d') for d in buy_dates]}")
 
+            # 조건 정보를 데이터프레임 속성으로 저장 (나중에 참조용)
+            data.attrs['buy_conditions'] = buy_conditions
+            data.attrs['sell_conditions'] = sell_conditions
+
             return data
 
         elif USE_STRATEGY_ENGINE:
@@ -353,12 +357,19 @@ class Strategy:
             try:
                 engine = StrategyEngine()
                 data = engine.prepare_data(data, strategy_config)
+                # 조건 정보를 속성으로 저장
+                data.attrs['buy_conditions'] = strategy_config.get('buyConditions', [])
+                data.attrs['sell_conditions'] = strategy_config.get('sellConditions', [])
                 return data
             except Exception as e:
                 print(f"[WARNING] StrategyEngine 실패: {e}")
 
         # 폴백: 기본 지표 계산
-        return await Strategy.calculate_indicators(data, strategy_config.get('indicators', []))
+        data = await Strategy.calculate_indicators(data, strategy_config.get('indicators', []))
+        # 조건 정보를 속성으로 저장
+        data.attrs['buy_conditions'] = strategy_config.get('buyConditions', [])
+        data.attrs['sell_conditions'] = strategy_config.get('sellConditions', [])
+        return data
 
     @staticmethod
     async def calculate_indicators(data: pd.DataFrame, indicators: List[Dict]) -> pd.DataFrame:

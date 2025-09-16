@@ -820,13 +820,13 @@ class AdvancedBacktestEngine:
                 sell_count = (data['sell_signal'] == -1).sum()
                 print(f"[Core] 신호: 매수 {buy_count}, 매도 {sell_count}")
 
-        # 폴백: 기존 방식
-        elif USE_COMPLETE_INDICATORS:
-            print(f"[DEBUG] CompleteIndicators 사용")
-            data = CompleteIndicators.calculate_all(data, strategy_config)
-        else:
-            print(f"[DEBUG] TechnicalIndicators 사용")
-            data = TechnicalIndicators.calculate_all(data, strategy_config)
+            # 폴백: 기존 방식
+            elif USE_COMPLETE_INDICATORS:
+                print(f"[DEBUG] CompleteIndicators 사용")
+                data = CompleteIndicators.calculate_all(data, strategy_config)
+            else:
+                print(f"[DEBUG] TechnicalIndicators 사용")
+                data = TechnicalIndicators.calculate_all(data, strategy_config)
 
         print(f"[DEBUG] 지표 계산 후 데이터 shape: {data.shape}")
         print(f"[DEBUG] 지표 계산 후 컬럼: {list(data.columns)[:30]}...")
