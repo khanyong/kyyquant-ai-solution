@@ -511,7 +511,7 @@ class StrategyEngine:
     def generate_signal(self, df: pd.DataFrame, date, strategy_params: Dict) -> Tuple[str, str, Dict]:
         """거래 신호 생성 - 신호와 조건 정보를 함께 반환"""
         try:
-            # Core 모듈 사용 시 사전 계산된 신호 사용
+            # Core 모듈 사용 시에도 조건 상세 표시
             if self.use_core and 'signal' in df.columns:
                 if date not in df.index:
                     return 'hold', '', {}
@@ -520,10 +520,23 @@ class StrategyEngine:
                 signal_val = df.iloc[idx]['signal']
 
                 if signal_val == 1:
-                    # Core 모듈에서는 상세 조건 추출이 어려우므로 기본 메시지
-                    return 'buy', 'Core 모듈 매수 신호', {}
+                    # Core 모듈 사용 시에도 매수 조건 상세 표시
+                    buy_conditions = strategy_params.get('buyConditions', [])
+                    matched_conditions = []
+                    for condition in buy_conditions:
+                        cond_str = self._format_condition(df, idx, condition)
+                        matched_conditions.append(cond_str)
+                    reason = ' & '.join(matched_conditions) if matched_conditions else '매수 신호 발생'
+                    return 'buy', reason, {'matched_conditions': matched_conditions}
                 elif signal_val == -1:
-                    return 'sell', 'Core 모듈 매도 신호', {}
+                    # Core 모듈 사용 시에도 매도 조건 상세 표시
+                    sell_conditions = strategy_params.get('sellConditions', [])
+                    matched_conditions = []
+                    for condition in sell_conditions:
+                        cond_str = self._format_condition(df, idx, condition)
+                        matched_conditions.append(cond_str)
+                    reason = ' & '.join(matched_conditions) if matched_conditions else '매도 신호 발생'
+                    return 'sell', reason, {'matched_conditions': matched_conditions}
                 else:
                     return 'hold', '', {}
 
@@ -630,15 +643,15 @@ class StrategyEngine:
                 else:
                     value_str = str(value)
 
-                # 연산자 매핑
+                # 연산자 매핑 (안전한 ASCII 문자 사용)
                 op_map = {
                     '>': '>',
                     '<': '<',
-                    '>=': '≥',
-                    '<=': '≤',
+                    '>=': '>=',
+                    '<=': '<=',
                     '==': '=',
-                    'cross_up': '↗',
-                    'cross_down': '↘'
+                    'cross_up': 'CrossUp',
+                    'cross_down': 'CrossDown'
                 }
                 op_str = op_map.get(operator, operator)
 
