@@ -31,6 +31,10 @@ def convert_numpy_to_native(obj):
     else:
         return obj
 
+# 환경변수 로드 (반드시 맨 처음에)
+from dotenv import load_dotenv
+load_dotenv()
+
 # 코드 버전 정보
 CODE_VERSION = "2025.01.15-v3"
 CODE_BUILD_TIME = datetime.now().isoformat()
@@ -706,7 +710,51 @@ async def run_backtest(request: BacktestRequest):
     try:
         # 1. Supabase에서 전략 정보 조회
         strategy_config = {}
-        if supabase and request.strategy_id:
+
+        # golden-cross 전략은 하드코딩된 설정 사용
+        if request.strategy_id == 'golden-cross':
+            print(f"[전략 로드] 하드코딩된 골든크로스 전략 사용")
+            strategy_config = {
+                "indicators": [
+                    {"type": "ma", "params": {"period": 20}},
+                    {"type": "ma", "params": {"period": 60}}
+                ],
+                "templateId": "golden-cross",
+                "templateName": "[템플릿] 골든크로스",
+                "buyConditions": [
+                    {
+                        "id": "1",
+                        "type": "buy",
+                        "value": "ma_60",
+                        "operator": "cross_above",
+                        "indicator": "ma_20",
+                        "combineWith": "AND"
+                    }
+                ],
+                "sellConditions": [
+                    {
+                        "id": "2",
+                        "type": "sell",
+                        "value": "ma_60",
+                        "operator": "cross_below",
+                        "indicator": "ma_20",
+                        "combineWith": "AND"
+                    }
+                ],
+                "strategy_type": "custom",
+                "riskManagement": {
+                    "stopLoss": -5,
+                    "takeProfit": 10,
+                    "maxPositions": 5,
+                    "positionSize": 20,
+                    "trailingStop": False,
+                    "trailingStopPercent": 0
+                }
+            }
+            print(f"  - 지표: {len(strategy_config.get('indicators', []))}개")
+            print(f"  - 매수 조건: {len(strategy_config.get('buyConditions', []))}개")
+            print(f"  - 매도 조건: {len(strategy_config.get('sellConditions', []))}개")
+        elif supabase and request.strategy_id:
             try:
                 print(f"[전략 로드] strategy_id: {request.strategy_id}")
                 response = supabase.table('strategies').select('*').eq('id', request.strategy_id).single().execute()
@@ -718,7 +766,7 @@ async def run_backtest(request: BacktestRequest):
                     print(f"  - 매도 조건: {len(strategy_config.get('sellConditions', []))}개")
             except Exception as e:
                 print(f"  [ERROR] 전략 조회 실패: {str(e)}")
-        
+
         # 2. request.parameters와 병합 (request.parameters가 우선)
         merged_parameters = {**strategy_config, **request.parameters}
         
@@ -739,12 +787,13 @@ async def run_backtest(request: BacktestRequest):
             if supabase:
                 try:
                     print(f"  - Supabase에서 {stock_code} 데이터 조회 중...")
+                    print(f"    쿼리: stock_code={stock_code}, trade_date>={request.start_date}, trade_date<={request.end_date}")
                     response = supabase.table('kw_price_daily').select('*').eq(
                         'stock_code', stock_code
                     ).gte('trade_date', request.start_date).lte('trade_date', request.end_date).order('trade_date').execute()
                     
                     if response.data and len(response.data) > 0:
-                        print(f"  ✓ Supabase에서 {len(response.data)}개 데이터 로드")
+                        print(f"  [OK] Supabase에서 {len(response.data)}개 데이터 로드")
                         data = pd.DataFrame(response.data)
                         # trade_date를 date로 변환
                         data['date'] = pd.to_datetime(data['trade_date'])
