@@ -508,27 +508,28 @@ class StrategyEngine:
                 self._debug_count += 1
             return False
 
-    def generate_signal(self, df: pd.DataFrame, date, strategy_params: Dict) -> str:
-        """거래 신호 생성"""
+    def generate_signal(self, df: pd.DataFrame, date, strategy_params: Dict) -> Tuple[str, str, Dict]:
+        """거래 신호 생성 - 신호와 조건 정보를 함께 반환"""
         try:
             # Core 모듈 사용 시 사전 계산된 신호 사용
             if self.use_core and 'signal' in df.columns:
                 if date not in df.index:
-                    return 'hold'
+                    return 'hold', '', {}
 
                 idx = df.index.get_loc(date)
                 signal_val = df.iloc[idx]['signal']
 
                 if signal_val == 1:
-                    return 'buy'
+                    # Core 모듈에서는 상세 조건 추출이 어려우므로 기본 메시지
+                    return 'buy', 'Core 모듈 매수 신호', {}
                 elif signal_val == -1:
-                    return 'sell'
+                    return 'sell', 'Core 모듈 매도 신호', {}
                 else:
-                    return 'hold'
+                    return 'hold', '', {}
 
             # 레거시 방식
             if date not in df.index:
-                return 'hold'
+                return 'hold', '', {}
 
             idx = df.index.get_loc(date)
 
@@ -536,9 +537,15 @@ class StrategyEngine:
             buy_conditions = strategy_params.get('buyConditions', [])
             if buy_conditions:
                 buy_result = True
+                matched_conditions = []
 
                 for i, condition in enumerate(buy_conditions):
                     signal = self.evaluate_condition(df, idx, condition)
+
+                    # 조건이 참일 때 조건 문자열 생성
+                    if signal:
+                        cond_str = self._format_condition(df, idx, condition)
+                        matched_conditions.append(cond_str)
 
                     if i == 0:
                         buy_result = signal
@@ -550,15 +557,22 @@ class StrategyEngine:
                             buy_result = buy_result or signal
 
                 if buy_result:
-                    return 'buy'
+                    reason = ' & '.join(matched_conditions) if matched_conditions else '매수 조건 충족'
+                    return 'buy', reason, {'matched_conditions': matched_conditions}
 
             # 매도 조건 체크
             sell_conditions = strategy_params.get('sellConditions', [])
             if sell_conditions:
                 sell_result = True
+                matched_conditions = []
 
                 for i, condition in enumerate(sell_conditions):
                     signal = self.evaluate_condition(df, idx, condition)
+
+                    # 조건이 참일 때 조건 문자열 생성
+                    if signal:
+                        cond_str = self._format_condition(df, idx, condition)
+                        matched_conditions.append(cond_str)
 
                     if i == 0:
                         sell_result = signal
@@ -570,15 +584,76 @@ class StrategyEngine:
                             sell_result = sell_result or signal
 
                 if sell_result:
-                    return 'sell'
+                    reason = ' & '.join(matched_conditions) if matched_conditions else '매도 조건 충족'
+                    return 'sell', reason, {'matched_conditions': matched_conditions}
 
-            return 'hold'
+            return 'hold', '', {}
 
         except Exception as e:
             if self._debug_count < self._max_debug:
                 print(f"[StrategyEngine] 신호 생성 오류: {e}")
                 self._debug_count += 1
-            return 'hold'
+            return 'hold', '', {}
+
+    def _format_condition(self, df: pd.DataFrame, idx: int, condition: Dict) -> str:
+        """조건을 문자열로 포맷팅 - 실제 값 포함"""
+        try:
+            indicator = condition.get('indicator', '').upper()
+            operator = condition.get('operator', '')
+            value = condition.get('value', '')
+
+            # 현재 지표 값 가져오기
+            if indicator.lower() in df.columns:
+                current_val = df.iloc[idx][indicator.lower()]
+
+                # 숫자 값 포맷팅
+                if isinstance(current_val, (int, float)):
+                    if indicator in ['RSI', 'STOCH_K', 'STOCH_D']:
+                        current_str = f"{current_val:.1f}"
+                    elif indicator == 'VOLUME':
+                        current_str = f"{int(current_val):,}"
+                    else:
+                        current_str = f"{current_val:.2f}"
+                else:
+                    current_str = str(current_val)
+
+                # 비교 대상이 다른 지표인 경우
+                if isinstance(value, str) and not value.replace('.', '').isdigit():
+                    if value.lower() in df.columns:
+                        compare_val = df.iloc[idx][value.lower()]
+                        if isinstance(compare_val, (int, float)):
+                            value_str = f"{value.upper()}({compare_val:.2f})"
+                        else:
+                            value_str = f"{value.upper()}"
+                    else:
+                        value_str = value.upper()
+                else:
+                    value_str = str(value)
+
+                # 연산자 매핑
+                op_map = {
+                    '>': '>',
+                    '<': '<',
+                    '>=': '≥',
+                    '<=': '≤',
+                    '==': '=',
+                    'cross_up': '↗',
+                    'cross_down': '↘'
+                }
+                op_str = op_map.get(operator, operator)
+
+                # 크로스 조건은 특별 처리
+                if operator in ['cross_up', 'cross_down']:
+                    return f"{indicator}({current_str}) {op_str} {value_str}"
+                else:
+                    return f"{indicator}({current_str}) {op_str} {value_str}"
+            else:
+                # 지표 값을 가져올 수 없는 경우 기본 포맷
+                return f"{indicator} {operator} {value}"
+
+        except Exception as e:
+            # 오류 시 기본 포맷 반환
+            return f"{condition.get('indicator', '')} {condition.get('operator', '')} {condition.get('value', '')}"
 
 
 # 싱글톤 인스턴스

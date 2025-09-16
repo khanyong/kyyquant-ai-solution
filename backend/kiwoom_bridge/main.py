@@ -34,7 +34,7 @@ except ImportError:
 
 # backtest API import
 try:
-    from backtest_api import router as backtest_router, CODE_VERSION
+    from backtest_api import router as backtest_router, CODE_VERSION, BacktestRequest, run_backtest
     BACKTEST_AVAILABLE = True
     print(f"[OK] Backtest API loaded (Version: {CODE_VERSION})")
 except ImportError as e:
@@ -427,6 +427,20 @@ async def n8n_trading_signal(data: Dict[str, Any]):
         "message": f"Signal processed: {signal_type}",
         "timestamp": datetime.now().isoformat()
     }
+
+# Vercel 프론트엔드 호환 라우트
+@app.post("/api/backtest-run")
+async def backtest_run_vercel(request: BacktestRequest):
+    """Vercel에서 사용하는 경로 - /api/backtest/run으로 리다이렉트"""
+    print(f"[VERCEL ROUTE] Received request from Vercel frontend")
+    print(f"[VERCEL ROUTE] Redirecting to /api/backtest/run")
+    # backtest_router의 run_backtest 직접 호출
+    if BACKTEST_AVAILABLE:
+        return await run_backtest(request)
+    else:
+        raise HTTPException(status_code=503, detail="Backtest API not available")
+
+print("[OK] Vercel compatibility route added: /api/backtest-run")
 
 if __name__ == "__main__":
     import uvicorn

@@ -56,6 +56,7 @@ class Position:
     avg_price: float
     entry_date: datetime
     entry_reason: str
+    entry_signal_details: Dict = field(default_factory=dict)  # 매수 신호 상세
     partial_entries: List[Dict] = field(default_factory=list)  # 분할매수 기록
 
     def add_partial(self, quantity: int, price: float, date: datetime):
@@ -86,14 +87,17 @@ class Trade:
     """거래 기록"""
     date: datetime
     stock_code: str
-    action: str  # 'buy', 'sell', 'buy_partial', 'sell_partial'
-    quantity: int
-    price: float
-    commission: float
-    slippage: float
+    stock_name: str = ""  # 종목명
+    action: str = ""  # 'buy', 'sell', 'buy_partial', 'sell_partial'
+    quantity: int = 0
+    price: float = 0
+    commission: float = 0
+    slippage: float = 0
     profit: Optional[float] = None
     profit_pct: Optional[float] = None
     position_size: Optional[int] = None  # 거래 후 포지션 크기
+    signal_reason: str = ""  # 매매 이유
+    signal_details: Dict = field(default_factory=dict)  # 신호 상세 정보
 
 # 유틸리티 함수들
 def _iname(base: str, *params) -> str:
@@ -557,6 +561,34 @@ class AdvancedBacktestEngine:
         self.positions: Dict[str, Position] = {}
         self.trades: List[Trade] = []
         self.equity_curve: List[float] = []
+        self.stock_names: Dict[str, str] = {}  # 종목코드 -> 종목명 매핑
+
+    def get_stock_name(self, stock_code: str) -> str:
+        """종목명 조회"""
+        # 주요 종목 매핑 (실제 환경에서는 DB나 API 사용)
+        stock_map = {
+            '005930': '삼성전자',
+            '000660': 'SK하이닉스',
+            '035420': 'NAVER',
+            '035720': '카카오',
+            '051910': 'LG화학',
+            '006400': '삼성SDI',
+            '207940': '삼성바이오로직스',
+            '005380': '현대차',
+            '000270': '기아',
+            '068270': '셀트리온',
+            '105560': 'KB금융',
+            '055550': '신한지주',
+            '086790': '하나금융지주',
+            '316140': '우리금융지주',
+            '034730': 'SK',
+            '015760': '한국전력',
+            '032830': '삼성생명',
+            '003550': 'LG',
+            '034220': 'LG디스플레이',
+            '009150': '삼성전기'
+        }
+        return self.stock_names.get(stock_code, stock_map.get(stock_code, stock_code))
 
     def calculate_position_size(self, capital: float, price: float, config: Dict) -> int:
         """포지션 크기 계산"""
@@ -586,7 +618,8 @@ class AdvancedBacktestEngine:
 
         return max(0, shares)
 
-    def execute_buy(self, stock_code: str, date: datetime, price: float, config: Dict) -> Optional[Trade]:
+    def execute_buy(self, stock_code: str, date: datetime, price: float, config: Dict,
+                    signal_reason: str = "", signal_details: Dict = None) -> Optional[Trade]:
         """매수 실행"""
         # 분할매수 설정
         split_buy = config.get('splitBuy', {})
@@ -628,7 +661,8 @@ class AdvancedBacktestEngine:
                 quantity=position_size,
                 avg_price=actual_price,
                 entry_date=date,
-                entry_reason='signal'
+                entry_reason=signal_reason or 'signal',
+                entry_signal_details=signal_details or {}
             )
             action = 'buy'
 
@@ -639,18 +673,22 @@ class AdvancedBacktestEngine:
         trade = Trade(
             date=date,
             stock_code=stock_code,
+            stock_name=self.get_stock_name(stock_code),
             action=action,
             quantity=position_size,
             price=actual_price,
             commission=self.commission,
             slippage=self.slippage,
-            position_size=self.positions[stock_code].quantity
+            position_size=self.positions[stock_code].quantity,
+            signal_reason=signal_reason or 'signal',
+            signal_details=signal_details or {}
         )
         self.trades.append(trade)
 
         return trade
 
-    def execute_sell(self, stock_code: str, date: datetime, price: float, config: Dict) -> Optional[Trade]:
+    def execute_sell(self, stock_code: str, date: datetime, price: float, config: Dict,
+                     exit_reason: str = "", exit_details: Dict = None) -> Optional[Trade]:
         """매도 실행"""
         if stock_code not in self.positions:
             return None
@@ -693,6 +731,7 @@ class AdvancedBacktestEngine:
         trade = Trade(
             date=date,
             stock_code=stock_code,
+            stock_name=self.get_stock_name(stock_code),
             action=action,
             quantity=sell_quantity,
             price=actual_price,
@@ -700,7 +739,9 @@ class AdvancedBacktestEngine:
             slippage=self.slippage,
             profit=profit,
             profit_pct=(profit / (position.avg_price * sell_quantity)) * 100 if position.avg_price > 0 else 0,
-            position_size=position.quantity if stock_code in self.positions else 0
+            position_size=position.quantity if stock_code in self.positions else 0,
+            signal_reason=exit_reason or 'signal',
+            signal_details=exit_details or {}
         )
         self.trades.append(trade)
 
@@ -794,6 +835,42 @@ class AdvancedBacktestEngine:
             date = row['date']
             close = row['close']
 
+            # strategy_engine을 사용하여 상세 신호 정보 가져오기
+            signal_reason_buy = ""
+            signal_details_buy = {}
+            signal_reason_sell = ""
+            signal_details_sell = {}
+
+            # USE_STRATEGY_ENGINE이 활성화되어 있고 strategy_engine이 사용 가능한 경우
+            if USE_STRATEGY_ENGINE:
+                try:
+                    from strategy_engine import strategy_engine
+                    # 매수/매도 신호 및 상세 정보 가져오기
+                    signal_result = strategy_engine.generate_signal(data, date, strategy_config)
+                    if isinstance(signal_result, tuple):
+                        signal_type, reason, details = signal_result
+                        if signal_type == 'buy':
+                            signal_reason_buy = reason
+                            signal_details_buy = details
+                            # 첫 번째 매수 신호에 대해서만 디버그 출력
+                            if not hasattr(self, '_debug_buy_printed'):
+                                print(f"[DEBUG] 매수 신호 상세: {reason}")
+                                self._debug_buy_printed = True
+                        elif signal_type == 'sell':
+                            signal_reason_sell = reason
+                            signal_details_sell = details
+                            # 첫 번째 매도 신호에 대해서만 디버그 출력
+                            if not hasattr(self, '_debug_sell_printed'):
+                                print(f"[DEBUG] 매도 신호 상세: {reason}")
+                                self._debug_sell_printed = True
+                except Exception as e:
+                    print(f"[DEBUG] strategy_engine 신호 생성 실패: {e}")
+            else:
+                # USE_STRATEGY_ENGINE이 False인 경우 디버그
+                if not hasattr(self, '_debug_engine_printed'):
+                    print(f"[DEBUG] USE_STRATEGY_ENGINE={USE_STRATEGY_ENGINE}, USE_CORE={USE_CORE}")
+                    self._debug_engine_printed = True
+
             # 현재 포트폴리오 가치 계산
             portfolio_value = self.capital
             for stock_code, position in self.positions.items():
@@ -814,23 +891,39 @@ class AdvancedBacktestEngine:
                         target_profit = strategy_config.get('targetProfit', {})
                         stop_loss = strategy_config.get('stopLoss', {})
 
+                        exit_reason = ""
+                        exit_details = {}
+
                         if target_profit.get('enabled') and profit_pct >= target_profit.get('value', 5.0):
                             print(f"[목표 수익률 도달] {stock_code}: {profit_pct:.2f}% >= {target_profit.get('value')}%")
+                            exit_reason = f"목표 수익률 도달 ({profit_pct:.2f}% >= {target_profit.get('value')}%)"
+                            exit_details = {'type': 'target_profit', 'profit_pct': profit_pct, 'target': target_profit.get('value')}
                         elif stop_loss.get('enabled') and profit_pct <= -abs(stop_loss.get('value', 3.0)):
                             print(f"[손절 실행] {stock_code}: {profit_pct:.2f}% <= -{stop_loss.get('value')}%")
+                            exit_reason = f"손절 실행 ({profit_pct:.2f}% <= -{stop_loss.get('value')}%)"
+                            exit_details = {'type': 'stop_loss', 'loss_pct': profit_pct, 'stop_loss': stop_loss.get('value')}
+                        else:
+                            # strategy_engine에서 가져온 상세 정보 사용
+                            exit_reason = signal_reason_sell if signal_reason_sell else "매도 신호 발생"
+                            exit_details = signal_details_sell if signal_details_sell else {'type': 'signal', 'signal_value': row.get('sell_signal', -1)}
 
-                        self.execute_sell(stock_code, date, close, strategy_config)
+                        self.execute_sell(stock_code, date, close, strategy_config, exit_reason, exit_details)
             elif row['sell_signal'] == -1:
                 # 포지션이 없으면 기본 매도 신호 사용
                 for stock_code in list(self.positions.keys()):
-                    self.execute_sell(stock_code, date, close, strategy_config)
+                    exit_reason = signal_reason_sell if signal_reason_sell else "매도 신호 발생"
+                    exit_details = signal_details_sell if signal_details_sell else {'type': 'signal', 'signal_value': -1}
+                    self.execute_sell(stock_code, date, close, strategy_config, exit_reason, exit_details)
 
             # 매수 신호 처리
             if row['buy_signal'] == 1:
                 # 최대 포지션 수 체크
                 max_positions = strategy_config.get('maxPositions', 1)
                 if len(self.positions) < max_positions:
-                    self.execute_buy('TEST', date, close, strategy_config)
+                    # strategy_engine에서 가져온 상세 정보 사용
+                    signal_reason = signal_reason_buy if signal_reason_buy else "매수 신호 발생"
+                    signal_details = signal_details_buy if signal_details_buy else {'type': 'signal', 'signal_value': 1}
+                    self.execute_buy('TEST', date, close, strategy_config, signal_reason, signal_details)
 
         # 최종 포지션 정리
         if len(data) > 0:
@@ -840,7 +933,9 @@ class AdvancedBacktestEngine:
             for stock_code in list(self.positions.keys()):
                 position = self.positions[stock_code]
                 if position.quantity > 0:
-                    self.execute_sell(stock_code, final_date, final_price, strategy_config)
+                    exit_reason = "백테스트 종료 - 포지션 청산"
+                    exit_details = {'type': 'backtest_end'}
+                    self.execute_sell(stock_code, final_date, final_price, strategy_config, exit_reason, exit_details)
 
         # 성과 분석
         return self.analyze_performance()
@@ -903,9 +998,12 @@ class AdvancedBacktestEngine:
             trade_details.append({
                 'date': trade.date.isoformat() if isinstance(trade.date, datetime) else str(trade.date),
                 'stock_code': trade.stock_code,
+                'stock_name': trade.stock_name,
                 'action': trade.action,
                 'quantity': trade.quantity,
                 'price': trade.price,
+                'signal_reason': trade.signal_reason,
+                'signal_details': trade.signal_details,
                 'profit': trade.profit,
                 'profit_pct': trade.profit_pct,
                 'position_size': trade.position_size

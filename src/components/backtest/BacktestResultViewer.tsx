@@ -395,6 +395,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                     <TableCell>날짜</TableCell>
                     <TableCell>종목</TableCell>
                     <TableCell align="center">구분</TableCell>
+                    <TableCell>매매 이유</TableCell>
                     <TableCell align="right">수량</TableCell>
                     <TableCell align="right">단가</TableCell>
                     <TableCell align="right">금액</TableCell>
@@ -422,6 +423,26 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                           color={trade.action === 'buy' ? 'primary' : 'secondary'}
                           size="small"
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Stack spacing={0.5}>
+                          <Typography variant="caption" sx={{ maxWidth: 200, display: 'block' }}>
+                            {trade.signal_reason || '-'}
+                          </Typography>
+                          {trade.signal_details?.type && (
+                            <Chip
+                              label={trade.signal_details.type === 'target_profit' ? '목표달성' :
+                                     trade.signal_details.type === 'stop_loss' ? '손절' :
+                                     trade.signal_details.type === 'signal' ? '신호' :
+                                     trade.signal_details.type === 'backtest_end' ? '청산' :
+                                     trade.signal_details.type}
+                              size="small"
+                              variant="outlined"
+                              color={trade.signal_details.type === 'target_profit' ? 'success' :
+                                     trade.signal_details.type === 'stop_loss' ? 'error' : 'default'}
+                            />
+                          )}
+                        </Stack>
                       </TableCell>
                       <TableCell align="right">{(trade.shares || trade.quantity || 0).toLocaleString()}</TableCell>
                       <TableCell align="right">{(trade.price || 0).toLocaleString()}원</TableCell>

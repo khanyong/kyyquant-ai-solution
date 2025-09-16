@@ -362,14 +362,23 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
                 price = df.loc[date, 'close']
 
                 # 전략 엔진을 사용하여 실제 신호 생성
-                signal = strategy_engine.generate_signal(df, date, strategy_params)
+                signal_result = strategy_engine.generate_signal(df, date, strategy_params)
+
+                # 새로운 반환 형식 처리
+                if isinstance(signal_result, tuple):
+                    signal, signal_reason, signal_details = signal_result
+                else:
+                    # 이전 버전 호환성
+                    signal = signal_result
+                    signal_reason = ""
+                    signal_details = {}
 
                 # 처음 몇 개 신호 로그 (디버그)
                 if not hasattr(perform_backtest, '_signal_log_count'):
                     perform_backtest._signal_log_count = 0
                 if perform_backtest._signal_log_count < 20 and signal != 'hold':
                     perform_backtest._signal_log_count += 1
-                    logger.info(f"신호 발생: {date} {code} {signal} (price={price})")
+                    logger.info(f"신호 발생: {date} {code} {signal} (price={price}) - {signal_reason}")
 
                 if signal == 'buy' and portfolio['cash'] > price * 100:
                     # 매수
@@ -390,22 +399,24 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
                             'action': 'buy',
                             'price': price,
                             'shares': shares,
-                            'cost': cost
+                            'cost': cost,
+                            'signal_reason': signal_reason,
+                            'signal_details': signal_details
                         })
-                
+
                 elif signal == 'sell' and code in portfolio['positions'] and portfolio['positions'][code] > 0:
                     # 매도
                     shares = portfolio['positions'][code]
                     revenue = price * shares * (1 - commission - slippage)
                     portfolio['cash'] += revenue
-                    
+
                     # 손익 계산
                     original_cost = portfolio['position_costs'].get(code, 0)
                     profit = revenue - original_cost if original_cost > 0 else 0
-                    
+
                     portfolio['positions'][code] = 0
                     portfolio['position_costs'][code] = 0  # 비용 초기화
-                    
+
                     trades.append({
                         'date': date.isoformat() if hasattr(date, 'isoformat') else str(date),
                         'code': code,
@@ -414,7 +425,9 @@ def perform_backtest(strategy: Dict, stock_data: Dict, initial_capital: float, c
                         'shares': shares,
                         'revenue': revenue,
                         'cost': original_cost,  # 원래 매수 비용
-                        'profit': profit  # 손익
+                        'profit': profit,  # 손익
+                        'signal_reason': signal_reason,
+                        'signal_details': signal_details
                     })
                 
                 # 포지션 평가

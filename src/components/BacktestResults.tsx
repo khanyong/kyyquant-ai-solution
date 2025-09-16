@@ -62,6 +62,7 @@ const BacktestResults: React.FC = () => {
       
       // 거래 내역 조회
       const tradesData = await BacktestService.getBacktestTrades(backtestId);
+      console.log('Trades data from service:', tradesData);
       setTrades(tradesData || []);
       
     } catch (err: any) {
@@ -512,8 +513,10 @@ const BacktestResults: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>날짜</TableCell>
-                    <TableCell>종목</TableCell>
+                    <TableCell>종목코드</TableCell>
+                    <TableCell>종목명</TableCell>
                     <TableCell>거래</TableCell>
+                    <TableCell>매매 이유</TableCell>
                     <TableCell align="right">가격</TableCell>
                     <TableCell align="right">수량</TableCell>
                     <TableCell align="right">금액</TableCell>
@@ -523,20 +526,40 @@ const BacktestResults: React.FC = () => {
                 <TableBody>
                   {trades.map((trade, index) => (
                     <TableRow key={index}>
-                      <TableCell>{new Date(trade.trade_date).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(trade.trade_date || trade.date).toLocaleDateString()}</TableCell>
                       <TableCell>{trade.stock_code}</TableCell>
+                      <TableCell>{trade.stock_name || trade.stock_code}</TableCell>
                       <TableCell>
-                        <Chip 
-                          label={trade.action} 
+                        <Chip
+                          label={trade.action === 'buy' ? '매수' : trade.action === 'sell' ? '매도' : trade.action.toUpperCase()}
                           size="small"
-                          color={trade.action === 'BUY' ? 'primary' : 'secondary'}
+                          color={trade.action === 'buy' || trade.action === 'BUY' ? 'primary' : 'secondary'}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" style={{ maxWidth: 200, display: 'block' }}>
+                          {trade.signal_reason || '-'}
+                        </Typography>
+                        {trade.signal_details?.type && (
+                          <Chip
+                            label={trade.signal_details.type === 'target_profit' ? '목표달성' :
+                                   trade.signal_details.type === 'stop_loss' ? '손절' :
+                                   trade.signal_details.type === 'signal' ? '신호' :
+                                   trade.signal_details.type === 'backtest_end' ? '청산' :
+                                   trade.signal_details.type}
+                            size="small"
+                            variant="outlined"
+                            color={trade.signal_details.type === 'target_profit' ? 'success' :
+                                   trade.signal_details.type === 'stop_loss' ? 'error' : 'default'}
+                            sx={{ mt: 0.5 }}
+                          />
+                        )}
                       </TableCell>
                       <TableCell align="right">₩{trade.price?.toLocaleString()}</TableCell>
                       <TableCell align="right">{trade.quantity}</TableCell>
                       <TableCell align="right">₩{trade.amount?.toLocaleString()}</TableCell>
-                      <TableCell align="right" sx={{ 
-                        color: trade.profit_loss > 0 ? 'success.main' : trade.profit_loss < 0 ? 'error.main' : 'text.primary' 
+                      <TableCell align="right" sx={{
+                        color: trade.profit_loss > 0 ? 'success.main' : trade.profit_loss < 0 ? 'error.main' : 'text.primary'
                       }}>
                         {trade.profit_loss ? `₩${trade.profit_loss.toLocaleString()}` : '-'}
                       </TableCell>

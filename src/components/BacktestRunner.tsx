@@ -881,7 +881,10 @@ const BacktestRunner: React.FC = () => {
             price: trade.price || 0,
             amount: trade.amount || trade.cost || trade.proceeds || trade.revenue || 0,
             profit_loss: trade.profit_loss || trade.profit || 0,
-            profit_rate: trade.profit_rate || trade.profit_pct || trade.return_rate || 0
+            profit_rate: trade.profit_rate || trade.profit_pct || trade.return_rate || 0,
+            signal_reason: trade.signal_reason || '',
+            signal_details: trade.signal_details || {},
+            trade_date: trade.date || trade.trade_date || ''
           })),
           // daily_returns는 개별 종목 결과에서 필요시 집계
           daily_returns: [],

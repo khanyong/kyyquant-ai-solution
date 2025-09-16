@@ -177,17 +177,33 @@ export class BacktestService {
   // 백테스트 거래 내역 조회
   static async getBacktestTrades(backtestId: string) {
     try {
+      // backtest_results 테이블에서 trade_details JSONB 필드를 가져옴
       const { data, error } = await supabase
-        .from('backtest_trades')
-        .select('*')
-        .eq('backtest_id', backtestId)
-        .order('trade_date', { ascending: false })
+        .from('backtest_results')
+        .select('trade_details')
+        .eq('id', backtestId)
+        .single()
 
       if (error) throw error
-      return data as BacktestTrade[]
+
+      // trade_details 배열 반환
+      return data?.trade_details || []
     } catch (error) {
       console.error('Error fetching backtest trades:', error)
-      throw error
+      // backtest_trades 테이블에서 시도 (fallback)
+      try {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('backtest_trades')
+          .select('*')
+          .eq('backtest_id', backtestId)
+          .order('trade_date', { ascending: false })
+
+        if (fallbackError) throw fallbackError
+        return fallbackData as BacktestTrade[]
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError)
+        return []
+      }
     }
   }
 
