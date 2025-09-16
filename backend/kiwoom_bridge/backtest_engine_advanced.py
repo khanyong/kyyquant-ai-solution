@@ -765,51 +765,60 @@ class AdvancedBacktestEngine:
         return trade
 
     def run(self, data: pd.DataFrame, strategy_config: Dict) -> Dict[str, Any]:
-        """백테스트 실행 - Core 모듈 우선 사용"""
+        """백테스트 실행 - 신호가 이미 생성된 데이터 처리"""
         print(f"[DEBUG] AdvancedBacktestEngine.run 시작")
         print(f"[DEBUG] 입력 데이터 shape: {data.shape}")
-        print(f"[DEBUG] Core 모듈 사용: {USE_CORE}")
 
-        # Core 모듈 사용 시
-        if USE_CORE:
-            print("[DEBUG] Core 모듈로 처리")
-
-            # params 구조 자동 수정
-            indicators = strategy_config.get('indicators', [])
-            fixed_indicators = []
-            for ind in indicators:
-                if 'params' not in ind and 'period' in ind:
-                    fixed_ind = {
-                        'type': ind.get('type', 'MA').upper(),
-                        'params': {'period': ind.get('period', 20)}
-                    }
-                    print(f"[FIX] 지표 구조: {ind} → {fixed_ind}")
-                    fixed_indicators.append(fixed_ind)
-                else:
-                    fixed_indicators.append(ind)
-
-            # 조건 가져오기 (정규화는 evaluate_conditions에서 처리)
-            buy_conditions = strategy_config.get('buyConditions', [])
-            sell_conditions = strategy_config.get('sellConditions', [])
-
-            # Core 설정
-            config = {
-                **strategy_config,
-                'indicators': fixed_indicators,
-                'buyConditions': buy_conditions,
-                'sellConditions': sell_conditions
-            }
-
-            # 지표 계산
-            data = compute_indicators(data, config)
-
-            # 신호 생성 (evaluate_conditions는 DataFrame을 반환)
-            data_with_signals = evaluate_conditions(data, buy_conditions, sell_conditions)
-            data = data_with_signals  # DataFrame 전체를 교체
-
+        # 신호가 이미 있는지 확인
+        if 'buy_signal' in data.columns and 'sell_signal' in data.columns:
+            print("[DEBUG] 신호가 이미 생성됨")
             buy_count = (data['buy_signal'] == 1).sum()
             sell_count = (data['sell_signal'] == -1).sum()
-            print(f"[Core] 신호: 매수 {buy_count}, 매도 {sell_count}")
+            print(f"[DEBUG] 기존 신호: 매수 {buy_count}, 매도 {sell_count}")
+        else:
+            # 신호가 없으면 생성 (폴백)
+            print("[DEBUG] 신호 생성 필요")
+
+            # Core 모듈 사용 시
+            if USE_CORE:
+                print("[DEBUG] Core 모듈로 처리")
+
+                # params 구조 자동 수정
+                indicators = strategy_config.get('indicators', [])
+                fixed_indicators = []
+                for ind in indicators:
+                    if 'params' not in ind and 'period' in ind:
+                        fixed_ind = {
+                            'type': ind.get('type', 'MA').upper(),
+                            'params': {'period': ind.get('period', 20)}
+                        }
+                        print(f"[FIX] 지표 구조: {ind} → {fixed_ind}")
+                        fixed_indicators.append(fixed_ind)
+                    else:
+                        fixed_indicators.append(ind)
+
+                # 조건 가져오기 (정규화는 evaluate_conditions에서 처리)
+                buy_conditions = strategy_config.get('buyConditions', [])
+                sell_conditions = strategy_config.get('sellConditions', [])
+
+                # Core 설정
+                config = {
+                    **strategy_config,
+                    'indicators': fixed_indicators,
+                    'buyConditions': buy_conditions,
+                    'sellConditions': sell_conditions
+                }
+
+                # 지표 계산
+                data = compute_indicators(data, config)
+
+                # 신호 생성 (evaluate_conditions는 DataFrame을 반환)
+                data_with_signals = evaluate_conditions(data, buy_conditions, sell_conditions)
+                data = data_with_signals  # DataFrame 전체를 교체
+
+                buy_count = (data['buy_signal'] == 1).sum()
+                sell_count = (data['sell_signal'] == -1).sum()
+                print(f"[Core] 신호: 매수 {buy_count}, 매도 {sell_count}")
 
         # 폴백: 기존 방식
         elif USE_COMPLETE_INDICATORS:
@@ -928,7 +937,11 @@ class AdvancedBacktestEngine:
             elif row['sell_signal'] == -1:
                 # 포지션이 없으면 기본 매도 신호 사용
                 for stock_code in list(self.positions.keys()):
-                    exit_reason = signal_reason_sell if signal_reason_sell else "매도 신호 발생"
+                    # sell_reason 컬럼이 있으면 사용, 없으면 strategy_engine 정보 사용
+                    if 'sell_reason' in row and row['sell_reason']:
+                        exit_reason = row['sell_reason']
+                    else:
+                        exit_reason = signal_reason_sell if signal_reason_sell else "매도 신호 발생"
                     exit_details = signal_details_sell if signal_details_sell else {'type': 'signal', 'signal_value': -1}
                     self.execute_sell(stock_code, date, close, strategy_config, exit_reason, exit_details)
 
@@ -937,8 +950,11 @@ class AdvancedBacktestEngine:
                 # 최대 포지션 수 체크
                 max_positions = strategy_config.get('maxPositions', 1)
                 if len(self.positions) < max_positions:
-                    # strategy_engine에서 가져온 상세 정보 사용
-                    signal_reason = signal_reason_buy if signal_reason_buy else "매수 신호 발생"
+                    # buy_reason 컬럼이 있으면 사용, 없으면 strategy_engine 정보 사용
+                    if 'buy_reason' in row and row['buy_reason']:
+                        signal_reason = row['buy_reason']
+                    else:
+                        signal_reason = signal_reason_buy if signal_reason_buy else "매수 신호 발생"
                     signal_details = signal_details_buy if signal_details_buy else {'type': 'signal', 'signal_value': 1}
                     self.execute_buy('TEST', date, close, strategy_config, signal_reason, signal_details)
 

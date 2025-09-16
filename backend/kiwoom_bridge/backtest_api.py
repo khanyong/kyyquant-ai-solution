@@ -126,6 +126,7 @@ class BacktestResult(BaseModel):
     buy_count: int = 0  # 매수 횟수
     sell_count: int = 0  # 매도 횟수
     trades: List[Dict]
+    data_source: str = "unknown"  # 데이터 소스: "supabase", "mock", "external"
 
 class Strategy:
     """전략 실행 클래스 - Core 모듈 우선 사용"""
@@ -306,9 +307,44 @@ class Strategy:
             data.loc[data['buy_signal'] == 1, 'signal'] = 1
             data.loc[data['sell_signal'] == -1, 'signal'] = -1
 
+            # 신호 이유 추가 - 조건을 문자열로 변환
+            buy_reason = []
+            for cond in buy_conditions:
+                indicator = cond.get('indicator', '')
+                operator = cond.get('operator', '')
+                value = cond.get('value', '')
+                if operator == 'cross_above':
+                    buy_reason.append(f"{indicator} CrossUp {value}")
+                elif operator == 'cross_below':
+                    buy_reason.append(f"{indicator} CrossDown {value}")
+                else:
+                    buy_reason.append(f"{indicator} {operator} {value}")
+
+            sell_reason = []
+            for cond in sell_conditions:
+                indicator = cond.get('indicator', '')
+                operator = cond.get('operator', '')
+                value = cond.get('value', '')
+                if operator == 'cross_above':
+                    sell_reason.append(f"{indicator} CrossUp {value}")
+                elif operator == 'cross_below':
+                    sell_reason.append(f"{indicator} CrossDown {value}")
+                else:
+                    sell_reason.append(f"{indicator} {operator} {value}")
+
+            # 신호 이유를 데이터프레임에 추가
+            data['buy_reason'] = ' & '.join(buy_reason) if buy_reason else '매수 신호 발생'
+            data['sell_reason'] = ' & '.join(sell_reason) if sell_reason else '매도 신호 발생'
+
             buy_count = (data['buy_signal'] == 1).sum()
             sell_count = (data['sell_signal'] == -1).sum()
-            print(f"[Core] 신호: 매수 {buy_count}, 매도 {sell_count}")
+            signal_count = (data['signal'] != 0).sum()
+            print(f"[Core] 신호: 매수 {buy_count}, 매도 {sell_count}, signal 컬럼: {signal_count}")
+
+            # 신호 발생일 출력
+            if buy_count > 0:
+                buy_dates = data[data['buy_signal'] == 1].index[:3]
+                print(f"[Core] 매수 신호 날짜: {[d.strftime('%Y-%m-%d') for d in buy_dates]}")
 
             return data
 
@@ -782,7 +818,8 @@ async def run_backtest(request: BacktestRequest):
             
             # 실제 주가 데이터 조회 (3-tier 전략: Supabase → API → Mock)
             data = None
-            
+            data_source = "unknown"  # 데이터 소스 추적
+
             # 1. Supabase에서 데이터 조회 시도
             if supabase:
                 try:
@@ -795,6 +832,7 @@ async def run_backtest(request: BacktestRequest):
                     if response.data and len(response.data) > 0:
                         print(f"  [OK] Supabase에서 {len(response.data)}개 데이터 로드")
                         data = pd.DataFrame(response.data)
+                        data_source = "supabase"  # Supabase 데이터 사용
                         # trade_date를 date로 변환
                         data['date'] = pd.to_datetime(data['trade_date'])
                         
@@ -833,6 +871,7 @@ async def run_backtest(request: BacktestRequest):
             # 3. 데이터가 없으면 Mock 데이터 사용 (개발/테스트용)
             if data is None or data.empty:
                 print(f"  ! 실제 데이터 없음. Mock 데이터 생성 중...")
+                data_source = "mock"  # Mock 데이터 사용
                 dates = pd.date_range(start=request.start_date, end=request.end_date, freq='D')
                 base_price = 50000 + np.random.randint(0, 50000)
                 mock_prices = np.random.randn(len(dates)) * (base_price * 0.02) + base_price
@@ -862,6 +901,11 @@ async def run_backtest(request: BacktestRequest):
             if USE_ADVANCED_ENGINE:
                 # 고급 백테스트 엔진 사용
                 print(f"  - 고급 백테스트 엔진 사용")
+
+                # 먼저 전략 실행하여 신호와 이유 추가
+                strategy = Strategy()
+                data = await strategy.execute_strategy(data, merged_parameters)
+
                 engine = AdvancedBacktestEngine(
                     initial_capital=capital_per_stock,
                     commission=request.commission,
@@ -880,7 +924,8 @@ async def run_backtest(request: BacktestRequest):
                     losing_trades=convert_numpy_to_native(result_dict['losing_trades']),
                     buy_count=convert_numpy_to_native(result_dict.get('buy_count', 0)),
                     sell_count=convert_numpy_to_native(result_dict.get('sell_count', 0)),
-                    trades=convert_numpy_to_native(result_dict['trades'])
+                    trades=convert_numpy_to_native(result_dict['trades']),
+                    data_source=data_source  # 데이터 소스 추가
                 )
             else:
                 # 기본 백테스트 엔진 사용
@@ -902,6 +947,7 @@ async def run_backtest(request: BacktestRequest):
             
             all_results.append({
                 'stock_code': stock_code,
+                'data_source': data_source,  # 데이터 소스 추가
                 'result': result.dict()
             })
             print(f"[완료] {idx}/{total_stocks} - 종목코드: {stock_code} 완료")
@@ -922,7 +968,16 @@ async def run_backtest(request: BacktestRequest):
         
         print(f"[결과] 평균 수익률: {total_return:.2f}%, 평균 승률: {avg_win_rate:.2f}%")
         print(f"[결과] 총 거래: {total_trades}회, 승리: {total_winning}회, 패배: {total_losing}회")
-        
+
+        # 데이터 소스 집계
+        data_sources = [r.get('data_source', 'unknown') for r in all_results]
+        primary_source = "supabase" if "supabase" in data_sources else ("mock" if "mock" in data_sources else "unknown")
+        source_count = {
+            "supabase": data_sources.count("supabase"),
+            "mock": data_sources.count("mock"),
+            "unknown": data_sources.count("unknown")
+        }
+
         return {
             "success": True,
             "summary": {
@@ -936,7 +991,9 @@ async def run_backtest(request: BacktestRequest):
                 "winning_trades": total_winning,
                 "losing_trades": total_losing,
                 "buy_count": total_buy_count,
-                "sell_count": total_sell_count
+                "sell_count": total_sell_count,
+                "data_source": primary_source,  # 주요 데이터 소스
+                "data_source_detail": source_count  # 데이터 소스별 개수
             },
             "individual_results": all_results,
             "request": request.dict()
@@ -1091,6 +1148,7 @@ async def analyze_strategy(request: AnalyzeRequest):
                     if response.data and len(response.data) > 0:
                         print(f"  [OK] Supabase에서 {len(response.data)}개 데이터 로드")
                         data = pd.DataFrame(response.data)
+                        data_source = "supabase"  # Supabase 데이터 사용
                         # trade_date를 date로 변환
                         data['date'] = pd.to_datetime(data['trade_date'])
 
