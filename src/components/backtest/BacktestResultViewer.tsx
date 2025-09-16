@@ -94,7 +94,7 @@ interface Trade {
   code?: string;  // 백엔드에서 사용하는 필드
   action: 'buy' | 'sell';
   quantity?: number;
-  shares?: number;  // 백엔드에서 사용하는 필드  
+  shares?: number;  // 백엔드에서 사용하는 필드
   price: number;
   amount?: number;
   cost?: number;  // 백엔드에서 사용하는 필드 (매수)
@@ -103,6 +103,16 @@ interface Trade {
   profit_rate?: number;
   profit_pct?: number;  // 백엔드에서 사용하는 수익률 필드
   proceeds?: number;  // 백엔드에서 사용하는 매도 수익금
+  signal_reason?: string;  // 매매 이유
+  signal_details?: {  // 신호 상세 정보
+    type?: string;
+    profit_pct?: number;
+    target?: number;
+    loss_pct?: number;
+    stop_loss?: number;
+    signal_value?: number;
+    matched_conditions?: string[];
+  };
   profit?: number;  // 백엔드에서 사용하는 순이익
 }
 
