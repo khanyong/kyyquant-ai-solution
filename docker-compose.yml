@@ -1,0 +1,47 @@
+version: '3.3'  # 시놀로지 Container Manager 호환
+
+services:
+  # 키움 자동매매 백엔드 서버
+  backend:
+    build: ./backend
+    container_name: auto-stock-backend
+    ports:
+      - "8001:8001"
+    environment:
+      # Supabase 설정
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      # 키움 API 설정 (필요시)
+      - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
+      - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}
+      - KIWOOM_ACCOUNT_NO=${KIWOOM_ACCOUNT_NO}
+      - KIWOOM_IS_DEMO=${KIWOOM_IS_DEMO}
+      # 프론트엔드 URL (CORS)
+      - FRONTEND_URL=${FRONTEND_URL}
+      # Python 설정
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Seoul
+      # 로깅
+      - LOG_LEVEL=INFO
+    volumes:
+      # 시놀로지 경로 설정
+      - ./backend:/app
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    extra_hosts:
+      - "openapi.kiwoom.com:211.115.74.81"
+    networks:
+      - trading-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  trading-network:
+    driver: bridge

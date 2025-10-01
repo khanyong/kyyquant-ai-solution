@@ -931,14 +931,15 @@
       }
     ],
     "metadata": {
-      "lastUpdated": "2025-09-14T15:14:11.899138",
-      "totalTasks": 26,
-      "completedTasks": 19,
+      "lastUpdated": "2025-10-01T00:00:00.000000",
+      "totalTasks": 27,
+      "completedTasks": 20,
       "inProgressTasks": 1,
       "pendingTasks": 6,
-      "progress": 81,
+      "progress": 77,
       "projectName": "KyyQuant AI Solution",
-      "description": "React + TypeScript + Vite 기반 자동매매 시스템"
+      "description": "React + TypeScript + Vite 기반 자동매매 시스템",
+      "note": "최신 로드맵은 MASTER_ROADMAP.md를 참조하세요"
     }
   }
 }

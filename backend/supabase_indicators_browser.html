@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Indicators 브라우저</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .config-section {
+            background: #f7f8fc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"], input[type="password"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .filter-section {
+            margin-bottom: 20px;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #f7f8fc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .formula-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #f7f8fc;
+            padding: 5px;
+            border-radius: 3px;
+            word-break: break-all;
+            max-width: 400px;
+        }
+
+        .download-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .type-badge.built-in {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .type-badge.custom {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .type-badge.composite {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Supabase Indicators 테이블 브라우저</h1>
+
+        <div class="config-section">
+            <h3>Supabase 연결 설정</h3>
+            <div class="config-grid">
+                <input type="text" id="supabaseUrl" placeholder="Supabase URL (https://xxx.supabase.co)">
+                <input type="password" id="supabaseKey" placeholder="Anon Key">
+                <button onclick="connectSupabase()">연결</button>
+            </div>
+            <small>💡 브라우저에서 직접 Supabase에 연결합니다. 데이터는 로컬에만 저장됩니다.</small>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">전체 지표</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uniqueCount">0</div>
+                <div class="stat-label">고유 지표</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="builtInCount">0</div>
+                <div class="stat-label">Built-in</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="customCount">0</div>
+                <div class="stat-label">Custom</div>
+            </div>
+        </div>
+
+        <div class="filter-section" id="filterSection" style="display: none;">
+            <input type="text" class="filter-input" id="filterInput"
+                   placeholder="🔍 검색 (이름, 설명, 타입...)">
+        </div>
+
+        <div id="tableContainer"></div>
+
+        <div class="download-buttons" id="downloadButtons" style="display: none;">
+            <button onclick="downloadJSON()">📥 JSON 다운로드</button>
+            <button onclick="downloadCSV()">📥 CSV 다운로드</button>
+            <button onclick="downloadSQL()">📥 SQL 다운로드</button>
+        </div>
+    </div>
+
+    <!-- 상세 모달 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle"></h2>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let indicatorsData = [];
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            status.style.display = 'block';
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function connectSupabase() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('supabaseKey').value;
+
+            if (!url || !key) {
+                showStatus('URL과 Key를 모두 입력하세요', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${url}/rest/v1/indicators?select=*`, {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                indicatorsData = await response.json();
+                showStatus(`✅ ${indicatorsData.length}개 지표 로드 완료`, 'success');
+                displayData();
+
+            } catch (error) {
+                showStatus(`연결 실패: ${error.message}`, 'error');
+            }
+        }
+
+        function displayData() {
+            // 통계 계산
+            const uniqueNames = new Set(indicatorsData.map(i => i.name));
+            const builtIn = indicatorsData.filter(i => i.calculation_type === 'built-in').length;
+            const custom = indicatorsData.filter(i => i.calculation_type === 'custom').length;
+
+            document.getElementById('totalCount').textContent = indicatorsData.length;
+            document.getElementById('uniqueCount').textContent = uniqueNames.size;
+            document.getElementById('builtInCount').textContent = builtIn;
+            document.getElementById('customCount').textContent = custom;
+
+            document.getElementById('stats').style.display = 'grid';
+            document.getElementById('filterSection').style.display = 'block';
+            document.getElementById('downloadButtons').style.display = 'flex';
+
+            renderTable(indicatorsData);
+        }
+
+        function renderTable(data) {
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>이름</th>
+                            <th>타입</th>
+                            <th>설명</th>
+                            <th>Formula</th>
+                            <th>액션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.forEach(item => {
+                const typeClass = item.calculation_type || 'unknown';
+                const typeBadge = `<span class="type-badge ${typeClass}">${item.calculation_type || 'unknown'}</span>`;
+
+                let formulaPreview = '';
+                if (item.formula) {
+                    try {
+                        const formula = typeof item.formula === 'string' ?
+                                      JSON.parse(item.formula) : item.formula;
+                        if (formula.method) {
+                            formulaPreview = `method: ${formula.method}`;
+                        } else if (formula.code) {
+                            formulaPreview = formula.code.substring(0, 50) + '...';
+                        }
+                    } catch {
+                        formulaPreview = item.formula.substring(0, 50) + '...';
+                    }
+                }
+
+                html += `
+                    <tr>
+                        <td>${item.id}</td>
+                        <td><strong>${item.name}</strong></td>
+                        <td>${typeBadge}</td>
+                        <td>${item.description || ''}</td>
+                        <td class="formula-cell">${formulaPreview}</td>
+                        <td>
+                            <button onclick="showDetail(${item.id})">상세</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('tableContainer').innerHTML = html;
+        }
+
+        function showDetail(id) {
+            const item = indicatorsData.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('modalTitle').textContent = `${item.name} 상세 정보`;
+
+            let formula = item.formula;
+            if (typeof formula === 'string') {
+                try {
+                    formula = JSON.parse(formula);
+                } catch {}
+            }
+
+            let content = `
+                <p><strong>ID:</strong> ${item.id}</p>
+                <p><strong>이름:</strong> ${item.name}</p>
+                <p><strong>계산 타입:</strong> ${item.calculation_type || 'unknown'}</p>
+                <p><strong>설명:</strong> ${item.description || '없음'}</p>
+                <p><strong>생성일:</strong> ${item.created_at || '알 수 없음'}</p>
+
+                <h3>Formula</h3>
+                <pre>${JSON.stringify(formula, null, 2)}</pre>
+            `;
+
+            if (item.parameters) {
+                content += `
+                    <h3>Parameters</h3>
+                    <pre>${JSON.stringify(item.parameters, null, 2)}</pre>
+                `;
+            }
+
+            document.getElementById('modalContent').innerHTML = content;
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // 필터링
+        document.getElementById('filterInput')?.addEventListener('input', (e) => {
+            const filter = e.target.value.toLowerCase();
+            const filtered = indicatorsData.filter(item => {
+                return item.name?.toLowerCase().includes(filter) ||
+                       item.description?.toLowerCase().includes(filter) ||
+                       item.calculation_type?.toLowerCase().includes(filter) ||
+                       JSON.stringify(item.formula).toLowerCase().includes(filter);
+            });
+            renderTable(filtered);
+        });
+
+        function downloadJSON() {
+            const dataStr = JSON.stringify(indicatorsData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+            const exportFileDefaultName = `indicators_${new Date().getTime()}.json`;
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        function downloadCSV() {
+            let csv = 'ID,Name,Type,Description,Formula\n';
+
+            indicatorsData.forEach(item => {
+                const formula = JSON.stringify(item.formula || '').replace(/"/g, '""');
+                csv += `${item.id},"${item.name}","${item.calculation_type}","${item.description || ''}","${formula}"\n`;
+            });
+
+            const dataUri = 'data:text/csv;charset=utf-8,'+ encodeURIComponent(csv);
+            const exportFileDefaultName = `indicators_${new Date().getTime()}.csv`;
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        function downloadSQL() {
+            let sql = '-- Supabase indicators table data\n';
+            sql += `-- Generated at: ${new Date().toISOString()}\n\n`;
+
+            indicatorsData.forEach(item => {
+                const values = [];
+                Object.entries(item).forEach(([key, value]) => {
+                    if (value === null) {
+                        values.push('NULL');
+                    } else if (typeof value === 'string') {
+                        values.push(`'${value.replace(/'/g, "''")}'`);
+                    } else if (typeof value === 'object') {
+                        values.push(`'${JSON.stringify(value).replace(/'/g, "''")}'`);
+                    } else {
+                        values.push(value);
+                    }
+                });
+
+                const columns = Object.keys(item).join(', ');
+                sql += `INSERT INTO indicators (${columns}) VALUES (${values.join(', ')});\n`;
+            });
+
+            const dataUri = 'data:text/plain;charset=utf-8,'+ encodeURIComponent(sql);
+            const exportFileDefaultName = `indicators_${new Date().getTime()}.sql`;
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        // 모달 외부 클릭 시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

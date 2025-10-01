@@ -78,6 +78,7 @@ import {
   normalizeStopLoss,
   ConflictCheckResult
 } from '../utils/strategyValidator'
+import { ensureStandardFormat } from '../utils/conditionConverter'
 
 interface Indicator {
   id: string
@@ -597,6 +598,13 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       const investmentConfig = localStorage.getItem('investmentConfig')
       const universeSettings = investmentConfig ? JSON.parse(investmentConfig) : null
 
+      // ===== 조건 형식 변환 (구 형식 → 표준 형식) =====
+      const convertedStrategy = ensureStandardFormat({
+        buyConditions: strategy.buyConditions,
+        sellConditions: strategy.sellConditions
+      })
+      console.log('[StrategyBuilder] Converted to standard format:', convertedStrategy)
+
       // 백테스팅과 호환되는 파라미터 구성
       const parameters: any = {
         strategy_type: detailedType,  // 상세 타입 정보 저장
@@ -614,7 +622,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         indicators: strategy.indicators.map(ind => {
           // params 구조가 있는지 확인
           const indicatorConfig: any = {
-            type: ind.id.toLowerCase(), // 소문자로 통일
+            name: ind.id.toLowerCase().replace('_', ''),  // 예: sma_20 → sma
+            type: ind.id.toUpperCase(),  // 예: SMA
             params: ind.params || {}
           }
 
@@ -625,9 +634,9 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
           return indicatorConfig
         }),
-        // 매수/매도 조건
-        buyConditions: strategy.buyConditions,
-        sellConditions: strategy.sellConditions,
+        // 매수/매도 조건 (표준 형식으로 변환됨)
+        buyConditions: convertedStrategy.buyConditions,
+        sellConditions: convertedStrategy.sellConditions,
         // 목표 수익률 및 손절
         targetProfit: strategy.targetProfit,
         stopLoss: strategy.stopLoss,
@@ -674,9 +683,9 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         // type: null,  // type 컬럼은 null로 설정 (체크 제약조건 때문)
         config: {
           ...parameters,
-          // 서버가 config 내부에서 직접 조건을 찾으므로 여기에도 포함
-          buyConditions: strategy.buyConditions || [],
-          sellConditions: strategy.sellConditions || [],
+          // 서버가 config 내부에서 직접 조건을 찾으므로 여기에도 포함 (표준 형식)
+          buyConditions: convertedStrategy.buyConditions || [],
+          sellConditions: convertedStrategy.sellConditions || [],
           // 목표 수익률 및 손절 설정도 config에 포함
           targetProfit: strategy.targetProfit,
           stopLoss: strategy.stopLoss,
@@ -690,10 +699,10 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
           list: strategy.indicators
         },
         entry_conditions: {
-          buy: strategy.buyConditions
+          buy: convertedStrategy.buyConditions
         },
         exit_conditions: {
-          sell: strategy.sellConditions
+          sell: convertedStrategy.sellConditions
         },
         risk_management: strategy.riskManagement,
         is_active: true,

@@ -451,92 +451,126 @@ const BacktestRunner: React.FC = () => {
   // 템플릿 적용 함수
   const applyTemplate = async (template: any) => {
     try {
-      // 템플릿을 임시 전략으로 저장
       const user = await authService.getCurrentUser();
       if (!user) {
         setError('로그인이 필요합니다.');
         return;
       }
 
-      // 전략 데이터 구성
-      // template.name이 이미 [템플릿]을 포함하고 있는지 확인
       const templateStrategyName = template.name.startsWith('[템플릿]')
         ? template.name
         : `[템플릿] ${template.name}`;
-      const strategyData = {
-        name: templateStrategyName,
-        description: template.description,
-        type: template.type === 'complex' ? 'stage_based' : 'custom',
-        config: template.type === 'complex' 
-          ? {
-              buyStageStrategy: template.stageStrategy.buyStages,
-              sellStageStrategy: template.stageStrategy.sellStages,
-              isStageBasedStrategy: true,
-              templateId: template.id,  // 템플릿 ID 저장
-              templateName: template.name  // 템플릿 이름 저장
-            }
-          : {
-              indicators: template.strategy.indicators,
-              buyConditions: template.strategy.buyConditions,
-              sellConditions: template.strategy.sellConditions,
-              riskManagement: template.strategy.riskManagement || {
-                stopLoss: -5,
-                takeProfit: 10,
-                trailingStop: false,
-                trailingStopPercent: 0,
-                positionSize: 20,
-                maxPositions: 5
-              },
-              templateId: template.id,  // 템플릿 ID 저장
-              templateName: template.name,  // 템플릿 이름 저장
-              strategy_type: template.type === 'complex' ? 'stage_based' : 'custom'
-            },
-        user_id: user.id,
-        is_active: true
-      };
 
-      console.log('Saving template strategy:', strategyData);
-
-      // Supabase에 임시 저장
-      const { data, error } = await supabase
+      // 1. 먼저 같은 이름의 전략이 이미 존재하는지 확인
+      const { data: existingStrategy, error: fetchError } = await supabase
         .from('strategies')
-        .insert([strategyData])
-        .select()
+        .select('*')
+        .eq('name', templateStrategyName)
+        .eq('user_id', user.id)
         .single();
 
-      if (error) {
-        console.error('템플릿 저장 오류:', error);
-        setError('템플릿 적용 중 오류가 발생했습니다.');
-        return;
+      if (existingStrategy && !fetchError) {
+        // 2. 이미 존재하는 경우: 기존 전략 사용
+        console.log('Using existing template strategy:', existingStrategy);
+
+        // strategies 배열에 없으면 추가
+        if (!strategies.find(s => s.id === existingStrategy.id)) {
+          const strategy = {
+            id: existingStrategy.id,
+            name: existingStrategy.name,
+            description: existingStrategy.description || '',
+            type: existingStrategy.config?.strategy_type || existingStrategy.type || 'custom',
+            config: existingStrategy.config,
+            parameters: existingStrategy.config || {},
+            created_at: existingStrategy.created_at
+          };
+          // 전략 목록의 맨 앞에 추가하여 드롭다운에서 바로 보이도록 함
+          setStrategies(prev => [strategy, ...prev.filter(s => s.id !== existingStrategy.id)]);
+        }
+
+        // 기존 전략 ID로 설정 - 이제 드롭다운에서 선택된 것으로 표시됨
+        setConfig(prev => ({ ...prev, strategyId: existingStrategy.id }));
+        setSuccess(`"${template.name}" 템플릿이 선택되었습니다.`);
+
+      } else {
+        // 3. 존재하지 않는 경우에만: 새로 생성
+        console.log('Creating new template strategy');
+
+        const strategyData = {
+          name: templateStrategyName,
+          description: template.description,
+          type: template.type === 'complex' ? 'stage_based' : 'custom',
+          config: template.type === 'complex'
+            ? {
+                buyStageStrategy: template.stageStrategy.buyStages,
+                sellStageStrategy: template.stageStrategy.sellStages,
+                isStageBasedStrategy: true,
+                templateId: template.id,
+                templateName: template.name
+              }
+            : {
+                indicators: template.strategy.indicators,
+                buyConditions: template.strategy.buyConditions,
+                sellConditions: template.strategy.sellConditions,
+                riskManagement: template.strategy.riskManagement || {
+                  stopLoss: -5,
+                  takeProfit: 10,
+                  trailingStop: false,
+                  trailingStopPercent: 0,
+                  positionSize: 20,
+                  maxPositions: 5
+                },
+                templateId: template.id,
+                templateName: template.name,
+                strategy_type: template.type === 'complex' ? 'stage_based' : 'custom'
+              },
+          user_id: user.id,
+          is_active: true
+        };
+
+        const { data: newStrategyData, error } = await supabase
+          .from('strategies')
+          .insert([strategyData])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('템플릿 저장 오류:', error);
+          setError('템플릿 적용 중 오류가 발생했습니다.');
+          return;
+        }
+
+        console.log('New template strategy saved:', newStrategyData);
+
+        const newStrategy = {
+          id: newStrategyData.id,
+          name: templateStrategyName,
+          description: newStrategyData.description || '',
+          type: newStrategyData.config?.strategy_type || newStrategyData.type || 'custom',
+          config: newStrategyData.config,
+          parameters: newStrategyData.config || {},
+          created_at: newStrategyData.created_at
+        };
+
+        // 전략 목록의 맨 앞에 추가하여 드롭다운에서 바로 보이도록 함
+        setStrategies(prev => [newStrategy, ...prev.filter(s => s.id !== newStrategyData.id)]);
+        setConfig(prev => ({ ...prev, strategyId: newStrategyData.id }));
+        setSuccess(`"${template.name}" 템플릿이 적용되었습니다.`);
       }
 
-      console.log('Template strategy saved:', data);
-
-      // 저장된 전략을 strategies 배열에 즉시 추가
-      const newStrategy = {
-        id: data.id,
-        name: templateStrategyName,
-        description: data.description || '',
-        type: data.config?.strategy_type || data.type || 'custom',
-        parameters: data.config || {},
-        created_at: data.created_at
-      };
-      
-      // strategies 배열에 새 전략 추가
-      setStrategies(prev => [...prev, newStrategy]);
-      
-      // 저장된 전략 ID로 설정
-      setConfig(prev => ({ ...prev, strategyId: data.id }));
-      
-      // 전략 목록 새로고침 (비동기로 실행)
-      setTimeout(() => loadStrategies(), 100);
-      
       // 다이얼로그 닫기
       setShowTemplateDialog(false);
       setSelectedTemplate(null);
-      
-      // 성공 메시지 표시
-      setSuccess(`"${template.name}" 템플릿이 적용되었습니다. 이제 백테스트를 실행할 수 있습니다.`);
+
+      // 전략 목록 새로고침 - strategyId를 유지하면서 실행
+      const currentStrategyId = existingStrategy?.id;
+      if (currentStrategyId) {
+        setTimeout(async () => {
+          await loadStrategies();
+          // 전략 목록 로드 후 선택된 strategyId 복원
+          setConfig(prev => ({ ...prev, strategyId: currentStrategyId }));
+        }, 100);
+      }
     } catch (error) {
       console.error('템플릿 적용 오류:', error);
       setError('템플릿 적용 중 오류가 발생했습니다.');
@@ -1133,10 +1167,19 @@ const BacktestRunner: React.FC = () => {
             <InputLabel id="strategy-select-label">전략 선택</InputLabel>
             <Select
               labelId="strategy-select-label"
-              value={config.strategyId}
+              value={config.strategyId || ''}
               label="전략 선택"
               onChange={(e) => setConfig({ ...config, strategyId: e.target.value })}
               disabled={isRunning}
+              renderValue={(value) => {
+                if (!value) return <em>전략을 선택하세요</em>;
+                const strategy = strategies.find(s => s.id === value);
+                return strategy ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip size="small" label={strategy.name} color="primary" />
+                  </Box>
+                ) : <em>전략을 선택하세요</em>;
+              }}
             >
               <MenuItem value="">
                 <em>전략을 선택하세요</em>

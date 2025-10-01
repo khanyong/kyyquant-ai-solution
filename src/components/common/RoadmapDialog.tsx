@@ -1585,7 +1585,9 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 81 // 2025-01-14 기준 진행률 (목표수익률 단계별 매도 시스템 완료)
+  const progress = 77 // 2025-10-01 기준 진행률 (Phase 2.5a 완료)
+
+  // 최신 로드맵은 MASTER_ROADMAP.md 참조
 
   const getStatusIcon = (status: string) => {
     switch(status) {
@@ -1628,6 +1630,9 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
             <Close />
           </IconButton>
         </Box>
+        <Alert severity="info" sx={{ mt: 2 }}>
+          📌 최신 상세 로드맵은 프로젝트 루트의 <strong>MASTER_ROADMAP.md</strong> 파일을 참조하세요
+        </Alert>
       </DialogTitle>
       
       <DialogContent dividers>

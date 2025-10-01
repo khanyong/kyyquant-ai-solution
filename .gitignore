@@ -71,3 +71,5 @@ temp/
 # MCP config (contains API keys)
 .mcp.json
 backend/venv32/
+backend_backup_20250917_140712/ backend_backup_20250929_150156/
+nul

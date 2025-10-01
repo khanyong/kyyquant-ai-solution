@@ -1,0 +1,42 @@
+# Auto Stock Backend용 Docker Compose 설정
+# NAS Container Manager에서 사용
+
+version: '3.8'
+
+services:
+  auto-stock-backend:
+    build: ./backend
+    image: auto-stock-backend:latest
+    container_name: auto-stock-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      # Supabase
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+
+      # 키움증권 API (필요시)
+      - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
+      - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}
+      - KIWOOM_ACCOUNT_NO=${KIWOOM_ACCOUNT_NO}
+
+      # 운영 환경
+      - ENVIRONMENT=production
+      - TZ=Asia/Seoul
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /volume1/docker/auto-stock/backend:/app
+      - /volume1/docker/auto-stock/.env:/app/.env:ro
+      - /volume1/docker/auto-stock/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - auto-stock-network
+
+networks:
+  auto-stock-network:
+    driver: bridge
