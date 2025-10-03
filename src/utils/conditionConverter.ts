@@ -6,10 +6,13 @@
 interface OldCondition {
   id?: string
   type?: 'buy' | 'sell'
-  indicator: string
+  indicator?: string
   operator: string
-  value: number | string
+  value?: number | string
   combineWith?: 'AND' | 'OR'
+  // 표준 형식 필드 (left/right)
+  left?: string
+  right?: string | number
   // 기타 레거시 필드
   ichimokuLine?: string
   confirmBars?: number
@@ -63,7 +66,12 @@ export const convertConditionToStandard = (
   oldCondition: OldCondition
 ): StandardCondition => {
   // MACD 커스텀 연산자 특수 처리
-  if (oldCondition.indicator === 'macd' || oldCondition.left === 'macd') {
+  const isMacdCondition = oldCondition.indicator === 'macd' ||
+                          oldCondition.left === 'macd' ||
+                          oldCondition.left === 'macd_line' ||
+                          oldCondition.left === 'macd_hist'
+
+  if (isMacdCondition) {
     if (oldCondition.operator === 'macd_above_signal') {
       return { left: 'macd_line', operator: '>', right: 'macd_signal' }
     } else if (oldCondition.operator === 'macd_below_signal') {
