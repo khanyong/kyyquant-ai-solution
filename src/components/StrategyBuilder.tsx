@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Paper,
@@ -78,7 +78,8 @@ import {
   normalizeStopLoss,
   ConflictCheckResult
 } from '../utils/strategyValidator'
-import { ensureStandardFormat } from '../utils/conditionConverter'
+import { ensureStandardFormat, convertConditionToStandard } from '../utils/conditionConverter'
+import { getAvailableIndicators } from '../services/indicatorService'
 
 interface Indicator {
   id: string
@@ -210,48 +211,7 @@ interface Strategy {
   }
 }
 
-const AVAILABLE_INDICATORS = [
-  { id: 'ma', name: 'MA (이동평균)', type: 'trend', defaultParams: { period: 20 } },
-  { id: 'sma', name: 'SMA (단순이동평균)', type: 'trend', defaultParams: { period: 20 } },
-  { id: 'ema', name: 'EMA (지수이동평균)', type: 'trend', defaultParams: { period: 20 } },
-  {
-    id: 'bollinger',
-    name: '볼린저밴드',
-    type: 'volatility',
-    defaultParams: { period: 20, std: 2 },
-    outputs: ['bollinger_upper', 'bollinger_middle', 'bollinger_lower']
-  },
-  { id: 'rsi', name: 'RSI', type: 'momentum', defaultParams: { period: 14 } },
-  {
-    id: 'macd',
-    name: 'MACD',
-    type: 'momentum',
-    defaultParams: { fast: 12, slow: 26, signal: 9 },
-    outputs: ['macd', 'macd_signal', 'macd_hist']
-  },
-  {
-    id: 'stochastic',
-    name: '스토캐스틱',
-    type: 'momentum',
-    defaultParams: { k: 14, d: 3 },
-    outputs: ['stoch_k', 'stoch_d']
-  },
-  { id: 'ichimoku', name: '일목균형표', type: 'trend', defaultParams: { 
-    tenkan: 9,  // 전환선
-    kijun: 26,  // 기준선 
-    senkou: 52, // 선행스팬
-    chikou: 26  // 후행스팬
-  } },
-  { id: 'volume', name: '거래량', type: 'volume', defaultParams: { period: 20 } },
-  { id: 'obv', name: 'OBV (누적거래량)', type: 'volume', defaultParams: {} },
-  { id: 'vwap', name: 'VWAP (거래량가중평균)', type: 'volume', defaultParams: {} },
-  { id: 'atr', name: 'ATR (변동성)', type: 'volatility', defaultParams: { period: 14 } },
-  { id: 'cci', name: 'CCI', type: 'momentum', defaultParams: { period: 20 } },
-  { id: 'williams', name: 'Williams %R', type: 'momentum', defaultParams: { period: 14 } },
-  { id: 'adx', name: 'ADX (추세강도)', type: 'trend', defaultParams: { period: 14 } },
-  { id: 'dmi', name: 'DMI (+DI/-DI)', type: 'trend', defaultParams: { period: 14 } },
-  { id: 'parabolic', name: 'Parabolic SAR', type: 'trend', defaultParams: { acc: 0.02, max: 0.2 } }
-]
+// availableIndicators는 이제 Supabase에서 동적으로 로드됩니다
 
 // PRESET_STRATEGIES는 템플릿으로 통합되어 제거됨
 // 상단의 8개 전략 템플릿 카드로 대체
@@ -290,6 +250,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
   const [useStageBasedStrategy, setUseStageBasedStrategy] = useState(true) // 단계별 전략 사용 여부
   const [buyStageStrategy, setBuyStageStrategy] = useState<any>(null)
   const [sellStageStrategy, setSellStageStrategy] = useState<any>(null)
+  const [availableIndicators, setAvailableIndicators] = useState<any[]>([])
+  const [indicatorsLoading, setIndicatorsLoading] = useState(true)
   const [strategy, setStrategy] = useState<Strategy>({
     id: 'custom-1',
     name: '나의 전략',
@@ -340,7 +302,28 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
   const [investmentConfig, setInvestmentConfig] = useState<any>(null)
   const [filteredUniverseCount, setFilteredUniverseCount] = useState<number>(0)
   const [strategyConflicts, setStrategyConflicts] = useState<ConflictCheckResult | null>(null)
-  
+
+  // Supabase에서 지표 목록 로드
+  useEffect(() => {
+    const loadIndicators = async () => {
+      try {
+        setIndicatorsLoading(true)
+        const indicators = await getAvailableIndicators()
+        setAvailableIndicators(indicators)
+      } catch (error) {
+        console.error('Failed to load indicators:', error)
+        // 폴백: 기본 지표 몇 개만 제공
+        setAvailableIndicators([
+          { id: 'rsi', name: 'RSI', type: 'momentum', defaultParams: { period: 14 } },
+          { id: 'macd', name: 'MACD', type: 'momentum', defaultParams: { fast: 12, slow: 26, signal: 9 } }
+        ])
+      } finally {
+        setIndicatorsLoading(false)
+      }
+    }
+    loadIndicators()
+  }, [])
+
   // 전략 변경 시 충돌 검사
   const checkConflictsDebounced = React.useCallback((updatedStrategy: any) => {
     const timeoutId = setTimeout(() => {
@@ -395,7 +378,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
   // 지표 추가
   const addIndicator = (indicatorId: string) => {
-    const indicator = AVAILABLE_INDICATORS.find(i => i.id === indicatorId)
+    const indicator = availableIndicators.find(i => i.id === indicatorId)
     if (!indicator) return
 
     const newIndicator: Indicator = {
@@ -479,6 +462,14 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     { value: '=', label: '같음 (=)' },
     { value: 'cross_above', label: '상향돌파' },
     { value: 'cross_below', label: '하향돌파' }
+  ]
+
+  // 볼린저 밴드 연산자 가져오기
+  const getBollingerOperators = () => [
+    { value: 'price_above', label: '종가가 위에 있음 (close > band)' },
+    { value: 'price_below', label: '종가가 아래 있음 (close < band)' },
+    { value: 'cross_above', label: '종가가 상향 돌파 (cross up)' },
+    { value: 'cross_below', label: '종가가 하향 돌파 (cross down)' }
   ]
 
   // 빠른 백테스트 실행
@@ -762,24 +753,42 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             ...buyStageStrategy,
             stages: buyStageStrategy.stages?.map((stage: any) => ({
               ...stage,
-              conditions: stage.indicators?.map((ind: any) => ({
-                left: ind.indicatorId || ind.id,
-                operator: ind.operator || '<',
-                right: ind.value,
-                combineWith: ind.combineWith || 'AND'
-              })) || []
+              conditions: stage.indicators?.map((ind: any) => {
+                // conditionConverter를 사용하여 볼린저 밴드 등의 특수 처리
+                const standardCondition = convertConditionToStandard({
+                  indicator: ind.indicatorId,
+                  operator: ind.operator || '<',
+                  value: ind.value,
+                  bollingerLine: ind.bollingerLine,
+                  macdLine: ind.macdLine,
+                  stochLine: ind.stochLine
+                })
+                return {
+                  ...standardCondition,
+                  combineWith: ind.combineWith || 'AND'
+                }
+              }) || []
             })) || []
           } : buyStageStrategy,
           sellStageStrategy: useStageBasedStrategy && sellStageStrategy ? {
             ...sellStageStrategy,
             stages: sellStageStrategy.stages?.map((stage: any) => ({
               ...stage,
-              conditions: stage.indicators?.map((ind: any) => ({
-                left: ind.indicatorId || ind.id,
-                operator: ind.operator || '<',
-                right: ind.value,
-                combineWith: ind.combineWith || 'AND'
-              })) || []
+              conditions: stage.indicators?.map((ind: any) => {
+                // conditionConverter를 사용하여 볼린저 밴드 등의 특수 처리
+                const standardCondition = convertConditionToStandard({
+                  indicator: ind.indicatorId,
+                  operator: ind.operator || '<',
+                  value: ind.value,
+                  bollingerLine: ind.bollingerLine,
+                  macdLine: ind.macdLine,
+                  stochLine: ind.stochLine
+                })
+                return {
+                  ...standardCondition,
+                  combineWith: ind.combineWith || 'AND'
+                }
+              }) || []
             })) || []
           } : sellStageStrategy,
           useStageBasedStrategy: useStageBasedStrategy
@@ -1297,7 +1306,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             <Grid item xs={12} lg={6}>
               <StageBasedStrategy
                 type="buy"
-                availableIndicators={AVAILABLE_INDICATORS}
+                availableIndicators={availableIndicators}
                 initialStrategy={buyStageStrategy}  // 초기값 전달
                 targetProfit={strategy.targetProfit}
                 stopLoss={strategy.stopLoss}
@@ -1321,7 +1330,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                         indicator: ind.indicatorId,
                         operator: ind.operator as any,
                         value: ind.value,
-                        combineWith: ind.combineWith
+                        combineWith: ind.combineWith,
+                        bollingerLine: ind.bollingerLine  // 볼린저 밴드 라인 추가
                       })))
                   })
                 }}
@@ -1330,7 +1340,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             <Grid item xs={12} lg={6}>
               <StageBasedStrategy
                 type="sell"
-                availableIndicators={AVAILABLE_INDICATORS}
+                availableIndicators={availableIndicators}
                 initialStrategy={sellStageStrategy}  // 초기값 전달
                 targetProfit={strategy.targetProfit}
                 stopLoss={strategy.stopLoss}
@@ -1354,7 +1364,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                         indicator: ind.indicatorId,
                         operator: ind.operator as any,
                         value: ind.value,
-                        combineWith: ind.combineWith
+                        combineWith: ind.combineWith,
+                        bollingerLine: ind.bollingerLine  // 볼린저 밴드 라인 추가
                       })))
                   })
                 }}
@@ -1379,7 +1390,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 onChange={(e) => addIndicator(e.target.value)}
                 label="지표 추가"
               >
-                {AVAILABLE_INDICATORS.map(indicator => (
+                {availableIndicators.map(indicator => (
                   <MenuItem key={indicator.id} value={indicator.id}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Typography>{indicator.name}</Typography>
@@ -1450,16 +1461,28 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             
             <Stack spacing={1}>
               {strategy.buyConditions.map((condition, index) => {
-                const indicator = AVAILABLE_INDICATORS.find(i => i.id === condition.indicator)
-                const operatorLabel = condition.indicator === 'ichimoku' && 
-                  (condition.operator.includes('cloud') || condition.operator.includes('tenkan') || condition.operator.includes('chikou'))
-                  ? getIchimokuOperators().find(o => o.value === condition.operator)?.label || condition.operator
-                  : getStandardOperators().find(o => o.value === condition.operator)?.label || condition.operator
-                
+                const indicator = availableIndicators.find(i => i.id === condition.indicator)
+                let operatorLabel = ''
+                let displayText = ''
+
+                if (condition.indicator === 'ichimoku' &&
+                    (condition.operator.includes('cloud') || condition.operator.includes('tenkan') || condition.operator.includes('chikou'))) {
+                  operatorLabel = getIchimokuOperators().find(o => o.value === condition.operator)?.label || condition.operator
+                  displayText = `${indicator?.name || condition.indicator} ${operatorLabel}${condition.confirmBars ? ` (확인 ${condition.confirmBars}봉)` : ''}`
+                } else if (condition.indicator === 'bollinger' || condition.indicator === 'bb') {
+                  operatorLabel = getBollingerOperators().find(o => o.value === condition.operator)?.label || condition.operator
+                  const lineLabel = condition.bollingerLine === 'bollinger_upper' ? '상단' :
+                                   condition.bollingerLine === 'bollinger_middle' ? '중간' : '하단'
+                  displayText = `${lineLabel}밴드: ${operatorLabel}`
+                } else {
+                  operatorLabel = getStandardOperators().find(o => o.value === condition.operator)?.label || condition.operator
+                  displayText = `${indicator?.name || condition.indicator} ${operatorLabel} ${condition.value}`
+                }
+
                 return (
                   <Chip
                     key={condition.id}
-                    label={`${index > 0 ? condition.combineWith + ' ' : ''}${indicator?.name || condition.indicator} ${operatorLabel} ${condition.value}${condition.confirmBars ? ` (확인 ${condition.confirmBars}봉)` : ''}`}
+                    label={`${index > 0 ? condition.combineWith + ' ' : ''}${displayText}`}
                     onDelete={() => removeCondition('buy', condition.id)}
                     color="success"
                   />
@@ -1483,16 +1506,28 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
             <Stack spacing={1}>
               {strategy.sellConditions.map((condition, index) => {
-                const indicator = AVAILABLE_INDICATORS.find(i => i.id === condition.indicator)
-                const operatorLabel = condition.indicator === 'ichimoku' &&
-                  (condition.operator.includes('cloud') || condition.operator.includes('tenkan') || condition.operator.includes('chikou'))
-                  ? getIchimokuOperators().find(o => o.value === condition.operator)?.label || condition.operator
-                  : getStandardOperators().find(o => o.value === condition.operator)?.label || condition.operator
+                const indicator = availableIndicators.find(i => i.id === condition.indicator)
+                let operatorLabel = ''
+                let displayText = ''
+
+                if (condition.indicator === 'ichimoku' &&
+                    (condition.operator.includes('cloud') || condition.operator.includes('tenkan') || condition.operator.includes('chikou'))) {
+                  operatorLabel = getIchimokuOperators().find(o => o.value === condition.operator)?.label || condition.operator
+                  displayText = `${indicator?.name || condition.indicator} ${operatorLabel}${condition.confirmBars ? ` (확인 ${condition.confirmBars}봉)` : ''}`
+                } else if (condition.indicator === 'bollinger' || condition.indicator === 'bb') {
+                  operatorLabel = getBollingerOperators().find(o => o.value === condition.operator)?.label || condition.operator
+                  const lineLabel = condition.bollingerLine === 'bollinger_upper' ? '상단' :
+                                   condition.bollingerLine === 'bollinger_middle' ? '중간' : '하단'
+                  displayText = `${lineLabel}밴드: ${operatorLabel}`
+                } else {
+                  operatorLabel = getStandardOperators().find(o => o.value === condition.operator)?.label || condition.operator
+                  displayText = `${indicator?.name || condition.indicator} ${operatorLabel} ${condition.value}`
+                }
 
                 return (
                   <Chip
                     key={condition.id}
-                    label={`${index > 0 ? condition.combineWith + ' ' : ''}${indicator?.name || condition.indicator} ${operatorLabel} ${condition.value}${condition.confirmBars ? ` (확인 ${condition.confirmBars}봉)` : ''}`}
+                    label={`${index > 0 ? condition.combineWith + ' ' : ''}${displayText}`}
                     onDelete={() => removeCondition('sell', condition.id)}
                     color="error"
                   />
@@ -1831,7 +1866,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                   }}
                   label="지표"
                 >
-                  {AVAILABLE_INDICATORS.map(ind => (
+                  {availableIndicators.map(ind => (
                     <MenuItem key={ind.id} value={ind.id}>{ind.name}</MenuItem>
                   ))}
                 </Select>
@@ -1859,7 +1894,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             )}
 
             {/* 볼린저 밴드 출력 컬럼 선택 */}
-            {tempCondition.indicator === 'bollinger' && (
+            {(tempCondition.indicator === 'bollinger' || tempCondition.indicator === 'bb') && (
               <Grid item xs={12}>
                 <FormControl fullWidth size="small">
                   <InputLabel>볼린저 밴드 라인</InputLabel>
@@ -1924,6 +1959,10 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     getIchimokuOperators().map(op => (
                       <MenuItem key={op.value} value={op.value}>{op.label}</MenuItem>
                     ))
+                  ) : (tempCondition.indicator === 'bollinger' || tempCondition.indicator === 'bb') ? (
+                    getBollingerOperators().map(op => (
+                      <MenuItem key={op.value} value={op.value}>{op.label}</MenuItem>
+                    ))
                   ) : (
                     getStandardOperators().map(op => (
                       <MenuItem key={op.value} value={op.value}>{op.label}</MenuItem>
@@ -1934,7 +1973,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             </Grid>
             
             {/* 값 */}
-            {tempCondition.indicator === 'ichimoku' && 
+            {tempCondition.indicator === 'ichimoku' &&
              (tempCondition.operator.includes('cloud') || tempCondition.operator.includes('tenkan')) ? (
               <Grid item xs={12}>
                 <TextField
@@ -1947,7 +1986,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                   helperText="연속으로 조건을 만족해야 하는 봉의 개수"
                 />
               </Grid>
-            ) : tempCondition.operator !== 'cross_above' && tempCondition.operator !== 'cross_below' ? (
+            ) : (tempCondition.indicator === 'bollinger' || tempCondition.indicator === 'bb') ? null
+            : tempCondition.operator !== 'cross_above' && tempCondition.operator !== 'cross_below' ? (
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -1968,7 +2008,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     일목균형표는 전환선(9일), 기준선(26일), 선행스팬(52일), 후행스팬(26일)으로 구성됩니다.
                     구름대는 선행스팬 A와 B 사이의 영역을 의미합니다.
                   </>
-                ) : tempCondition.indicator === 'bollinger' ? (
+                ) : (tempCondition.indicator === 'bollinger' || tempCondition.indicator === 'bb') ? (
                   <>
                     볼린저 밴드는 상단/중간/하단 밴드로 구성됩니다.
                     {currentConditionType === 'buy' ? '종가가 하단 밴드 아래로 떨어지면 과매도' : '종가가 상단 밴드 위로 올라가면 과매수'} 신호입니다.

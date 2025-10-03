@@ -62,6 +62,25 @@ const normalizeIndicatorName = (name: string): string => {
 export const convertConditionToStandard = (
   oldCondition: OldCondition
 ): StandardCondition => {
+  // 볼린저 밴드 특수 처리: price_above/price_below를 close와 밴드 비교로 변환
+  if ((oldCondition.indicator === 'bollinger' || oldCondition.indicator === 'bb') && oldCondition.bollingerLine) {
+    const bandLine = oldCondition.bollingerLine // bollinger_upper, bollinger_middle, bollinger_lower
+
+    if (oldCondition.operator === 'price_above') {
+      // 종가가 밴드보다 위 → close > bollinger_xxx
+      return { left: 'close', operator: '>', right: bandLine }
+    } else if (oldCondition.operator === 'price_below') {
+      // 종가가 밴드보다 아래 → close < bollinger_xxx
+      return { left: 'close', operator: '<', right: bandLine }
+    } else if (oldCondition.operator === 'cross_above') {
+      // 종가가 밴드를 상향 돌파 → close crossover bollinger_xxx
+      return { left: 'close', operator: 'crossover', right: bandLine }
+    } else if (oldCondition.operator === 'cross_below') {
+      // 종가가 밴드를 하향 돌파 → close crossunder bollinger_xxx
+      return { left: 'close', operator: 'crossunder', right: bandLine }
+    }
+  }
+
   // 다중 출력 지표의 경우 특정 라인을 left로 사용
   let left: string
 

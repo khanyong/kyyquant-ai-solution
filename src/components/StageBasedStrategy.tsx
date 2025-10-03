@@ -62,6 +62,7 @@ interface StageIndicator {
   value: number | string
   params?: { [key: string]: any }
   combineWith: 'AND' | 'OR'
+  bollingerLine?: 'bollinger_upper' | 'bollinger_middle' | 'bollinger_lower'
 }
 
 interface Stage {
@@ -384,28 +385,10 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
     
     // 볼린저밴드 전용 옵션
     const bollingerOptions = [
-      // 밴드 위치 관련
-      { value: 'price_above_upper', label: '가격 > 상단밴드 (과매수)' },
-      { value: 'price_below_lower', label: '가격 < 하단밴드 (과매도)' },
-      { value: 'price_above_middle', label: '가격 > 중심선 (20일 이평)' },
-      { value: 'price_below_middle', label: '가격 < 중심선 (20일 이평)' },
-      // 밴드 터치/돌파
-      { value: 'upper_touch', label: '상단밴드 터치 (저항) (추후 지원)' },
-      { value: 'lower_touch', label: '하단밴드 터치 (지지) (추후 지원)' },
-      { value: 'upper_breakout', label: '상단밴드 돌파 (추세강화) (추후 지원)' },
-      { value: 'lower_breakout', label: '하단밴드 돌파 (추세강화) (추후 지원)' },
-      { value: 'band_walk_upper', label: '상단밴드 따라 상승 (강한 상승추세) (추후 지원)' },
-      { value: 'band_walk_lower', label: '하단밴드 따라 하락 (강한 하락추세) (추후 지원)' },
-      // 밴드폭 관련
-      { value: 'band_squeeze', label: '밴드 수축 (변동성 감소) (추후 지원)' },
-      { value: 'band_expansion', label: '밴드 확장 (변동성 증가) (추후 지원)' },
-      { value: 'band_squeeze_fire', label: '스퀴즈 후 확장 (브레이크아웃) (추후 지원)' },
-      // %B 지표 (0-1 정규화)
-      { value: 'percent_b_high', label: '%B > 0.8 (상단 근접) (추후 지원)' },
-      { value: 'percent_b_low', label: '%B < 0.2 (하단 근접) (추후 지원)' },
-      { value: 'percent_b_above_1', label: '%B > 1 (밴드 이탈) (추후 지원)' },
-      { value: 'percent_b_below_0', label: '%B < 0 (밴드 이탈) (추후 지원)' },
-      { value: 'percent_b_divergence', label: '%B 다이버전스 (추후 지원)' }
+      { value: 'price_above', label: '종가가 위에 있음 (close > band)' },
+      { value: 'price_below', label: '종가가 아래 있음 (close < band)' },
+      { value: 'cross_above', label: '종가가 상향 돌파 (cross up)' },
+      { value: 'cross_below', label: '종가가 하향 돌파 (cross down)' }
     ]
     
     // MACD 전용 옵션 (12-26-9 기본설정)
@@ -612,8 +595,9 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
         return ichimokuOptions
       
       case 'bb':
+      case 'bollinger':
         return bollingerOptions
-      
+
       case 'macd':
         return macdOptions
       
@@ -653,6 +637,25 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
       default:
         return basicOptions
     }
+  }
+
+  // Operator를 사람이 읽을 수 있는 레이블로 변환
+  const getOperatorLabel = (indicatorId: string, operator: string, bollingerLine?: string): string => {
+    const options = getOperatorOptions(indicatorId)
+    const option = options.find(opt => opt.value === operator)
+
+    if (option) {
+      // 볼린저 밴드의 경우 선택된 라인 정보 추가
+      if ((indicatorId === 'bollinger' || indicatorId === 'bb') && bollingerLine) {
+        const lineLabel = bollingerLine === 'bollinger_upper' ? '상단밴드' :
+                          bollingerLine === 'bollinger_middle' ? '중간밴드' : '하단밴드'
+        return `${lineLabel} ${option.label}`
+      }
+      return option.label
+    }
+
+    // 옵션을 찾지 못한 경우 기본 연산자 표시
+    return operator
   }
 
   return (
@@ -825,7 +828,7 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
                                   {indicator.name}
                                 </Typography>
                                 <Chip
-                                  label={`${indicator.operator} ${indicator.value}`}
+                                  label={getOperatorLabel(indicator.indicatorId, indicator.operator, indicator.bollingerLine)}
                                   size="small"
                                   color={type === 'buy' ? 'success' : 'error'}
                                 />
@@ -899,9 +902,9 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
                   </Typography>
                   <Stack direction="row" spacing={0.5}>
                     {stage.indicators.map(ind => (
-                      <Chip 
+                      <Chip
                         key={ind.id}
-                        label={`${ind.name} ${ind.operator} ${ind.value}`}
+                        label={`${ind.name} ${getOperatorLabel(ind.indicatorId, ind.operator, ind.bollingerLine)}`}
                         size="small"
                         variant="outlined"
                       />
@@ -970,10 +973,17 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
                   value={tempIndicator.indicatorId}
                   onChange={(e) => {
                     const indicator = availableIndicators.find(i => i.id === e.target.value)
-                    setTempIndicator({ 
-                      ...tempIndicator, 
-                      indicatorId: e.target.value,
-                      name: indicator?.name || ''
+                    const newIndicatorId = e.target.value
+
+                    // 볼린저 밴드 선택 시 기본 라인 설정
+                    const isBollinger = newIndicatorId === 'bollinger' || newIndicatorId === 'bb'
+
+                    setTempIndicator({
+                      ...tempIndicator,
+                      indicatorId: newIndicatorId,
+                      name: indicator?.name || '',
+                      // 볼린저 밴드인 경우 기본값 설정, 아니면 제거
+                      ...(isBollinger ? { bollingerLine: tempIndicator.bollingerLine || 'bollinger_lower' as 'bollinger_lower' } : {})
                     })
                   }}
                   label="지표 선택"
@@ -990,8 +1000,29 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
               </FormControl>
             </Grid>
 
+            {/* 볼린저 밴드 라인 선택 */}
+            {(tempIndicator.indicatorId === 'bollinger' || tempIndicator.indicatorId === 'bb') && (
+              <Grid item xs={12}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>볼린저 밴드 라인</InputLabel>
+                  <Select
+                    value={tempIndicator.bollingerLine || 'bollinger_lower'}
+                    onChange={(e) => setTempIndicator({
+                      ...tempIndicator,
+                      bollingerLine: e.target.value as 'bollinger_upper' | 'bollinger_middle' | 'bollinger_lower'
+                    })}
+                    label="볼린저 밴드 라인"
+                  >
+                    <MenuItem value="bollinger_upper">상단 밴드 (Upper Band)</MenuItem>
+                    <MenuItem value="bollinger_middle">중간 밴드 (Middle Band / SMA)</MenuItem>
+                    <MenuItem value="bollinger_lower">하단 밴드 (Lower Band)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
+
             {/* 연산자 - 지표별 특화 조건 */}
-            <Grid item xs={tempIndicator.indicatorId && ['ichimoku', 'bb', 'macd', 'volume', 'adx', 'parabolic'].includes(tempIndicator.indicatorId) ? 12 : 6}>
+            <Grid item xs={tempIndicator.indicatorId && ['ichimoku', 'bb', 'bollinger', 'macd', 'volume', 'adx', 'parabolic'].includes(tempIndicator.indicatorId) ? 12 : 6}>
               <FormControl fullWidth size="small">
                 <InputLabel>조건</InputLabel>
                 <Select
