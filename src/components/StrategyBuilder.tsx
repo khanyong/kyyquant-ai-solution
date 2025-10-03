@@ -733,9 +733,31 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
           targetProfit: strategy.targetProfit,
           stopLoss: strategy.stopLoss,
           stopLossOld: strategy.riskManagement.stopLoss,
-          // 단계별 전략도 포함
-          buyStageStrategy: buyStageStrategy,
-          sellStageStrategy: sellStageStrategy,
+          // 단계별 전략도 포함 (indicators를 conditions로 변환)
+          buyStageStrategy: useStageBasedStrategy && buyStageStrategy ? {
+            ...buyStageStrategy,
+            stages: buyStageStrategy.stages?.map((stage: any) => ({
+              ...stage,
+              conditions: stage.indicators?.map((ind: any) => ({
+                left: ind.indicatorId || ind.id,
+                operator: ind.operator || '<',
+                right: ind.value,
+                combineWith: ind.combineWith || 'AND'
+              })) || []
+            })) || []
+          } : buyStageStrategy,
+          sellStageStrategy: useStageBasedStrategy && sellStageStrategy ? {
+            ...sellStageStrategy,
+            stages: sellStageStrategy.stages?.map((stage: any) => ({
+              ...stage,
+              conditions: stage.indicators?.map((ind: any) => ({
+                left: ind.indicatorId || ind.id,
+                operator: ind.operator || '<',
+                right: ind.value,
+                combineWith: ind.combineWith || 'AND'
+              })) || []
+            })) || []
+          } : sellStageStrategy,
           useStageBasedStrategy: useStageBasedStrategy
         },
         indicators: {
