@@ -753,20 +753,23 @@ const TradingSettingsWithUniverse: React.FC = () => {
           investor: currentFilterValues.investor
         },
         appliedFilters,
-        filteredStocks: filteredData.map(stock => ({
-          code: stock.stock_code || stock.code,
-          name: stock.stock_name || stock.name,
-          market_cap: stock.market_cap,
-          per: stock.per,
-          pbr: stock.pbr,
-          roe: stock.roe,
-          sector: stock.sector
-        })),
         filterStats: newStats,
         timestamp: new Date().toISOString()
       }
-      
-      // 기존 investmentConfig 업데이트
+
+      // filteredStocks는 별도 키로 저장 (전략 config에는 포함하지 않음)
+      const filteredStocksData = filteredData.map(stock => ({
+        code: stock.stock_code || stock.code,
+        name: stock.stock_name || stock.name,
+        market_cap: stock.market_cap,
+        per: stock.per,
+        pbr: stock.pbr,
+        roe: stock.roe,
+        sector: stock.sector
+      }))
+      localStorage.setItem('filteredUniverse', JSON.stringify(filteredStocksData))
+
+      // 기존 investmentConfig 업데이트 (filteredStocks 제외)
       const existingConfig = localStorage.getItem('investmentConfig')
       let updatedConfig = existingConfig ? JSON.parse(existingConfig) : {}
       updatedConfig = {
