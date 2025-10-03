@@ -13,6 +13,10 @@ interface OldCondition {
   // 기타 레거시 필드
   ichimokuLine?: string
   confirmBars?: number
+  // 다중 출력 지표 필드
+  bollingerLine?: string
+  macdLine?: string
+  stochLine?: string
 }
 
 interface StandardCondition {
@@ -58,7 +62,21 @@ const normalizeIndicatorName = (name: string): string => {
 export const convertConditionToStandard = (
   oldCondition: OldCondition
 ): StandardCondition => {
-  const left = normalizeIndicatorName(oldCondition.indicator)
+  // 다중 출력 지표의 경우 특정 라인을 left로 사용
+  let left: string
+
+  if (oldCondition.indicator === 'bollinger' && oldCondition.bollingerLine) {
+    left = oldCondition.bollingerLine
+  } else if (oldCondition.indicator === 'macd' && oldCondition.macdLine) {
+    left = oldCondition.macdLine
+  } else if (oldCondition.indicator === 'stochastic' && oldCondition.stochLine) {
+    left = oldCondition.stochLine
+  } else if (oldCondition.indicator === 'ichimoku' && oldCondition.ichimokuLine) {
+    left = oldCondition.ichimokuLine
+  } else {
+    left = normalizeIndicatorName(oldCondition.indicator)
+  }
+
   const operator = OPERATOR_MAPPING[oldCondition.operator] || oldCondition.operator
   const right = typeof oldCondition.value === 'string'
     ? normalizeIndicatorName(oldCondition.value)

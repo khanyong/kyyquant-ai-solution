@@ -100,6 +100,12 @@ interface Condition {
   // 일목균형표 전용 파라미터
   ichimokuLine?: 'tenkan' | 'kijun' | 'senkou_a' | 'senkou_b' | 'chikou'
   confirmBars?: number // 확인봉 개수
+  // 볼린저 밴드 전용 파라미터
+  bollingerLine?: 'bollinger_upper' | 'bollinger_middle' | 'bollinger_lower'
+  // MACD 전용 파라미터
+  macdLine?: 'macd' | 'macd_signal' | 'macd_hist'
+  // 스토캐스틱 전용 파라미터
+  stochLine?: 'stoch_k' | 'stoch_d'
 }
 
 interface Strategy {
@@ -208,10 +214,28 @@ const AVAILABLE_INDICATORS = [
   { id: 'ma', name: 'MA (이동평균)', type: 'trend', defaultParams: { period: 20 } },
   { id: 'sma', name: 'SMA (단순이동평균)', type: 'trend', defaultParams: { period: 20 } },
   { id: 'ema', name: 'EMA (지수이동평균)', type: 'trend', defaultParams: { period: 20 } },
-  { id: 'bollinger', name: '볼린저밴드', type: 'volatility', defaultParams: { period: 20, std: 2 } },
+  {
+    id: 'bollinger',
+    name: '볼린저밴드',
+    type: 'volatility',
+    defaultParams: { period: 20, std: 2 },
+    outputs: ['bollinger_upper', 'bollinger_middle', 'bollinger_lower']
+  },
   { id: 'rsi', name: 'RSI', type: 'momentum', defaultParams: { period: 14 } },
-  { id: 'macd', name: 'MACD', type: 'momentum', defaultParams: { fast: 12, slow: 26, signal: 9 } },
-  { id: 'stochastic', name: '스토캐스틱', type: 'momentum', defaultParams: { k: 14, d: 3 } },
+  {
+    id: 'macd',
+    name: 'MACD',
+    type: 'momentum',
+    defaultParams: { fast: 12, slow: 26, signal: 9 },
+    outputs: ['macd', 'macd_signal', 'macd_hist']
+  },
+  {
+    id: 'stochastic',
+    name: '스토캐스틱',
+    type: 'momentum',
+    defaultParams: { k: 14, d: 3 },
+    outputs: ['stoch_k', 'stoch_d']
+  },
   { id: 'ichimoku', name: '일목균형표', type: 'trend', defaultParams: { 
     tenkan: 9,  // 전환선
     kijun: 26,  // 기준선 
@@ -1833,6 +1857,59 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 </FormControl>
               </Grid>
             )}
+
+            {/* 볼린저 밴드 출력 컬럼 선택 */}
+            {tempCondition.indicator === 'bollinger' && (
+              <Grid item xs={12}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>볼린저 밴드 라인</InputLabel>
+                  <Select
+                    value={tempCondition.bollingerLine || 'bollinger_lower'}
+                    onChange={(e) => setTempCondition({ ...tempCondition, bollingerLine: e.target.value as any })}
+                    label="볼린저 밴드 라인"
+                  >
+                    <MenuItem value="bollinger_upper">상단 밴드 (Upper Band)</MenuItem>
+                    <MenuItem value="bollinger_middle">중간 밴드 (Middle Band / SMA)</MenuItem>
+                    <MenuItem value="bollinger_lower">하단 밴드 (Lower Band)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
+
+            {/* MACD 출력 컬럼 선택 */}
+            {tempCondition.indicator === 'macd' && (
+              <Grid item xs={12}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>MACD 라인</InputLabel>
+                  <Select
+                    value={tempCondition.macdLine || 'macd'}
+                    onChange={(e) => setTempCondition({ ...tempCondition, macdLine: e.target.value as any })}
+                    label="MACD 라인"
+                  >
+                    <MenuItem value="macd">MACD 라인</MenuItem>
+                    <MenuItem value="macd_signal">시그널 라인</MenuItem>
+                    <MenuItem value="macd_hist">히스토그램</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
+
+            {/* 스토캐스틱 출력 컬럼 선택 */}
+            {tempCondition.indicator === 'stochastic' && (
+              <Grid item xs={12}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>스토캐스틱 라인</InputLabel>
+                  <Select
+                    value={tempCondition.stochLine || 'stoch_k'}
+                    onChange={(e) => setTempCondition({ ...tempCondition, stochLine: e.target.value as any })}
+                    label="스토캐스틱 라인"
+                  >
+                    <MenuItem value="stoch_k">%K 라인</MenuItem>
+                    <MenuItem value="stoch_d">%D 라인</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
             
             {/* 연산자 */}
             <Grid item xs={12}>
@@ -1891,10 +1968,17 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     일목균형표는 전환선(9일), 기준선(26일), 선행스팬(52일), 후행스팬(26일)으로 구성됩니다.
                     구름대는 선행스팬 A와 B 사이의 영역을 의미합니다.
                   </>
+                ) : tempCondition.indicator === 'bollinger' ? (
+                  <>
+                    볼린저 밴드는 상단/중간/하단 밴드로 구성됩니다.
+                    {currentConditionType === 'buy' ? '종가가 하단 밴드 아래로 떨어지면 과매도' : '종가가 상단 밴드 위로 올라가면 과매수'} 신호입니다.
+                  </>
                 ) : tempCondition.indicator === 'rsi' ? (
                   <>RSI {currentConditionType === 'buy' ? '30 미만은 과매도' : '70 초과는 과매수'} 신호입니다.</>
                 ) : tempCondition.indicator === 'macd' ? (
                   <>MACD와 시그널선의 교차를 통해 매매 시점을 포착합니다.</>
+                ) : tempCondition.indicator === 'stochastic' ? (
+                  <>스토캐스틱은 %K와 %D 라인의 교차로 매매 시점을 포착합니다. {currentConditionType === 'buy' ? '20 이하는 과매도' : '80 이상은 과매수'} 구간입니다.</>
                 ) : (
                   <>선택한 지표와 조건에 따라 {currentConditionType === 'buy' ? '매수' : '매도'} 신호가 발생합니다.</>
                 )}
