@@ -612,7 +612,20 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
       // 투자 유니버스 설정 가져오기
       const investmentConfig = localStorage.getItem('investmentConfig')
-      const universeSettings = investmentConfig ? JSON.parse(investmentConfig) : null
+      let universeSettings = investmentConfig ? JSON.parse(investmentConfig) : null
+
+      // filteredStocks 제거 (DB 저장 시 불필요한 데이터)
+      if (universeSettings?.universe?.filteredStocks) {
+        universeSettings = {
+          ...universeSettings,
+          universe: {
+            ...universeSettings.universe,
+            filteredStocks: undefined
+          }
+        }
+        // undefined 필드 제거
+        delete universeSettings.universe.filteredStocks
+      }
 
       // ===== 조건 형식 변환 (구 형식 → 표준 형식) =====
       const convertedStrategy = ensureStandardFormat({
