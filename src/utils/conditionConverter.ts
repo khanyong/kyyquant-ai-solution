@@ -62,6 +62,27 @@ const normalizeIndicatorName = (name: string): string => {
 export const convertConditionToStandard = (
   oldCondition: OldCondition
 ): StandardCondition => {
+  // MACD 커스텀 연산자 특수 처리
+  if (oldCondition.indicator === 'macd' || oldCondition.left === 'macd') {
+    if (oldCondition.operator === 'macd_above_signal') {
+      return { left: 'macd_line', operator: '>', right: 'macd_signal' }
+    } else if (oldCondition.operator === 'macd_below_signal') {
+      return { left: 'macd_line', operator: '<', right: 'macd_signal' }
+    } else if (oldCondition.operator === 'macd_cross_signal_up') {
+      return { left: 'macd_line', operator: 'crossover', right: 'macd_signal' }
+    } else if (oldCondition.operator === 'macd_cross_signal_down') {
+      return { left: 'macd_line', operator: 'crossunder', right: 'macd_signal' }
+    } else if (oldCondition.operator === 'histogram_positive') {
+      return { left: 'macd_hist', operator: '>', right: 0 }
+    } else if (oldCondition.operator === 'histogram_negative') {
+      return { left: 'macd_hist', operator: '<', right: 0 }
+    } else if (oldCondition.operator === 'macd_above_zero') {
+      return { left: 'macd_line', operator: '>', right: 0 }
+    } else if (oldCondition.operator === 'macd_below_zero') {
+      return { left: 'macd_line', operator: '<', right: 0 }
+    }
+  }
+
   // 볼린저 밴드 특수 처리: price_above/price_below를 close와 밴드 비교로 변환
   if ((oldCondition.indicator === 'bollinger' || oldCondition.indicator === 'bb') && oldCondition.bollingerLine) {
     const bandLine = oldCondition.bollingerLine // bollinger_upper, bollinger_middle, bollinger_lower
