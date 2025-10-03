@@ -588,10 +588,17 @@ class IndicatorCalculator:
         start_time = time.time()
         warnings = []
 
+        print(f"[Calculator] DEBUG: calculate() called with config={config}, stock_code={stock_code}")
+        print(f"[Calculator] DEBUG: config keys={list(config.keys())}")
+        if 'params' in config:
+            print(f"[Calculator] DEBUG: config['params']={config['params']}")
+
         # 기본 옵션
         if options is None:
+            period_from_config = config.get('params', {}).get('period', 20)
+            print(f"[Calculator] DEBUG: Creating ExecOptions with period={period_from_config} from config params={config.get('params', {})}")
             options = ExecOptions(
-                period=config.get('params', {}).get('period', 20),
+                period=period_from_config,
                 realtime=config.get('realtime', False)
             )
 
@@ -602,8 +609,8 @@ class IndicatorCalculator:
         calculation_type = config.get('calculation_type', 'builtin')
 
         try:
-            # 캐시 확인 - 종목코드 포함
-            cache_key = self._get_cache_key(indicator_name, options, stock_code, df.index)
+            # 캐시 확인 - 종목코드 및 params 포함
+            cache_key = self._get_cache_key(indicator_name, options, stock_code, df.index, config.get('params', {}))
             if cache_key in self._execution_cache:
                 cached_result = self._execution_cache[cache_key]
                 logger.info(f"Using cached result for {indicator_name} ({stock_code})")
@@ -615,7 +622,7 @@ class IndicatorCalculator:
             indicator_def = self.indicators_cache.get(indicator_name)
             if indicator_def:
                 logger.info(f"Using Supabase definition for {indicator_name}")
-                result_columns = self._calculate_from_definition(df, indicator_def, options)
+                result_columns = self._calculate_from_definition(df, indicator_def, options, config.get('params', {}))
 
             # DB 전용 모드에서는 Supabase에 없으면 에러
             elif self.enforce_db_only:
@@ -774,10 +781,11 @@ class IndicatorCalculator:
             logger.error(f"Failed to execute custom formula: {e}")
             raise
 
-    def _calculate_python_code(self, df: pd.DataFrame, config: Dict, options: ExecOptions) -> Dict[str, pd.Series]:
+    def _calculate_python_code(self, df: pd.DataFrame, config: Dict, options: ExecOptions, custom_params: Dict = None) -> Dict[str, pd.Series]:
         """Python 코드 실행"""
         print(f"[Calculator] DEBUG: _calculate_python_code called")
         print(f"[Calculator] DEBUG: config keys={list(config.keys())}")
+        print(f"[Calculator] DEBUG: custom_params={custom_params}")
 
         # config가 indicator definition인 경우 formula에서 code 추출
         if 'formula' in config and isinstance(config['formula'], dict):
@@ -808,18 +816,22 @@ class IndicatorCalculator:
             'min_periods': options.min_periods
         }
 
-        # config의 params 병합
-        if config.get('params'):
-            namespace['params'].update(config.get('params'))
-
-        # default_params 추가
+        # default_params 먼저 추가 (낮은 우선순위)
         if config.get('default_params'):
             try:
                 default_params = json.loads(config['default_params']) if isinstance(config['default_params'], str) else config['default_params']
                 if isinstance(default_params, dict):
-                    namespace['params'].update(default_params)
+                    # custom_params가 없는 키만 업데이트
+                    for key, value in default_params.items():
+                        if key not in namespace['params']:
+                            namespace['params'][key] = value
             except:
                 pass
+
+        # custom_params 우선 적용 (최고 우선순위!)
+        if custom_params:
+            namespace['params'].update(custom_params)
+            print(f"[Calculator] DEBUG: Applied custom_params to namespace: {custom_params}")
 
         namespace['options'] = options
 
@@ -859,7 +871,7 @@ class IndicatorCalculator:
             logger.error(f"Failed to execute Python code: {e}")
             raise
 
-    def _execute_supabase_code(self, df: pd.DataFrame, code: str, definition: Dict, options: ExecOptions) -> Dict[str, pd.Series]:
+    def _execute_supabase_code(self, df: pd.DataFrame, code: str, definition: Dict, options: ExecOptions, custom_params: Dict = None) -> Dict[str, pd.Series]:
         """Supabase 형식의 코드 실행"""
         # 안전한 네임스페이스 생성
         namespace = self.sandbox.create_safe_namespace()
@@ -873,16 +885,27 @@ class IndicatorCalculator:
             'min_periods': options.min_periods
         }
 
+        # custom_params 우선 적용 (중요!)
+        if custom_params:
+            namespace['params'].update(custom_params)
+            print(f"[Calculator] DEBUG: Applied custom_params to namespace: {custom_params}")
+
         # default_params 추가
         if definition.get('default_params'):
             try:
                 default_params = json.loads(definition['default_params']) if isinstance(definition['default_params'], str) else definition['default_params']
                 if isinstance(default_params, dict):
-                    namespace['params'].update(default_params)
+                    # custom_params가 없는 키만 업데이트
+                    for key, value in default_params.items():
+                        if key not in namespace['params']:
+                            namespace['params'][key] = value
             except:
                 pass
 
         try:
+            # 디버그: namespace params 확인
+            logger.info(f"[DEBUG] Executing code with params: {namespace['params']}")
+
             # 코드 실행
             exec(code, namespace)
 
@@ -902,21 +925,18 @@ class IndicatorCalculator:
             logger.error(f"Failed to execute Supabase code: {e}")
             raise
 
-    def _calculate_from_definition(self, df: pd.DataFrame, definition: Dict, options: ExecOptions) -> Dict[str, pd.Series]:
+    def _calculate_from_definition(self, df: pd.DataFrame, definition: Dict, options: ExecOptions, custom_params: Dict = None) -> Dict[str, pd.Series]:
         """Supabase 정의로부터 계산"""
         calc_type = definition.get('calculation_type')
         print(f"[Calculator] DEBUG: _calculate_from_definition called")
         print(f"[Calculator] DEBUG: calc_type={calc_type}")
         print(f"[Calculator] DEBUG: definition name={definition.get('name')}")
+        print(f"[Calculator] DEBUG: custom_params={custom_params}")
+        print(f"[Calculator] DEBUG: options.period={options.period}, options.min_periods={options.min_periods}")
 
-        # default_params가 있으면 options 업데이트
-        if definition.get('default_params'):
-            try:
-                params = json.loads(definition['default_params']) if isinstance(definition['default_params'], str) else definition['default_params']
-                if isinstance(params, dict) and 'period' in params:
-                    options.period = params['period']
-            except:
-                pass
+        # default_params로 options를 덮어쓰지 않음
+        # custom_params가 우선순위를 가져야 하며, namespace 생성 시 default_params는 _execute_supabase_code에서 처리됨
+        # 이 로직은 custom_params보다 먼저 실행되어 options.period를 덮어쓰는 버그를 일으킴
 
         if calc_type == 'built-in' or calc_type == 'builtin':
             print(f"[Calculator] DEBUG: calc_type is built-in")
@@ -934,7 +954,7 @@ class IndicatorCalculator:
                 print(f"[Calculator] DEBUG: Using Supabase code execution")
                 # 기존 Supabase 형식 - Python 코드 실행
                 code = formula['code']
-                return self._execute_supabase_code(df, code, definition, options)
+                return self._execute_supabase_code(df, code, definition, options, custom_params)
             else:
                 print(f"[Calculator] DEBUG: Using registry execution")
                 # 새 형식 - registry 사용 (DB 전용 모드에서는 불가)
@@ -955,17 +975,23 @@ class IndicatorCalculator:
             return self._calculate_custom_formula(df, definition, options)
         elif calc_type == 'python_code':
             print(f"[Calculator] DEBUG: Using python_code")
-            return self._calculate_python_code(df, definition, options)
+            return self._calculate_python_code(df, definition, options, custom_params)
         else:
             # 기본적으로 custom_formula로 처리
             print(f"[Calculator] DEBUG: Unknown calc_type, using custom_formula as fallback")
             logger.warning(f"Unknown calculation type '{calc_type}', treating as custom_formula")
             return self._calculate_custom_formula(df, definition, options)
 
-    def _get_cache_key(self, name: str, options: ExecOptions, stock_code: Optional[str] = None, df_index: Optional[pd.Index] = None) -> str:
-        """캐시 키 생성 - 종목 및 데이터 범위 포함"""
+    def _get_cache_key(self, name: str, options: ExecOptions, stock_code: Optional[str] = None, df_index: Optional[pd.Index] = None, params: Optional[Dict] = None) -> str:
+        """캐시 키 생성 - 종목, 데이터 범위 및 파라미터 포함"""
         # 기본 키
         key_parts = [name, str(options.period), str(options.realtime), str(options.min_periods)]
+
+        # params 추가 (중요: 동일 지표의 다른 파라미터 구분)
+        if params:
+            import json
+            params_str = json.dumps(params, sort_keys=True)
+            key_parts.append(params_str)
 
         # 종목 코드 추가
         if stock_code:

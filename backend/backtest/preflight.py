@@ -286,12 +286,13 @@ class IndicatorColumnMapper:
 
         try:
             # result dict의 키 패턴 추출: result = {f'sma_{period}': ...} 또는 result = {'sma': ...}
-            # 패턴: result\s*=\s*\{([^}]+)\}
-            match = re.search(r"result\s*=\s*\{([^}]+)\}", formula_code)
+            # 패턴 개선: 중괄호 내부의 중괄호도 고려 (f-string의 {period} 포함)
+            # result = { ... } 에서 외부 중괄호만 매칭
+            match = re.search(r"result\s*=\s*\{(.+)\}", formula_code, re.DOTALL)
             if not match:
                 return []
 
-            dict_content = match.group(1)
+            dict_content = match.group(1).strip()
 
             # f-string 키 패턴: f'...{param_name}...' 또는 f"...{param_name}..."
             # 예: f'sma_{period}', f"macd_{fast}_{slow}"

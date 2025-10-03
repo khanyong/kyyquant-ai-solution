@@ -1231,41 +1231,60 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 21,
-      title: 'n8n 워크플로우 자동매매 연동',
-      status: 'in-progress',
+      title: '볼린저 밴드 조건 설정 UI 개선',
+      status: 'done',
       priority: 'high',
-      icon: <AutoGraph />,
-      period: '2025.09 - 진행중',
-      description: 'n8n 기반 자동매매 워크플로우 실제 구현',
+      icon: <Code />,
+      period: '2025.10.04',
+      description: '볼린저 밴드 라인 선택 기능 및 Supabase 지표 연동 시스템 구축',
       subtasks: [
         {
-          title: '⏳ n8n 서버 설정',
+          title: '✅ 볼린저 밴드 라인 선택 기능',
           details: [
-            'NAS n8n Docker 컨테이너 구성',
-            '워크플로우 임포트 및 활성화',
-            'Webhook 엔드포인트 설정',
-            'Supabase 연동 노드 구성',
-            '키움 API 연동 노드 개발'
+            '상단/중간/하단 밴드 선택 UI 추가',
+            '볼린저 밴드 연산자 단순화 (price_above/below, cross_above/below)',
+            'StageBasedStrategy.tsx에 bollingerLine 필드 추가',
+            'getOperatorLabel 함수로 레이블 가독성 향상',
+            '볼린저 밴드 선택 시 기본 라인 자동 설정'
           ]
         },
         {
-          title: '⏳ 실시간 전략 모니터링',
+          title: '✅ Supabase 지표 동적 로드',
           details: [
-            '활성 전략 주기적 체크 (1분)',
-            '매매 신호 자동 생성',
-            '종목별 조건 평가',
-            '신호 강도 계산',
-            'Supabase signals 테이블 업데이트'
+            'indicatorService.ts 신규 구현',
+            'getAvailableIndicators 함수로 Supabase에서 지표 로드',
+            'StrategyBuilder.tsx에서 useEffect로 지표 목록 초기화',
+            '폴백 메커니즘: 로드 실패 시 기본 지표 제공',
+            'indicators 테이블의 output_columns 활용'
           ]
         },
         {
-          title: '⏳ 자동 주문 실행',
+          title: '✅ 조건 변환 로직 개선',
           details: [
-            '매수/매도 주문 자동화',
-            '주문 체결 확인',
-            '포지션 업데이트',
-            '잔고 실시간 추적',
-            '주문 실패 시 재시도'
+            'conditionConverter.ts에 볼린저 밴드 특수 처리 추가',
+            'price_above → close > bollinger_xxx 변환',
+            'price_below → close < bollinger_xxx 변환',
+            'cross_above → close crossover bollinger_xxx',
+            'cross_below → close crossunder bollinger_xxx'
+          ]
+        },
+        {
+          title: '✅ UI 개선 및 버그 수정',
+          details: [
+            '조건 표시 레이블에 선택된 볼린저 라인 정보 포함',
+            '볼린저 밴드 조건 칩 표시 개선 (예: "상단밴드: 종가가 위에 있음")',
+            'Strategy 인터페이스에 user_id/userId 속성 추가',
+            'TypeScript 빌드 에러 수정 (BacktestRunner, StrategyBuilder)',
+            'Vercel 배포 오류 해결'
+          ]
+        },
+        {
+          title: '✅ 데이터베이스 스크립트',
+          details: [
+            'fix_bollinger_columns.sql - 볼린저 밴드 컬럼 수정',
+            'verify_bollinger_columns.sql - 볼린저 밴드 검증',
+            'fix_macd_indicator.sql - MACD 지표 수정',
+            'indicators 테이블 output_columns 확인'
           ]
         }
       ]
@@ -1332,7 +1351,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 22,
+      id: 23,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -1393,7 +1412,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 23,
+      id: 24,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1454,7 +1473,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 24,
+      id: 25,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -1515,7 +1534,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 25,
+      id: 26,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1576,7 +1595,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 26,
+      id: 27,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',

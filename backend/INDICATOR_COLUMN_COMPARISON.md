@@ -12,7 +12,7 @@
 | `cci` | 📌 static | `cci` | `cci` | `cci` |
 | `close` | 📌 static | `close` | `close` | `close` |
 | `dmi` | 📌 static | `dmi_plus_di, dmi_minus_di` | `dmi_plus_di, dmi_minus_di` | `dmi_plus_di`, `dmi_minus_di` |
-| `ema` | 📌 static | `ema` | `ema` | `ema` |
+| `ema` | 🔄 dynamic | `ema_{period}` | `ema_20` | `ema` |
 | `ichimoku` | 📌 static | `ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b, ichimoku_chikou` | `ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b, ichimoku_chikou` | `ichimoku_tenkan`, `ichimoku_kijun`, `ichimoku_senkou_a`, `ichimoku_senkou_b`, `ichimoku_chikou` |
 | `ma` | 📌 static | `ma` | `ma` | `ma` |
 | `macd` | 📌 static | `macd_line, macd_signal, macd_hist` | `macd_line, macd_signal, macd_hist` | `macd_line`, `macd_signal`, `macd_hist` |
@@ -219,12 +219,17 @@
 
 ### 동적 컬럼명 생성 지표
 
-- **`sma`**: `sma_{period}` 형태로 생성
-- **`volume_ma`**: `volume_ma_{period}` 형태로 생성
+- **`sma`**: `sma_{period}` 형태로 생성 (예: `sma_20`, `sma_60`)
+- **`ema`**: `ema_{period}` 형태로 생성 (예: `ema_20`, `ema_50`)
+- **`volume_ma`**: `volume_ma_{period}` 형태로 생성 (예: `volume_ma_20`)
+
+**업데이트 (2025-10-04):**
+- preflight.py의 regex 패턴 수정: f-string 내부 중괄호 정확히 파싱
+- calculator.py의 캐시 키 수정: params를 포함하여 동일 지표의 다른 period 구분
 
 ### 정적 컬럼명 생성 지표
 
-총 18개의 지표가 고정된 컬럼명을 사용합니다.
+총 17개의 지표가 고정된 컬럼명을 사용합니다.
 
 ### 검증 요약
 
