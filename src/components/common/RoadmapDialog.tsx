@@ -1175,6 +1175,62 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 20,
+      title: '매도 OR 로직 및 UI 개선',
+      status: 'done',
+      priority: 'high',
+      icon: <TrendingUp />,
+      period: '2025.10.03',
+      description: '목표수익률과 지표 조건의 OR 관계 구현 및 사용자 경험 개선',
+      subtasks: [
+        {
+          title: '✅ 매도 조건 OR 로직 구현',
+          details: [
+            '목표수익률과 지표 조건을 OR 관계로 처리',
+            '둘 중 하나라도 만족하면 매도 실행',
+            '손절은 항상 최우선으로 100% 매도',
+            '매도 시 더 큰 exitPercent 선택',
+            'sell_signal 구조를 dict로 변경 (stage, exitPercent, reason 포함)'
+          ]
+        },
+        {
+          title: '✅ 지표 중복 사용 허용',
+          details: [
+            '각 단계에서 동일 지표를 다른 조건으로 사용 가능',
+            'getAvailableIndicatorsForStage 필터링 제거',
+            '예: 1단계 RSI < 35, 2단계 RSI < 28, 3단계 RSI < 20'
+          ]
+        },
+        {
+          title: '✅ 기본 비교 연산자 추가',
+          details: [
+            'RSI, Stochastic, CCI 등에 basicOptions 추가',
+            '사용자가 임의의 값 설정 가능 (예: RSI < 35)',
+            '기존 프리셋 값 외 커스텀 임계값 지원'
+          ]
+        },
+        {
+          title: '✅ 미지원 기능 시각적 구분',
+          details: [
+            '미지원 조건에 "(추후 지원)" 표시',
+            '회색 처리 및 투명도 조정 (opacity: 0.5)',
+            '트레일링 스톱에 "(추후 지원)" 라벨 추가',
+            'MenuItem sx prop을 통한 스타일링'
+          ]
+        },
+        {
+          title: '✅ 문서화 및 테스트',
+          details: [
+            'SUPABASE_STRATEGY_SAMPLES.md 업데이트',
+            '마지막 단계 투자 비율 100% 명시',
+            'test_sell_or_logic.py 테스트 스크립트 작성',
+            'feature/sell-or-logic-and-ui-improvements 브랜치 생성',
+            '12개 파일 변경 (+2,124, -782 줄)'
+          ]
+        }
+      ]
+    },
+    {
+      id: 21,
       title: 'n8n 워크플로우 자동매매 연동',
       status: 'in-progress',
       priority: 'high',
@@ -1215,7 +1271,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 21,
+      id: 22,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -1585,7 +1641,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 77 // 2025-10-01 기준 진행률 (Phase 2.5a 완료)
+  const progress = 80 // 2025-10-03 기준 진행률 (매도 OR 로직 및 UI 개선 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 

@@ -605,6 +605,61 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       })
       console.log('[StrategyBuilder] Converted to standard format:', convertedStrategy)
 
+      // 단계별 전략에서 사용된 모든 지표 수집
+      const collectIndicatorsFromStages = () => {
+        const indicatorSet = new Set<string>()
+        const indicatorConfigs: any[] = []
+
+        // 매수 단계에서 지표 수집
+        if (useStageBasedStrategy && buyStageStrategy?.stages) {
+          buyStageStrategy.stages.forEach((stage: any) => {
+            if (stage.enabled && stage.indicators) {
+              stage.indicators.forEach((ind: any) => {
+                const indicatorId = ind.indicatorId || ind.id
+                if (!indicatorSet.has(indicatorId)) {
+                  indicatorSet.add(indicatorId)
+                  indicatorConfigs.push({
+                    name: indicatorId.toLowerCase().replace('_', ''),
+                    type: indicatorId.toUpperCase(),
+                    params: ind.params || {}
+                  })
+                }
+              })
+            }
+          })
+        }
+
+        // 매도 단계에서 지표 수집
+        if (useStageBasedStrategy && sellStageStrategy?.stages) {
+          sellStageStrategy.stages.forEach((stage: any) => {
+            if (stage.enabled && stage.indicators) {
+              stage.indicators.forEach((ind: any) => {
+                const indicatorId = ind.indicatorId || ind.id
+                if (!indicatorSet.has(indicatorId)) {
+                  indicatorSet.add(indicatorId)
+                  indicatorConfigs.push({
+                    name: indicatorId.toLowerCase().replace('_', ''),
+                    type: indicatorId.toUpperCase(),
+                    params: ind.params || {}
+                  })
+                }
+              })
+            }
+          })
+        }
+
+        // 기본 지표 목록에서도 수집 (단계별 전략 미사용 시)
+        if (!useStageBasedStrategy || indicatorConfigs.length === 0) {
+          return strategy.indicators.map(ind => ({
+            name: ind.id.toLowerCase().replace('_', ''),
+            type: ind.id.toUpperCase(),
+            params: ind.params || {}
+          }))
+        }
+
+        return indicatorConfigs
+      }
+
       // 백테스팅과 호환되는 파라미터 구성
       const parameters: any = {
         strategy_type: detailedType,  // 상세 타입 정보 저장
@@ -618,22 +673,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
           portfolioSettings: universeSettings.portfolio,
           riskSettings: universeSettings.risk
         } : null,
-        // 기본 지표 파라미터 - params 구조로 변환
-        indicators: strategy.indicators.map(ind => {
-          // params 구조가 있는지 확인
-          const indicatorConfig: any = {
-            name: ind.id.toLowerCase().replace('_', ''),  // 예: sma_20 → sma
-            type: ind.id.toUpperCase(),  // 예: SMA
-            params: ind.params || {}
-          }
-
-          // 레거시 period 필드가 있으면 params로 이동
-          if ('period' in ind && !ind.params) {
-            indicatorConfig.params = { period: (ind as any).period }
-          }
-
-          return indicatorConfig
-        }),
+        // 지표 파라미터 - 단계별 전략에서 사용된 모든 지표 수집
+        indicators: collectIndicatorsFromStages(),
         // 매수/매도 조건 (표준 형식으로 변환됨)
         buyConditions: convertedStrategy.buyConditions,
         sellConditions: convertedStrategy.sellConditions,
@@ -683,6 +724,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         // type: null,  // type 컬럼은 null로 설정 (체크 제약조건 때문)
         config: {
           ...parameters,
+          // 지표 정보 명시적 추가 (백테스트 엔진에서 필수)
+          indicators: parameters.indicators,
           // 서버가 config 내부에서 직접 조건을 찾으므로 여기에도 포함 (표준 형식)
           buyConditions: convertedStrategy.buyConditions || [],
           sellConditions: convertedStrategy.sellConditions || [],

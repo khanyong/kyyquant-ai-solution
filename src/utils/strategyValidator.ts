@@ -57,18 +57,8 @@ export function validateStageStrategy(stageStrategy: any): ValidationResult {
     }
   })
 
-  // 지표 중복 검증
-  const usedIndicators = new Set<string>()
-  stageStrategy.stages.forEach((stage: any) => {
-    if (stage.enabled && stage.indicators) {
-      stage.indicators.forEach((ind: any) => {
-        if (usedIndicators.has(ind.indicatorId)) {
-          errors.push(`지표 ${ind.name || ind.indicatorId}가 여러 단계에서 중복 사용되었습니다`)
-        }
-        usedIndicators.add(ind.indicatorId)
-      })
-    }
-  })
+  // 지표 중복 검증 (제거됨 - 각 단계에서 동일 지표를 다른 조건으로 사용 가능)
+  // 예: 1단계 RSI < 35, 2단계 RSI < 28, 3단계 RSI < 20
 
   return {
     isValid: errors.length === 0,
