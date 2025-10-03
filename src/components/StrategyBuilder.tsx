@@ -208,7 +208,7 @@ const AVAILABLE_INDICATORS = [
   { id: 'ma', name: 'MA (이동평균)', type: 'trend', defaultParams: { period: 20 } },
   { id: 'sma', name: 'SMA (단순이동평균)', type: 'trend', defaultParams: { period: 20 } },
   { id: 'ema', name: 'EMA (지수이동평균)', type: 'trend', defaultParams: { period: 20 } },
-  { id: 'bb', name: '볼린저밴드', type: 'volatility', defaultParams: { period: 20, std: 2 } },
+  { id: 'bollinger', name: '볼린저밴드', type: 'volatility', defaultParams: { period: 20, std: 2 } },
   { id: 'rsi', name: 'RSI', type: 'momentum', defaultParams: { period: 14 } },
   { id: 'macd', name: 'MACD', type: 'momentum', defaultParams: { fast: 12, slow: 26, signal: 9 } },
   { id: 'stochastic', name: '스토캐스틱', type: 'momentum', defaultParams: { k: 14, d: 3 } },
@@ -396,7 +396,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     setTempCondition({
       id: `cond_${Date.now()}`,
       type,
-      indicator: 'rsi_14',
+      indicator: 'rsi',
       operator: type === 'buy' ? '<' : '>',
       value: type === 'buy' ? 30 : 70,
       combineWith: strategy[type === 'buy' ? 'buyConditions' : 'sellConditions'].length > 0 ? 'AND' : 'AND'
@@ -1077,429 +1077,36 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
             검증된 기본 전략 템플릿을 선택하여 빠르게 시작하세요
           </Typography>
           <Grid container spacing={2}>
-            {/* 골든크로스 전략 */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3 
-                  }
-                }}
-                onClick={() => {
-                  setStrategy({
-                    ...strategy,
-                    name: '[템플릿] 골든크로스',
-                    description: '단기 이동평균선이 장기 이동평균선을 상향 돌파할 때 매수',
-                    indicators: [],
-                    buyConditions: [
-                      { id: '1', type: 'buy', indicator: 'MA_20', operator: '>', value: 'MA_60', combineWith: 'AND' }
-                    ],
-                    sellConditions: [
-                      { id: '2', type: 'sell', indicator: 'MA_20', operator: '<', value: 'MA_60', combineWith: 'AND' }
-                    ]
-                  });
-                  setUseStageBasedStrategy(false);
-                }}
-              >
-                <CardContent>
-                  <TrendingUp color="primary" sx={{ mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    골든크로스
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    MA20 &gt; MA60 매수<br/>
-                    안정적인 추세 추종
-                  </Typography>
-                  <Chip label="초급" size="small" color="success" sx={{ mt: 1 }} />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* RSI 과매도 전략 */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3 
-                  }
-                }}
-                onClick={() => {
-                  setStrategy({
-                    ...strategy,
-                    name: '[템플릿] RSI 반전',
-                    description: 'RSI 과매도 구간에서 매수, 과매수 구간에서 매도',
-                    indicators: [],
-                    buyConditions: [
-                      { id: '1', type: 'buy', indicator: 'RSI_14', operator: '<', value: 30, combineWith: 'AND' }
-                    ],
-                    sellConditions: [
-                      { id: '2', type: 'sell', indicator: 'RSI_14', operator: '>', value: 70, combineWith: 'AND' }
-                    ]
-                  });
-                  setUseStageBasedStrategy(false);
-                }}
-              >
-                <CardContent>
-                  <Autorenew color="secondary" sx={{ mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    RSI 반전
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    RSI 30 이하 매수<br/>
-                    과매도 반등 포착
-                  </Typography>
-                  <Chip label="초급" size="small" color="success" sx={{ mt: 1 }} />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* 볼린저밴드 전략 */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3 
-                  }
-                }}
-                onClick={() => {
-                  setStrategy({
-                    ...strategy,
-                    name: '[템플릿] 볼린저밴드',
-                    description: '하단 밴드 터치 후 반등 시 매수, 상단 밴드 돌파 시 매도',
-                    indicators: [],
-                    buyConditions: [
-                      { id: '1', type: 'buy', indicator: 'PRICE', operator: '<', value: 'BB_LOWER', combineWith: 'AND' },
-                      { id: '2', type: 'buy', indicator: 'RSI_14', operator: '<', value: 40, combineWith: 'AND' }
-                    ],
-                    sellConditions: [
-                      { id: '3', type: 'sell', indicator: 'PRICE', operator: '>', value: 'BB_UPPER', combineWith: 'AND' }
-                    ]
-                  });
-                  setUseStageBasedStrategy(false);
-                }}
-              >
-                <CardContent>
-                  <Timeline color="info" sx={{ mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    볼린저밴드
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    밴드 하단 매수<br/>
-                    변동성 활용 매매
-                  </Typography>
-                  <Chip label="중급" size="small" color="warning" sx={{ mt: 1 }} />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* MACD 전략 */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3 
-                  }
-                }}
-                onClick={() => {
-                  setStrategy({
-                    ...strategy,
-                    name: '[템플릿] MACD 시그널',
-                    description: 'MACD가 시그널선을 상향 돌파 시 매수',
-                    indicators: [],
-                    buyConditions: [
-                      { id: '1', type: 'buy', indicator: 'MACD', operator: 'cross_above', value: 'MACD_SIGNAL', combineWith: 'AND' },
-                      { id: '2', type: 'buy', indicator: 'MACD', operator: '>', value: 0, combineWith: 'AND' }
-                    ],
-                    sellConditions: [
-                      { id: '3', type: 'sell', indicator: 'MACD', operator: 'cross_below', value: 'MACD_SIGNAL', combineWith: 'AND' }
-                    ]
-                  });
-                  setUseStageBasedStrategy(false);
-                }}
-              >
-                <CardContent>
-                  <ShowChart color="error" sx={{ mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    MACD 시그널
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    MACD 골든크로스<br/>
-                    모멘텀 추종 매매
-                  </Typography>
-                  <Chip label="중급" size="small" color="warning" sx={{ mt: 1 }} />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* 복합 전략 1 */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3 
-                  }
-                }}
-                onClick={() => {
-                  // 3단계 모드 자동 활성화
-                  setUseStageBasedStrategy(true);
-                  
-                  // 3단계 전략 설정
-                  setBuyStageStrategy({
-                    stage1: {
-                      indicators: ['RSI_14'],
-                      conditions: [
-                        { indicator: 'RSI_14', operator: '<', value: 35 }
-                      ]
-                    },
-                    stage2: {
-                      indicators: ['MACD_12_26_9'],
-                      conditions: [
-                        { indicator: 'MACD', operator: 'cross_above', value: 'MACD_SIGNAL' }
-                      ]
-                    },
-                    stage3: {
-                      indicators: ['VOLUME'],
-                      conditions: [
-                        { indicator: 'VOLUME', operator: '>', value: 'VOLUME_MA_20' }
-                      ]
-                    }
-                  });
-                  
-                  // 매도 전략도 설정
-                  setSellStageStrategy({
-                    stage1: {
-                      indicators: ['RSI_14'],
-                      conditions: [
-                        { indicator: 'RSI_14', operator: '>', value: 70 }
-                      ]
-                    },
-                    stage2: {
-                      indicators: ['MACD_12_26_9'],
-                      conditions: [
-                        { indicator: 'MACD', operator: 'cross_below', value: 'MACD_SIGNAL' }
-                      ]
-                    },
-                    stage3: {
-                      indicators: [],
-                      conditions: []
-                    }
-                  });
-                  
-                  setStrategy({
-                    ...strategy,
-                    name: '[템플릿] 복합 전략 A',
-                    description: 'RSI 과매도 → MACD 골든크로스 → 거래량 확인'
-                  });
-                }}
-              >
-                <CardContent>
-                  <AccountTree color="primary" sx={{ mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    복합 전략 A
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    RSI+MACD+거래량<br/>
-                    3단계 검증 시스템
-                  </Typography>
-                  <Chip label="고급" size="small" color="error" sx={{ mt: 1 }} />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* 복합 전략 2 */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3 
-                  }
-                }}
-                onClick={() => {
-                  // 3단계 모드 자동 활성화
-                  setUseStageBasedStrategy(true);
-                  
-                  // 3단계 매수 전략 설정
-                  setBuyStageStrategy({
-                    stage1: {
-                      indicators: ['MA_20', 'MA_60'],
-                      conditions: [
-                        { indicator: 'MA_20', operator: '>', value: 'MA_60' }
-                      ]
-                    },
-                    stage2: {
-                      indicators: ['BB_20_2'],
-                      conditions: [
-                        { indicator: 'PRICE', operator: '<', value: 'BB_MIDDLE' }
-                      ]
-                    },
-                    stage3: {
-                      indicators: ['RSI_14'],
-                      conditions: [
-                        { indicator: 'RSI_14', operator: '<', value: 50 }
-                      ]
-                    }
-                  });
-                  
-                  // 매도 전략 설정
-                  setSellStageStrategy({
-                    stage1: {
-                      indicators: ['MA_20', 'MA_60'],
-                      conditions: [
-                        { indicator: 'MA_20', operator: '<', value: 'MA_60' }
-                      ]
-                    },
-                    stage2: {
-                      indicators: ['BB_20_2'],
-                      conditions: [
-                        { indicator: 'PRICE', operator: '>', value: 'BB_UPPER' }
-                      ]
-                    },
-                    stage3: {
-                      indicators: [],
-                      conditions: []
-                    }
-                  });
-                  
-                  setStrategy({
-                    ...strategy,
-                    name: '[템플릿] 복합 전략 B',
-                    description: '골든크로스 → 볼린저 중단 이하 → RSI 확인'
-                  });
-                }}
-              >
-                <CardContent>
-                  <AccountTree color="secondary" sx={{ mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    복합 전략 B
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    MA+BB+RSI<br/>
-                    추세와 모멘텀 결합
-                  </Typography>
-                  <Chip label="고급" size="small" color="error" sx={{ mt: 1 }} />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* 스캘핑 전략 */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3 
-                  }
-                }}
-                onClick={() => {
-                  setStrategy({
-                    ...strategy,
-                    name: '[템플릿] 스캘핑',
-                    description: '5분봉 기준 빠른 진입/청산',
-                    indicators: [],
-                    buyConditions: [
-                      { id: '1', type: 'buy', indicator: 'PRICE', operator: '>', value: 'MA_5', combineWith: 'AND' },
-                      { id: '2', type: 'buy', indicator: 'RSI_9', operator: '<', value: 50, combineWith: 'AND' }
-                    ],
-                    sellConditions: [
-                      { id: '3', type: 'sell', indicator: 'RSI_9', operator: '>', value: 70, combineWith: 'AND' }
-                    ],
-                    riskManagement: {
-                      stopLoss: -2,
-                      takeProfit: 3,
-                      trailingStop: true,
-                      trailingStopPercent: 1,
-                      positionSize: 10,
-                      maxPositions: 3
-                    }
-                  });
-                  setUseStageBasedStrategy(false);
-                }}
-              >
-                <CardContent>
-                  <Speed color="warning" sx={{ mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    스캘핑
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    단기 진입/청산<br/>
-                    빠른 수익 실현
-                  </Typography>
-                  <Chip label="전문가" size="small" color="error" sx={{ mt: 1 }} />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* 스윙 전략 */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 3 
-                  }
-                }}
-                onClick={() => {
-                  setStrategy({
-                    ...strategy,
-                    name: '[템플릿] 스윙 트레이딩',
-                    description: '중기 추세 전환점 포착',
-                    indicators: [],
-                    buyConditions: [
-                      { id: '1', type: 'buy', indicator: 'MA_20', operator: '>', value: 'MA_60', combineWith: 'AND' },
-                      { id: '2', type: 'buy', indicator: 'RSI_14', operator: '<', value: 60, combineWith: 'AND' },
-                      { id: '3', type: 'buy', indicator: 'MACD', operator: '>', value: 0, combineWith: 'AND' }
-                    ],
-                    sellConditions: [
-                      { id: '4', type: 'sell', indicator: 'MA_20', operator: '<', value: 'MA_60', combineWith: 'AND' },
-                      { id: '5', type: 'sell', indicator: 'RSI_14', operator: '>', value: 70, combineWith: 'AND' }
-                    ],
-                    riskManagement: {
-                      stopLoss: -7,
-                      takeProfit: 15,
-                      trailingStop: false,
-                      trailingStopPercent: 0,
-                      positionSize: 20,
-                      maxPositions: 5
-                    }
-                  });
-                  setUseStageBasedStrategy(false);
-                }}
-              >
-                <CardContent>
-                  <SwapHoriz color="info" sx={{ mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    스윙 트레이딩
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    중기 추세 포착<br/>
-                    안정적 수익 추구
-                  </Typography>
-                  <Chip label="중급" size="small" color="warning" sx={{ mt: 1 }} />
-                </CardContent>
-              </Card>
-            </Grid>
+            {/* Supabase에서 템플릿 전략 동적 로드 */}
+            {savedStrategies
+              .filter(s => s.name && s.name.startsWith('[템플릿]') && !s.userId)
+              .map(template => (
+                <Grid item xs={12} sm={6} md={3} key={template.id}>
+                  <Card
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 3
+                      }
+                    }}
+                    onClick={() => {
+                      loadStrategy(template);
+                    }}
+                  >
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        {template.name.replace('[템플릿] ', '')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {template.description || '전략 설명 없음'}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            }
           </Grid>
         </Paper>
 

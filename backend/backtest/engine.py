@@ -78,7 +78,11 @@ class BacktestEngine:
         self,
         strategy_config: Dict[str, Any],
         stock_codes: List[str],
-        **kwargs
+        start_date: str,
+        end_date: str,
+        initial_capital: float = 10000000,
+        commission: float = 0.00015,
+        slippage: float = 0.001
     ) -> Dict[str, Any]:
         """
         설정으로 직접 백테스트 실행 (전략 저장 없이)
@@ -90,7 +94,22 @@ class BacktestEngine:
             'config': strategy_config
         }
 
-        return await self._run_with_strategy(temp_strategy, stock_codes, **kwargs)
+        # 데이터 로드
+        price_data = await self._load_price_data(stock_codes, start_date, end_date)
+        if not price_data:
+            raise ValueError("No price data available")
+
+        # 백테스트 실행
+        results = await self._run_backtest(
+            strategy=temp_strategy,
+            price_data=price_data,
+            initial_capital=initial_capital,
+            commission=commission,
+            slippage=slippage
+        )
+
+        # 결과 정리
+        return self._prepare_results(results, temp_strategy['id'], start_date, end_date)
 
     async def _load_price_data(
         self,
@@ -148,7 +167,9 @@ class BacktestEngine:
 
             # 지표 계산
             print(f"[Engine] Step 1: Calculating indicators...")
+            print(f"[Engine] DEBUG: strategy_config.get('indicators') = {strategy_config.get('indicators', [])}")
             df = await self._calculate_indicators(df, strategy_config, stock_code)
+            print(f"[Engine] DEBUG: After _calculate_indicators, columns = {list(df.columns)}")
 
             # Preflight 검증 (첫 종목에서만 수행)
             if stock_code == list(price_data.keys())[0]:
@@ -181,76 +202,240 @@ class BacktestEngine:
                 date = idx
                 price = row['close']
 
-                # 매도 체크
-                if stock_code in positions and row.get('sell_signal'):
+                # 매도 체크 - 목표수익률과 지표 조건 OR 처리
+                if stock_code in positions:
                     position = positions[stock_code]
-                    sell_quantity = position['quantity']
-                    # 슬리피지 적용 (매도 시 불리한 가격)
-                    sell_price = price * (1 - slippage)
-                    sell_amount = sell_quantity * sell_price
-                    commission_fee = sell_amount * commission
+                    should_exit = False
+                    exit_reason = None
+                    exit_ratio = 0  # 최대 비율을 선택
+                    exit_reasons = []
 
-                    # 수익 계산
-                    profit = sell_amount - position['total_cost'] - commission_fee
-                    profit_rate = profit / position['total_cost'] * 100
+                    # 1. 목표수익률/손절 체크
+                    target_profit_config = strategy_config.get('targetProfit')
+                    stop_loss_config = strategy_config.get('stopLoss')
 
-                    # 거래 기록
-                    trades.append({
-                        'trade_id': str(uuid.uuid4()),
-                        'date': date,
-                        'stock_code': stock_code,
-                        'type': 'sell',
-                        'quantity': sell_quantity,
-                        'price': sell_price,
-                        'amount': sell_amount,
-                        'commission': commission_fee,
-                        'profit': profit,
-                        'profit_rate': profit_rate,
-                        'reason': row.get('sell_reason', 'Signal')
-                    })
+                    profit_exit, profit_reason, profit_exit_ratio = self._check_profit_based_exit(
+                        position, price, target_profit_config, stop_loss_config
+                    )
 
-                    # 자본금 업데이트
-                    capital += sell_amount - commission_fee
+                    # 2. 시그널 기반 매도 체크 (단계별 매도)
+                    sell_signal_info = row.get('sell_signal')
+                    signal_exit = False
+                    signal_reason = None
+                    signal_exit_ratio = 0
 
-                    # 포지션 제거
-                    del positions[stock_code]
+                    if sell_signal_info:
+                        if isinstance(sell_signal_info, dict):
+                            # 단계별 매도 (dict 형태)
+                            signal_exit = True
+                            signal_reason = sell_signal_info.get('reason', 'Signal')
+                            signal_exit_ratio = sell_signal_info.get('exitPercent', 100)
+                        else:
+                            # 기존 boolean 형태 (하위 호환성)
+                            signal_exit = True
+                            signal_reason = row.get('sell_reason', 'Signal')
+                            signal_exit_ratio = 100
 
-                # 매수 체크
-                if stock_code not in positions and row.get('buy_signal'):
-                    # 매수 가능 금액 계산
-                    position_size = strategy_config.get('position_size', 0.3)  # 기본값 30%
-                    max_buy_amount = capital * position_size
-                    # 슬리피지 적용 (매수 시 불리한 가격)
-                    buy_price = price * (1 + slippage)
-                    buy_quantity = int(max_buy_amount / buy_price)
+                    # 3. OR 조건: 목표수익률 OR 지표 조건 중 큰 비율 선택
+                    # 손절은 항상 최우선 (100% 매도)
+                    if profit_exit and 'Stop loss' in profit_reason:
+                        # 손절은 무조건 100% 매도
+                        should_exit = True
+                        exit_reason = profit_reason
+                        exit_ratio = 100
+                    else:
+                        # 목표수익률과 지표 조건 중 큰 비율 선택
+                        if profit_exit:
+                            exit_reasons.append(profit_reason)
+                            exit_ratio = max(exit_ratio, profit_exit_ratio)
 
-                    if buy_quantity > 0:
-                        buy_amount = buy_quantity * buy_price
-                        commission_fee = buy_amount * commission
+                        if signal_exit:
+                            exit_reasons.append(signal_reason)
+                            exit_ratio = max(exit_ratio, signal_exit_ratio)
 
-                        # 거래 기록
-                        trades.append({
-                            'trade_id': str(uuid.uuid4()),
-                            'date': date,
-                            'stock_code': stock_code,
-                            'type': 'buy',
-                            'quantity': buy_quantity,
-                            'price': buy_price,
-                            'amount': buy_amount,
-                            'commission': commission_fee,
-                            'reason': row.get('buy_reason', 'Signal')
-                        })
+                        if exit_ratio > 0:
+                            should_exit = True
+                            exit_reason = ' OR '.join(exit_reasons)
 
-                        # 포지션 추가
-                        positions[stock_code] = {
-                            'quantity': buy_quantity,
-                            'avg_price': buy_price,
-                            'total_cost': buy_amount + commission_fee,
-                            'entry_date': date
-                        }
+                    # 매도 실행
+                    if should_exit:
+                        # 매도 수량 계산 (exit_ratio 적용)
+                        sell_quantity = int(position['quantity'] * exit_ratio / 100)
 
-                        # 자본금 업데이트
-                        capital -= buy_amount + commission_fee
+                        if sell_quantity > 0:
+                            # 슬리피지 적용 (매도 시 불리한 가격)
+                            sell_price = price * (1 - slippage)
+                            sell_amount = sell_quantity * sell_price
+                            commission_fee = sell_amount * commission
+
+                            # 수익 계산 (매도한 비율만큼의 원가 계산)
+                            sold_cost = position['total_cost'] * (sell_quantity / position['quantity'])
+                            profit = sell_amount - sold_cost - commission_fee
+                            profit_rate = profit / sold_cost * 100
+
+                            # 거래 기록
+                            trades.append({
+                                'trade_id': str(uuid.uuid4()),
+                                'date': date,
+                                'stock_code': stock_code,
+                                'type': 'sell',
+                                'quantity': sell_quantity,
+                                'price': sell_price,
+                                'amount': sell_amount,
+                                'commission': commission_fee,
+                                'profit': profit,
+                                'profit_rate': profit_rate,
+                                'reason': exit_reason,
+                                'exit_ratio': exit_ratio
+                            })
+
+                            # 자본금 업데이트
+                            capital += sell_amount - commission_fee
+
+                            # 포지션 업데이트 또는 제거
+                            if exit_ratio >= 100:
+                                # 전량 매도
+                                del positions[stock_code]
+                            else:
+                                # 부분 매도: 포지션 업데이트
+                                remaining_quantity = position['quantity'] - sell_quantity
+                                remaining_cost = position['total_cost'] - sold_cost
+
+                                positions[stock_code] = {
+                                    'quantity': remaining_quantity,
+                                    'avg_price': position['avg_price'],  # 평단가 유지
+                                    'total_cost': remaining_cost,
+                                    'entry_date': position['entry_date'],
+                                    'executed_exit_stages': position.get('executed_exit_stages', []),
+                                    'highest_stage_reached': position.get('highest_stage_reached', 0)
+                                }
+
+                                # 단계별 매도인 경우 실행된 단계 기록
+                                if 'stage_' in exit_reason:
+                                    stage_num = int(exit_reason.split('_')[1])
+                                    if stage_num not in positions[stock_code]['executed_exit_stages']:
+                                        positions[stock_code]['executed_exit_stages'].append(stage_num)
+
+                # 매수 체크 - 단일 매수 또는 분할 매수
+                buy_signal_info = row.get('buy_signal')
+
+                if buy_signal_info:
+                    # 분할 매수 처리 (단계별)
+                    if isinstance(buy_signal_info, dict) and 'stage' in buy_signal_info:
+                        stage_num = buy_signal_info['stage']
+                        position_ratio = buy_signal_info.get('positionPercent', 30) / 100.0
+
+                        # 이미 진입한 포지션이 있는 경우
+                        if stock_code in positions:
+                            position = positions[stock_code]
+                            executed_buy_stages = position.get('executed_buy_stages', [])
+
+                            # 이미 실행된 단계는 스킵
+                            if stage_num in executed_buy_stages:
+                                continue
+
+                            # 남은 자본금의 비율로 매수 (설명: 남은 자금의 position_ratio%만큼 매수)
+                            buy_amount_target = capital * position_ratio
+
+                        # 신규 진입인 경우
+                        else:
+                            buy_amount_target = capital * position_ratio
+
+                        # 슬리피지 적용
+                        buy_price = price * (1 + slippage)
+                        buy_quantity = int(buy_amount_target / buy_price)
+
+                        if buy_quantity > 0:
+                            buy_amount = buy_quantity * buy_price
+                            commission_fee = buy_amount * commission
+
+                            # 자본금 확인
+                            if buy_amount + commission_fee <= capital:
+                                # 거래 기록
+                                trades.append({
+                                    'trade_id': str(uuid.uuid4()),
+                                    'date': date,
+                                    'stock_code': stock_code,
+                                    'type': 'buy',
+                                    'quantity': buy_quantity,
+                                    'price': buy_price,
+                                    'amount': buy_amount,
+                                    'commission': commission_fee,
+                                    'reason': f"stage_{stage_num}_buy ({buy_signal_info.get('reason', 'Signal')})"
+                                })
+
+                                # 포지션 업데이트 또는 생성
+                                if stock_code in positions:
+                                    # 기존 포지션에 추가 (평단가 계산)
+                                    old_position = positions[stock_code]
+                                    total_quantity = old_position['quantity'] + buy_quantity
+                                    total_cost = old_position['total_cost'] + buy_amount + commission_fee
+                                    new_avg_price = (old_position['quantity'] * old_position['avg_price'] +
+                                                   buy_quantity * buy_price) / total_quantity
+
+                                    positions[stock_code] = {
+                                        'quantity': total_quantity,
+                                        'avg_price': new_avg_price,
+                                        'total_cost': total_cost,
+                                        'entry_date': old_position['entry_date'],
+                                        'executed_buy_stages': old_position.get('executed_buy_stages', []) + [stage_num],
+                                        'executed_exit_stages': old_position.get('executed_exit_stages', []),
+                                        'highest_stage_reached': old_position.get('highest_stage_reached', 0)
+                                    }
+                                else:
+                                    # 신규 포지션 생성
+                                    positions[stock_code] = {
+                                        'quantity': buy_quantity,
+                                        'avg_price': buy_price,
+                                        'total_cost': buy_amount + commission_fee,
+                                        'entry_date': date,
+                                        'executed_buy_stages': [stage_num],
+                                        'executed_exit_stages': [],
+                                        'highest_stage_reached': 0
+                                    }
+
+                                # 자본금 업데이트
+                                capital -= buy_amount + commission_fee
+
+                    # 기존 단일 매수 처리
+                    elif stock_code not in positions:
+                        # 매수 가능 금액 계산
+                        position_size = strategy_config.get('position_size', 0.3)  # 기본값 30%
+                        max_buy_amount = capital * position_size
+                        # 슬리피지 적용 (매수 시 불리한 가격)
+                        buy_price = price * (1 + slippage)
+                        buy_quantity = int(max_buy_amount / buy_price)
+
+                        if buy_quantity > 0:
+                            buy_amount = buy_quantity * buy_price
+                            commission_fee = buy_amount * commission
+
+                            # 거래 기록
+                            trades.append({
+                                'trade_id': str(uuid.uuid4()),
+                                'date': date,
+                                'stock_code': stock_code,
+                                'type': 'buy',
+                                'quantity': buy_quantity,
+                                'price': buy_price,
+                                'amount': buy_amount,
+                                'commission': commission_fee,
+                                'reason': row.get('buy_reason', 'Signal')
+                            })
+
+                            # 포지션 추가
+                            positions[stock_code] = {
+                                'quantity': buy_quantity,
+                                'avg_price': buy_price,
+                                'total_cost': buy_amount + commission_fee,
+                                'entry_date': date,
+                                'executed_buy_stages': [],
+                                'executed_exit_stages': [],  # 단계별 매도 추적
+                                'highest_stage_reached': 0  # 도달한 최고 단계 (동적 손절선 용)
+                            }
+
+                            # 자본금 업데이트
+                            capital -= buy_amount + commission_fee
 
                 # 일별 자산 가치 계산
                 total_value = capital
@@ -375,21 +560,48 @@ class BacktestEngine:
         indicators = strategy_config.get('indicators', [])
 
         print(f"[Engine] Calculating {len(indicators)} indicators for {stock_code}")
+        print(f"[Engine] Indicators array: {indicators}")
         print(f"[Engine] Initial columns: {list(df.columns)}")
+
+        if not indicators:
+            print(f"[Engine] WARNING: No indicators to calculate!")
+            return df
 
         for idx, indicator in enumerate(indicators):
             try:
                 print(f"[Engine] Calculating indicator {idx+1}/{len(indicators)}: {indicator}")
+                print(f"[Engine] DEBUG: About to call calculator.calculate()")
+                print(f"[Engine] DEBUG: df.shape={df.shape}, df.columns={list(df.columns)}")
 
                 # calculate 메서드는 IndicatorResult를 반환하므로 이를 처리
                 # stock_code를 전달하여 캐시 충돌 방지
                 result = self.indicator_calculator.calculate(df, indicator, stock_code=stock_code)
 
+                print(f"[Engine] DEBUG: calculate() returned")
+                print(f"[Engine] DEBUG: result type={type(result)}")
+                print(f"[Engine] DEBUG: result is None? {result is None}")
+
+                if result is None:
+                    print(f"[Engine] WARNING: calculate() returned None for indicator {indicator.get('name')}")
+                    continue
+
+                print(f"[Engine] DEBUG: hasattr(result, 'columns')={hasattr(result, 'columns')}")
+
                 # IndicatorResult의 columns 속성에서 데이터를 가져와 DataFrame에 추가
                 if hasattr(result, 'columns'):
+                    print(f"[Engine] DEBUG: result.columns type={type(result.columns)}")
+                    print(f"[Engine] DEBUG: result.columns keys={list(result.columns.keys()) if result.columns else 'empty'}")
+
+                    if not result.columns:
+                        print(f"[Engine] WARNING: result.columns is empty for indicator {indicator.get('name')}")
+                        continue
+
                     for col_name, col_data in result.columns.items():
+                        print(f"[Engine] DEBUG: Adding column {col_name}, type={type(col_data)}, len={len(col_data) if hasattr(col_data, '__len__') else 'N/A'}")
                         df[col_name] = col_data
                         print(f"[Engine] Added column: {col_name}")
+                else:
+                    print(f"[Engine] WARNING: result has no 'columns' attribute, result={result}")
 
             except Exception as e:
                 print(f"[Engine] Error calculating indicator {indicator.get('name', 'unknown')}: {e}")
@@ -446,30 +658,43 @@ class BacktestEngine:
         sell_signal_count = 0
 
         for i in range(len(df)):
-            # 매수 조건 체크 - AND 조건으로 평가
-            all_buy_conditions_met = True
-            buy_reasons = []
-
+            # 매수 조건 체크 - combineWith 필드를 고려하여 평가
             if buy_conditions:
-                for condition in buy_conditions:
-                    if not self._check_condition(df.iloc[i], condition):
-                        all_buy_conditions_met = False
-                        break
-                    else:
-                        buy_reasons.append(self._format_condition_reason(condition))
+                buy_result, buy_reasons = self._evaluate_conditions_with_combine(
+                    df.iloc[i], buy_conditions
+                )
 
-                if all_buy_conditions_met:
+                if buy_result:
                     df.loc[df.index[i], 'buy_signal'] = True
-                    df.loc[df.index[i], 'buy_reason'] = ' & '.join(buy_reasons)
+                    # combineWith에 따라 조합 표시
+                    reason_parts = []
+                    for idx, reason in enumerate(buy_reasons):
+                        if idx > 0:
+                            combine = buy_conditions[idx].get('combineWith', 'AND').upper()
+                            reason_parts.append(f"{combine} {reason}")
+                        else:
+                            reason_parts.append(reason)
+                    df.loc[df.index[i], 'buy_reason'] = ' '.join(reason_parts)
                     buy_signal_count += 1
 
-            # 매도 조건 체크 - OR 조건으로 평가 (하나라도 만족하면 매도)
-            for condition in sell_conditions:
-                if self._check_condition(df.iloc[i], condition):
+            # 매도 조건 체크 - combineWith 필드를 고려하여 평가
+            if sell_conditions:
+                sell_result, sell_reasons = self._evaluate_conditions_with_combine(
+                    df.iloc[i], sell_conditions
+                )
+
+                if sell_result:
                     df.loc[df.index[i], 'sell_signal'] = True
-                    df.loc[df.index[i], 'sell_reason'] = self._format_condition_reason(condition)
+                    # combineWith에 따라 조합 표시
+                    reason_parts = []
+                    for idx, reason in enumerate(sell_reasons):
+                        if idx > 0:
+                            combine = sell_conditions[idx].get('combineWith', 'AND').upper()
+                            reason_parts.append(f"{combine} {reason}")
+                        else:
+                            reason_parts.append(reason)
+                    df.loc[df.index[i], 'sell_reason'] = ' '.join(reason_parts)
                     sell_signal_count += 1
-                    break
 
         # 이전 값 컬럼 제거
         prev_cols = [col for col in df.columns if col.startswith('prev_')]
@@ -486,8 +711,106 @@ class BacktestEngine:
         positions: Dict = None,
         stock_code: str = None
     ) -> pd.DataFrame:
-        """단계별 신호 평가"""
-        # TODO: 단계별 거래 로직 구현
+        """
+        단계별 신호 평가
+
+        각 행(날짜)마다 모든 단계의 조건을 체크하고,
+        조건이 만족되면 해당 단계 정보를 신호에 포함
+        """
+        df['buy_signal'] = None
+        df['buy_reason'] = ''
+        df['sell_signal'] = None  # Changed from False to None to support dict values
+        df['sell_reason'] = ''
+
+        buy_signal_count = 0
+        sell_signal_count = 0
+
+        for i in range(len(df)):
+            row = df.iloc[i]
+
+            # 매수 단계 체크
+            for stage in buy_stages:
+                if not stage.get('enabled', False):
+                    continue
+
+                stage_num = stage.get('stage', 1)
+                conditions = stage.get('conditions', [])
+                position_percent = stage.get('positionPercent', 30)
+                pass_all_required = stage.get('passAllRequired', True)
+
+                if not conditions:
+                    continue
+
+                # 조건 평가
+                results = []
+                reasons = []
+
+                for condition in conditions:
+                    result = self._check_condition(row, condition)
+                    results.append(result)
+                    if result:
+                        reasons.append(self._format_condition_reason(condition))
+
+                # passAllRequired에 따라 판단
+                if pass_all_required:
+                    # AND: 모든 조건 만족
+                    stage_satisfied = all(results) if results else False
+                else:
+                    # OR: 하나라도 만족
+                    stage_satisfied = any(results) if results else False
+
+                if stage_satisfied:
+                    # 신호 설정 (dict 형태로 stage 정보 포함)
+                    df.at[df.index[i], 'buy_signal'] = {
+                        'stage': stage_num,
+                        'positionPercent': position_percent,
+                        'reason': ' AND '.join(reasons) if pass_all_required else ' OR '.join(reasons)
+                    }
+                    df.at[df.index[i], 'buy_reason'] = f"Stage {stage_num}: {' AND '.join(reasons) if pass_all_required else ' OR '.join(reasons)}"
+                    buy_signal_count += 1
+                    break  # 첫 번째 만족한 단계만 실행 (중복 방지)
+
+            # 매도 단계 체크
+            for stage in sell_stages:
+                if not stage.get('enabled', False):
+                    continue
+
+                stage_num = stage.get('stage', 1)
+                conditions = stage.get('conditions', [])
+                position_percent = stage.get('positionPercent', 100)
+                pass_all_required = stage.get('passAllRequired', True)
+
+                if not conditions:
+                    continue
+
+                # 조건 평가
+                results = []
+                reasons = []
+
+                for condition in conditions:
+                    result = self._check_condition(row, condition)
+                    results.append(result)
+                    if result:
+                        reasons.append(self._format_condition_reason(condition))
+
+                # passAllRequired에 따라 판단
+                if pass_all_required:
+                    stage_satisfied = all(results) if results else False
+                else:
+                    stage_satisfied = any(results) if results else False
+
+                if stage_satisfied:
+                    # 단계별 매도는 dict 형태로 저장 (exitPercent 포함)
+                    df.at[df.index[i], 'sell_signal'] = {
+                        'stage': stage_num,
+                        'exitPercent': stage.get('exitPercent', 100),
+                        'reason': f"Stage {stage_num}: {' AND '.join(reasons) if pass_all_required else ' OR '.join(reasons)}"
+                    }
+                    df.at[df.index[i], 'sell_reason'] = f"Stage {stage_num}: {' AND '.join(reasons) if pass_all_required else ' OR '.join(reasons)}"
+                    sell_signal_count += 1
+                    break
+
+        print(f"[Engine] Staged signal evaluation complete: {buy_signal_count} buy signals, {sell_signal_count} sell signals")
         return df
 
     def _resolve_indicator_name(self, row: pd.Series, indicator_name: str) -> Optional[str]:
@@ -577,15 +900,26 @@ class BacktestEngine:
         return ('unknown', operand)
 
     def _check_condition(self, row: pd.Series, condition: Dict) -> bool:
-        """조건 체크"""
+        """조건 체크 - 신규 left/right/operator 형식과 기존 indicator/value 형식 모두 지원"""
+
+        # 신규 형식: {"left": "macd_line", "operator": "crossover", "right": "macd_signal"}
+        left = condition.get('left')
+        right = condition.get('right')
+
+        # 기존 형식: {"indicator": "macd", "operator": ">", "value": 0, "compareTo": "signal"}
         indicator = condition.get('indicator')
-        operator = condition.get('operator')
         value = condition.get('value')
         compare_to = condition.get('compareTo')
 
-        # 디버그: 사용 가능한 컬럼 확인
-        if not indicator:
-            print(f"[Engine] Warning: No indicator specified in condition")
+        operator = condition.get('operator')
+
+        # 형식 감지 및 통합
+        if left is not None:
+            # 신규 형식 사용
+            indicator = left
+            compare_to = right
+        elif indicator is None:
+            print(f"[Engine] Warning: No indicator/left specified in condition")
             return False
 
         # 지표 이름 해석
@@ -602,7 +936,7 @@ class BacktestEngine:
             return False
 
         # 비교 대상 값 결정
-        if compare_to:
+        if compare_to is not None:
             operand_type, operand_value = self._resolve_operand(row, compare_to)
             if operand_type == 'const':
                 compare_value = operand_value
@@ -611,7 +945,7 @@ class BacktestEngine:
                 if pd.isna(compare_value):
                     return False
             else:
-                print(f"[Engine] Warning: Cannot resolve compareTo '{compare_to}'")
+                print(f"[Engine] Warning: Cannot resolve compareTo/right '{compare_to}'")
                 return False
         elif value is not None:
             operand_type, operand_value = self._resolve_operand(row, value)
@@ -639,7 +973,7 @@ class BacktestEngine:
                 result = indicator_value <= compare_value
             elif operator == '==':
                 result = indicator_value == compare_value
-            elif operator in ['cross_above', 'crossAbove']:
+            elif operator in ['cross_above', 'crossAbove', 'crossover']:
                 # 크로스 업 체크 - 이전 값과 현재 값 비교
                 prev_indicator_name = 'prev_' + resolved_indicator
                 if compare_to:
@@ -660,7 +994,7 @@ class BacktestEngine:
                         result = False
                 else:
                     result = False
-            elif operator in ['cross_below', 'crossBelow']:
+            elif operator in ['cross_below', 'crossBelow', 'crossunder']:
                 # 크로스 다운 체크
                 prev_indicator_name = 'prev_' + resolved_indicator
                 if compare_to:
@@ -695,16 +1029,178 @@ class BacktestEngine:
             traceback.print_exc()
             return False
 
-    def _format_condition_reason(self, condition: Dict) -> str:
-        """조건을 읽기 쉬운 문자열로 변환"""
-        indicator = condition.get('indicator', '')
-        operator = condition.get('operator', '')
-        value = condition.get('value', '')
-        compare_to = condition.get('compareTo', '')
+    def _check_profit_based_exit(
+        self,
+        position: Dict,
+        current_price: float,
+        target_profit: Dict = None,
+        stop_loss: Dict = None
+    ) -> Tuple[bool, str, int]:
+        """
+        손익률 기반 매도 체크
 
-        if compare_to:
+        Args:
+            position: 포지션 정보 {'avg_price', 'quantity', 'executed_exit_stages', 'highest_stage_reached'}
+            current_price: 현재가
+            target_profit: 목표 수익률 설정 {'enabled', 'mode', 'simple', 'staged'}
+            stop_loss: 손절 설정 {'enabled', 'value', 'breakEven', 'trailingStop'}
+
+        Returns:
+            (should_exit, reason, exit_ratio)
+            - should_exit: 매도 여부
+            - reason: 매도 이유
+            - exit_ratio: 매도 비율 (0-100)
+        """
+        profit_rate = (current_price - position['avg_price']) / position['avg_price'] * 100
+
+        # 동적 손절선 계산 (단계별 목표 도달 시 손절선 상향 조정)
+        dynamic_stop_loss = None
+        if target_profit and target_profit.get('mode') == 'staged':
+            staged = target_profit.get('staged', {})
+            if staged.get('enabled', False):
+                stages = staged.get('stages', [])
+                highest_stage = position.get('highest_stage_reached', 0)
+
+                # 도달한 최고 단계에 따라 동적 손절선 설정
+                for stage_config in stages:
+                    stage_num = stage_config.get('stage')
+                    target_value = stage_config.get('targetProfit', 0)
+                    dynamic_stop_enabled = stage_config.get('dynamicStopLoss', False)
+
+                    # 현재 수익률이 이 단계를 넘었고, 아직 기록되지 않은 경우
+                    if profit_rate >= target_value and stage_num > highest_stage:
+                        position['highest_stage_reached'] = stage_num
+                        highest_stage = stage_num
+
+                # 최고 도달 단계에 따라 손절선 조정
+                if highest_stage > 0 and stop_loss and stop_loss.get('enabled', False):
+                    # 손절→본전: 1단계 도달 시
+                    if highest_stage == 1:
+                        dynamic_stop_loss = 0  # 본전
+                    # 손절→1단계가: 2단계 도달 시
+                    elif highest_stage == 2:
+                        # 1단계 목표 수익률로 손절선 이동
+                        stage_1 = next((s for s in stages if s.get('stage') == 1), None)
+                        if stage_1 and stage_1.get('dynamicStopLoss', False):
+                            dynamic_stop_loss = stage_1.get('targetProfit', 0)
+                    # 손절→2단계가: 3단계 도달 시
+                    elif highest_stage >= 3:
+                        # 2단계 목표 수익률로 손절선 이동
+                        stage_2 = next((s for s in stages if s.get('stage') == 2), None)
+                        if stage_2 and stage_2.get('dynamicStopLoss', False):
+                            dynamic_stop_loss = stage_2.get('targetProfit', 0)
+
+        # 1. 손절 체크 (우선순위 높음)
+        if stop_loss and stop_loss.get('enabled', False):
+            # 동적 손절선이 설정되어 있으면 사용, 아니면 기본 손절선 사용
+            if dynamic_stop_loss is not None:
+                effective_stop_loss = dynamic_stop_loss
+            else:
+                stop_loss_value = stop_loss.get('value', 0)
+                if stop_loss_value < 0:  # 음수로 저장되어 있는 경우
+                    effective_stop_loss = stop_loss_value
+                else:  # 양수로 저장된 경우 (UI에서 절대값)
+                    effective_stop_loss = -stop_loss_value
+
+            if profit_rate <= effective_stop_loss:
+                return True, f'stop_loss ({profit_rate:.2f}% <= {effective_stop_loss:.2f}%)', 100
+
+        # 2. 목표 수익률 체크 (단순 모드)
+        if target_profit and target_profit.get('mode') == 'simple':
+            simple = target_profit.get('simple', {})
+            if simple.get('enabled', False):
+                target_value = simple.get('value', 0)
+                if profit_rate >= target_value:
+                    return True, f'target_profit ({profit_rate:.2f}% >= {target_value}%)', 100
+
+        # 3. 단계별 목표 수익률 체크
+        elif target_profit and target_profit.get('mode') == 'staged':
+            staged = target_profit.get('staged', {})
+            if staged.get('enabled', False):
+                stages = staged.get('stages', [])
+                executed_stages = position.get('executed_exit_stages', [])
+
+                for stage_config in stages:
+                    stage_num = stage_config.get('stage')
+                    if stage_num in executed_stages:
+                        continue
+
+                    target_value = stage_config.get('targetProfit', 0)
+                    exit_ratio = stage_config.get('exitRatio', 100)
+
+                    if profit_rate >= target_value:
+                        return True, f'stage_{stage_num}_target ({profit_rate:.2f}% >= {target_value}%)', exit_ratio
+
+        return False, None, 0
+
+    def _evaluate_conditions_with_combine(
+        self,
+        row: pd.Series,
+        conditions: List[Dict]
+    ) -> Tuple[bool, List[str]]:
+        """
+        조건들을 combineWith 필드를 고려하여 평가
+
+        Args:
+            row: DataFrame row
+            conditions: 조건 리스트
+
+        Returns:
+            (결과, 만족한 조건 설명 리스트)
+        """
+        if not conditions:
+            return False, []
+
+        # 첫 번째 조건 평가
+        result = self._check_condition(row, conditions[0])
+        satisfied_reasons = []
+
+        if result:
+            satisfied_reasons.append(self._format_condition_reason(conditions[0]))
+
+        # 나머지 조건들을 combineWith에 따라 결합
+        for i, condition in enumerate(conditions[1:], 1):
+            current_result = self._check_condition(row, condition)
+            combine_with = condition.get('combineWith', 'AND').upper()
+
+            if combine_with == 'AND':
+                # AND: 이전 결과와 현재 결과 모두 참이어야 함
+                if result and current_result:
+                    satisfied_reasons.append(self._format_condition_reason(condition))
+                result = result and current_result
+            else:  # OR
+                # OR: 이전 결과가 거짓이고 현재 결과가 참이면 추가
+                if not result and current_result:
+                    satisfied_reasons = [self._format_condition_reason(condition)]
+                    result = True
+                elif result and current_result:
+                    satisfied_reasons.append(self._format_condition_reason(condition))
+                # 이미 result가 True면 유지
+                result = result or current_result
+
+        return result, satisfied_reasons
+
+    def _format_condition_reason(self, condition: Dict) -> str:
+        """조건을 읽기 쉬운 문자열로 변환 - 신규/기존 형식 모두 지원"""
+        # 신규 형식
+        left = condition.get('left')
+        right = condition.get('right')
+
+        # 기존 형식
+        indicator = condition.get('indicator')
+        value = condition.get('value')
+        compare_to = condition.get('compareTo')
+
+        operator = condition.get('operator', '')
+
+        if left is not None:
+            # 신규 형식: {"left": "macd_line", "operator": "crossover", "right": "macd_signal"}
+            return f"{left} {operator} {right}"
+        elif compare_to:
+            # 기존 형식 with compareTo
             return f"{indicator} {operator} {compare_to}"
         else:
+            # 기존 형식 with value
             return f"{indicator} {operator} {value}"
 
     def _prepare_results(

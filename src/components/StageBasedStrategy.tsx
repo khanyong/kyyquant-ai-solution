@@ -203,19 +203,12 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
     }
   }, [strategy])
 
-  // 사용 가능한 지표 필터링 (이미 사용된 지표 제외)
+  // 사용 가능한 지표 필터링 (단계별 전략에서는 동일 지표를 여러 단계에서 사용 가능)
   const getAvailableIndicatorsForStage = (stageNum: number) => {
-    const usedInOtherStages = new Set<string>()
-    
-    strategy.stages.forEach((stage, index) => {
-      if (index + 1 !== stageNum) {
-        stage.indicators.forEach(ind => {
-          usedInOtherStages.add(ind.indicatorId)
-        })
-      }
-    })
-
-    return availableIndicators.filter(ind => !usedInOtherStages.has(ind.id))
+    // 분할 매수/매도 전략에서는 각 단계마다 동일한 지표를
+    // 다른 조건(예: RSI < 35, RSI < 28)으로 사용할 수 있어야 함
+    // 따라서 모든 지표를 항상 사용 가능하도록 반환
+    return availableIndicators
   }
 
   // 단계 활성화/비활성화
@@ -343,44 +336,50 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
       { value: 'price_below', label: '현재가 < 이평선' },
       { value: 'golden_cross', label: '골든크로스 (단기 > 장기)' },
       { value: 'death_cross', label: '데드크로스 (단기 < 장기)' },
-      { value: 'ma_rising', label: '이평선 상승중' },
-      { value: 'ma_falling', label: '이평선 하락중' },
-      { value: 'perfect_order_bull', label: '정배열 (단기>중기>장기)' },
-      { value: 'perfect_order_bear', label: '역배열 (장기>중기>단기)' },
-      { value: 'distance_from_ma', label: '이평선 이격도 (%)' },
-      { value: 'ma_support', label: '이평선 지지 (터치 후 반등)' },
-      { value: 'ma_resistance', label: '이평선 저항 (터치 후 하락)' },
-      { value: 'ma_convergence', label: '이평선 수렴 (변동성 감소)' },
-      { value: 'ma_divergence', label: '이평선 확산 (변동성 증가)' }
+      { value: 'ma_rising', label: '이평선 상승중 (추후 지원)' },
+      { value: 'ma_falling', label: '이평선 하락중 (추후 지원)' },
+      { value: 'perfect_order_bull', label: '정배열 (단기>중기>장기) (추후 지원)' },
+      { value: 'perfect_order_bear', label: '역배열 (장기>중기>단기) (추후 지원)' },
+      { value: 'distance_from_ma', label: '이평선 이격도 (%) (추후 지원)' },
+      { value: 'ma_support', label: '이평선 지지 (터치 후 반등) (추후 지원)' },
+      { value: 'ma_resistance', label: '이평선 저항 (터치 후 하락) (추후 지원)' },
+      { value: 'ma_convergence', label: '이평선 수렴 (변동성 감소) (추후 지원)' },
+      { value: 'ma_divergence', label: '이평선 확산 (변동성 증가) (추후 지원)' }
     ]
     
     // 일목균형표 전용 옵션 (5대 요소 기반)
     const ichimokuOptions = [
-      // 구름대 관련
+      // 구름대 관련 (복합 조건으로 구현 가능)
       { value: 'price_above_cloud', label: '가격 > 구름대 (강세)' },
       { value: 'price_below_cloud', label: '가격 < 구름대 (약세)' },
       { value: 'price_in_cloud', label: '가격 구름대 내부 (보합)' },
-      { value: 'cloud_breakout_up', label: '구름대 상향 돌파' },
-      { value: 'cloud_breakout_down', label: '구름대 하향 돌파' },
-      { value: 'cloud_green', label: '양운(선행A > 선행B)' },
-      { value: 'cloud_red', label: '음운(선행A < 선행B)' },
-      { value: 'cloud_twist', label: '구름대 꼬임 (전환점)' },
-      { value: 'cloud_thickness_increasing', label: '구름대 두께 증가 (변동성 확대)' },
-      { value: 'cloud_thickness_decreasing', label: '구름대 두께 감소 (변동성 축소)' },
+      { value: 'cloud_breakout_up', label: '구름대 상향 돌파 (추후 지원)' },
+      { value: 'cloud_breakout_down', label: '구름대 하향 돌파 (추후 지원)' },
+      { value: 'cloud_green', label: '양운 (선행A > 선행B)' },
+      { value: 'cloud_red', label: '음운 (선행A < 선행B)' },
+      { value: 'cloud_twist', label: '구름대 꼬임 (전환점) (추후 지원)' },
+      { value: 'cloud_thickness_increasing', label: '구름대 두께 증가 (변동성 확대) (추후 지원)' },
+      { value: 'cloud_thickness_decreasing', label: '구름대 두께 감소 (변동성 축소) (추후 지원)' },
       // 전환선/기준선 관련
       { value: 'tenkan_above_kijun', label: '전환선 > 기준선 (단기강세)' },
       { value: 'tenkan_below_kijun', label: '전환선 < 기준선 (단기약세)' },
-      { value: 'tenkan_cross_kijun_up', label: '전환선 기준선 상향교차' },
-      { value: 'tenkan_cross_kijun_down', label: '전환선 기준선 하향교차' },
+      { value: 'tenkan_cross_kijun_up', label: '전환선 기준선 상향교차 (추후 지원)' },
+      { value: 'tenkan_cross_kijun_down', label: '전환선 기준선 하향교차 (추후 지원)' },
       { value: 'price_above_kijun', label: '가격 > 기준선' },
+      { value: 'price_below_kijun', label: '가격 < 기준선' },
       { value: 'price_above_tenkan', label: '가격 > 전환선' },
+      { value: 'price_below_tenkan', label: '가격 < 전환선' },
+      { value: 'price_above_senkou_a', label: '가격 > 선행스팬A' },
+      { value: 'price_below_senkou_a', label: '가격 < 선행스팬A' },
+      { value: 'price_above_senkou_b', label: '가격 > 선행스팬B' },
+      { value: 'price_below_senkou_b', label: '가격 < 선행스팬B' },
       // 후행스팬 관련
-      { value: 'chikou_above_price', label: '후행스팬 > 26일전 가격' },
-      { value: 'chikou_below_price', label: '후행스팬 < 26일전 가격' },
-      { value: 'chikou_above_cloud', label: '후행스팬 > 구름대' },
+      { value: 'chikou_above_price', label: '후행스팬 > 26일전 가격 (추후 지원)' },
+      { value: 'chikou_below_price', label: '후행스팬 < 26일전 가격 (추후 지원)' },
+      { value: 'chikou_above_cloud', label: '후행스팬 > 구름대 (추후 지원)' },
       // 삼역호전
-      { value: 'three_line_bullish', label: '삼역호전 강세 (모든 조건 충족)' },
-      { value: 'three_line_bearish', label: '삼역호전 약세 (모든 조건 미충족)' }
+      { value: 'three_line_bullish', label: '삼역호전 강세 (모든 조건 충족) (추후 지원)' },
+      { value: 'three_line_bearish', label: '삼역호전 약세 (모든 조건 미충족) (추후 지원)' }
     ]
     
     // 볼린저밴드 전용 옵션
@@ -391,22 +390,22 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
       { value: 'price_above_middle', label: '가격 > 중심선 (20일 이평)' },
       { value: 'price_below_middle', label: '가격 < 중심선 (20일 이평)' },
       // 밴드 터치/돌파
-      { value: 'upper_touch', label: '상단밴드 터치 (저항)' },
-      { value: 'lower_touch', label: '하단밴드 터치 (지지)' },
-      { value: 'upper_breakout', label: '상단밴드 돌파 (추세강화)' },
-      { value: 'lower_breakout', label: '하단밴드 돌파 (추세강화)' },
-      { value: 'band_walk_upper', label: '상단밴드 따라 상승 (강한 상승추세)' },
-      { value: 'band_walk_lower', label: '하단밴드 따라 하락 (강한 하락추세)' },
+      { value: 'upper_touch', label: '상단밴드 터치 (저항) (추후 지원)' },
+      { value: 'lower_touch', label: '하단밴드 터치 (지지) (추후 지원)' },
+      { value: 'upper_breakout', label: '상단밴드 돌파 (추세강화) (추후 지원)' },
+      { value: 'lower_breakout', label: '하단밴드 돌파 (추세강화) (추후 지원)' },
+      { value: 'band_walk_upper', label: '상단밴드 따라 상승 (강한 상승추세) (추후 지원)' },
+      { value: 'band_walk_lower', label: '하단밴드 따라 하락 (강한 하락추세) (추후 지원)' },
       // 밴드폭 관련
-      { value: 'band_squeeze', label: '밴드 수축 (변동성 감소)' },
-      { value: 'band_expansion', label: '밴드 확장 (변동성 증가)' },
-      { value: 'band_squeeze_fire', label: '스퀴즈 후 확장 (브레이크아웃)' },
+      { value: 'band_squeeze', label: '밴드 수축 (변동성 감소) (추후 지원)' },
+      { value: 'band_expansion', label: '밴드 확장 (변동성 증가) (추후 지원)' },
+      { value: 'band_squeeze_fire', label: '스퀴즈 후 확장 (브레이크아웃) (추후 지원)' },
       // %B 지표 (0-1 정규화)
-      { value: 'percent_b_high', label: '%B > 0.8 (상단 근접)' },
-      { value: 'percent_b_low', label: '%B < 0.2 (하단 근접)' },
-      { value: 'percent_b_above_1', label: '%B > 1 (밴드 이탈)' },
-      { value: 'percent_b_below_0', label: '%B < 0 (밴드 이탈)' },
-      { value: 'percent_b_divergence', label: '%B 다이버전스' }
+      { value: 'percent_b_high', label: '%B > 0.8 (상단 근접) (추후 지원)' },
+      { value: 'percent_b_low', label: '%B < 0.2 (하단 근접) (추후 지원)' },
+      { value: 'percent_b_above_1', label: '%B > 1 (밴드 이탈) (추후 지원)' },
+      { value: 'percent_b_below_0', label: '%B < 0 (밴드 이탈) (추후 지원)' },
+      { value: 'percent_b_divergence', label: '%B 다이버전스 (추후 지원)' }
     ]
     
     // MACD 전용 옵션 (12-26-9 기본설정)
@@ -419,25 +418,27 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
       // 제로라인 관련
       { value: 'macd_above_zero', label: 'MACD > 0 (상승추세)' },
       { value: 'macd_below_zero', label: 'MACD < 0 (하락추세)' },
-      { value: 'macd_cross_zero_up', label: 'MACD 0선 상향돌파' },
-      { value: 'macd_cross_zero_down', label: 'MACD 0선 하향돌파' },
+      { value: 'macd_cross_zero_up', label: 'MACD 0선 상향돌파 (추후 지원)' },
+      { value: 'macd_cross_zero_down', label: 'MACD 0선 하향돌파 (추후 지원)' },
       // 히스토그램 (MACD - Signal)
       { value: 'histogram_positive', label: '히스토그램 > 0 (강세)' },
       { value: 'histogram_negative', label: '히스토그램 < 0 (약세)' },
-      { value: 'histogram_increasing', label: '히스토그램 증가 (모멘텀 강화)' },
-      { value: 'histogram_decreasing', label: '히스토그램 감소 (모멘텀 약화)' },
-      { value: 'histogram_peak', label: '히스토그램 고점 (전환 가능)' },
-      { value: 'histogram_trough', label: '히스토그램 저점 (전환 가능)' },
+      { value: 'histogram_increasing', label: '히스토그램 증가 (모멘텀 강화) (추후 지원)' },
+      { value: 'histogram_decreasing', label: '히스토그램 감소 (모멘텀 약화) (추후 지원)' },
+      { value: 'histogram_peak', label: '히스토그램 고점 (전환 가능) (추후 지원)' },
+      { value: 'histogram_trough', label: '히스토그램 저점 (전환 가능) (추후 지원)' },
       // 다이버전스
-      { value: 'bullish_divergence', label: '강세 다이버전스 (가격↓ MACD↑)' },
-      { value: 'bearish_divergence', label: '약세 다이버전스 (가격↑ MACD↓)' },
-      { value: 'hidden_bullish_div', label: '숨은 강세 다이버전스' },
-      { value: 'hidden_bearish_div', label: '숨은 약세 다이버전스' }
+      { value: 'bullish_divergence', label: '강세 다이버전스 (가격↓ MACD↑) (추후 지원)' },
+      { value: 'bearish_divergence', label: '약세 다이버전스 (가격↑ MACD↓) (추후 지원)' },
+      { value: 'hidden_bullish_div', label: '숨은 강세 다이버전스 (추후 지원)' },
+      { value: 'hidden_bearish_div', label: '숨은 약세 다이버전스 (추후 지원)' }
     ]
     
     // RSI 전용 옵션 (14일 기본)
     const rsiOptions = [
-      // 절대값 기준
+      // 기본 비교 연산자 (임의의 값 설정 가능)
+      ...basicOptions,
+      // 절대값 기준 (자주 사용하는 값)
       { value: 'rsi_oversold_30', label: 'RSI < 30 (과매도)' },
       { value: 'rsi_overbought_70', label: 'RSI > 70 (과매수)' },
       { value: 'rsi_oversold_20', label: 'RSI < 20 (극단 과매도)' },
@@ -445,90 +446,93 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
       // 중심선 관련
       { value: 'rsi_above_50', label: 'RSI > 50 (상승모멘텀)' },
       { value: 'rsi_below_50', label: 'RSI < 50 (하락모멘텀)' },
-      { value: 'rsi_cross_50_up', label: 'RSI 50 상향돌파' },
-      { value: 'rsi_cross_50_down', label: 'RSI 50 하향돌파' },
+      { value: 'rsi_cross_50_up', label: 'RSI 50 상향돌파 (추후 지원)' },
+      { value: 'rsi_cross_50_down', label: 'RSI 50 하향돌파 (추후 지원)' },
       // 과매도/과매수 탈출
-      { value: 'rsi_exit_oversold', label: 'RSI 30 상향돌파 (반등신호)' },
-      { value: 'rsi_exit_overbought', label: 'RSI 70 하향돌파 (조정신호)' },
+      { value: 'rsi_exit_oversold', label: 'RSI 30 상향돌파 (추후 지원)' },
+      { value: 'rsi_exit_overbought', label: 'RSI 70 하향돌파 (추후 지원)' },
       // 다이버전스
-      { value: 'rsi_bullish_divergence', label: 'RSI 강세 다이버전스' },
-      { value: 'rsi_bearish_divergence', label: 'RSI 약세 다이버전스' },
-      { value: 'rsi_hidden_bullish_div', label: 'RSI 숨은 강세 다이버전스' },
-      { value: 'rsi_hidden_bearish_div', label: 'RSI 숨은 약세 다이버전스' },
+      { value: 'rsi_bullish_divergence', label: 'RSI 강세 다이버전스 (추후 지원)' },
+      { value: 'rsi_bearish_divergence', label: 'RSI 약세 다이버전스 (추후 지원)' },
+      { value: 'rsi_hidden_bullish_div', label: 'RSI 숨은 강세 다이버전스 (추후 지원)' },
+      { value: 'rsi_hidden_bearish_div', label: 'RSI 숨은 약세 다이버전스 (추후 지원)' },
       // 패턴
-      { value: 'rsi_failure_swing_buy', label: 'RSI Failure Swing (매수)' },
-      { value: 'rsi_failure_swing_sell', label: 'RSI Failure Swing (매도)' },
+      { value: 'rsi_failure_swing_buy', label: 'RSI Failure Swing (매수) (추후 지원)' },
+      { value: 'rsi_failure_swing_sell', label: 'RSI Failure Swing (매도) (추후 지원)' },
       // 범위 조건
       { value: 'rsi_range', label: 'RSI 특정 범위' }
     ]
     
     // 스토캐스틱 전용 옵션 (%K, %D)
     const stochasticOptions = [
+      // 기본 비교 연산자
+      ...basicOptions,
       // 과매도/과매수
       { value: 'stoch_oversold_20', label: '%K < 20 (과매도)' },
       { value: 'stoch_overbought_80', label: '%K > 80 (과매수)' },
-      { value: 'stoch_oversold_exit', label: '%K 20 상향돌파 (반등)' },
-      { value: 'stoch_overbought_exit', label: '%K 80 하향돌파 (조정)' },
+      { value: 'stoch_oversold_exit', label: '%K 20 상향돌파 (반등) (추후 지원)' },
+      { value: 'stoch_overbought_exit', label: '%K 80 하향돌파 (조정) (추후 지원)' },
       // %K와 %D 교차
       { value: 'stoch_k_above_d', label: '%K > %D (단기강세)' },
       { value: 'stoch_k_below_d', label: '%K < %D (단기약세)' },
-      { value: 'stoch_k_cross_d_up', label: '%K가 %D 상향교차' },
-      { value: 'stoch_k_cross_d_down', label: '%K가 %D 하향교차' },
-      { value: 'stoch_k_cross_d_oversold', label: '과매도 구간 %K/%D 상향교차' },
-      { value: 'stoch_k_cross_d_overbought', label: '과매수 구간 %K/%D 하향교차' },
+      { value: 'stoch_k_cross_d_up', label: '%K가 %D 상향교차 (추후 지원)' },
+      { value: 'stoch_k_cross_d_down', label: '%K가 %D 하향교차 (추후 지원)' },
+      { value: 'stoch_k_cross_d_oversold', label: '과매도 구간 %K/%D 상향교차 (추후 지원)' },
+      { value: 'stoch_k_cross_d_overbought', label: '과매수 구간 %K/%D 하향교차 (추후 지원)' },
       // 슬로우 스토캐스틱
       { value: 'slow_stoch_oversold', label: 'Slow %D < 20' },
       { value: 'slow_stoch_overbought', label: 'Slow %D > 80' },
       // 다이버전스
-      { value: 'stoch_bullish_divergence', label: '스토캐스틱 강세 다이버전스' },
-      { value: 'stoch_bearish_divergence', label: '스토캐스틱 약세 다이버전스' }
+      { value: 'stoch_bullish_divergence', label: '스토캐스틱 강세 다이버전스 (추후 지원)' },
+      { value: 'stoch_bearish_divergence', label: '스토캐스틱 약세 다이버전스 (추후 지원)' }
     ]
     
     // 거래량 지표 옵션
     const volumeOptions = [
       // 거래량 변화
-      { value: 'volume_increase', label: '거래량 증가 (전일 대비)' },
-      { value: 'volume_decrease', label: '거래량 감소 (전일 대비)' },
-      { value: 'volume_spike', label: '거래량 폭증 (평균 2배 이상)' },
-      { value: 'volume_above_ma', label: '거래량 > 20일 평균' },
-      { value: 'volume_below_ma', label: '거래량 < 20일 평균' },
+      { value: 'volume_increase', label: '거래량 증가 (전일 대비) (추후 지원)' },
+      { value: 'volume_decrease', label: '거래량 감소 (전일 대비) (추후 지원)' },
+      { value: 'volume_spike', label: '거래량 폭증 (평균 2배 이상) (추후 지원)' },
+      { value: 'volume_above_ma', label: '거래량 > 20일 평균 (추후 지원)' },
+      { value: 'volume_below_ma', label: '거래량 < 20일 평균 (추후 지원)' },
       // 가격-거래량 관계
-      { value: 'price_up_volume_up', label: '가격↑ 거래량↑ (강세지속)' },
-      { value: 'price_up_volume_down', label: '가격↑ 거래량↓ (상승력약화)' },
-      { value: 'price_down_volume_up', label: '가격↓ 거래량↑ (매도세강함)' },
-      { value: 'price_down_volume_down', label: '가격↓ 거래량↓ (바닥근접)' },
-      { value: 'volume_dry_up', label: '거래량 고갈 (3일 연속 감소)' },
-      { value: 'volume_climax', label: '거래량 클라이맥스 (극단적 폭증)' },
+      { value: 'price_up_volume_up', label: '가격↑ 거래량↑ (강세지속) (추후 지원)' },
+      { value: 'price_up_volume_down', label: '가격↑ 거래량↓ (상승력약화) (추후 지원)' },
+      { value: 'price_down_volume_up', label: '가격↓ 거래량↑ (매도세강함) (추후 지원)' },
+      { value: 'price_down_volume_down', label: '가격↓ 거래량↓ (바닥근접) (추후 지원)' },
+      { value: 'volume_dry_up', label: '거래량 고갈 (3일 연속 감소) (추후 지원)' },
+      { value: 'volume_climax', label: '거래량 클라이맥스 (극단적 폭증) (추후 지원)' },
       // 특정 배수 조건
-      { value: 'volume_multiplier', label: '평균 대비 N배' }
+      { value: 'volume_multiplier', label: '평균 대비 N배 (추후 지원)' }
     ]
     
     // OBV (On-Balance Volume) 전용
     const obvOptions = [
-      { value: 'obv_rising', label: 'OBV 상승 (매집)' },
-      { value: 'obv_falling', label: 'OBV 하락 (분산)' },
-      { value: 'obv_divergence_bullish', label: 'OBV 강세 다이버전스' },
-      { value: 'obv_divergence_bearish', label: 'OBV 약세 다이버전스' },
-      { value: 'obv_above_ma', label: 'OBV > 이동평균' },
-      { value: 'obv_below_ma', label: 'OBV < 이동평균' },
-      { value: 'obv_breakout', label: 'OBV 신고점 돌파' },
-      { value: 'obv_breakdown', label: 'OBV 신저점 하향돌파' },
-      { value: 'obv_ma_cross_up', label: 'OBV 이평선 상향돌파' },
-      { value: 'obv_ma_cross_down', label: 'OBV 이평선 하향돌파' }
+      { value: 'obv_rising', label: 'OBV 상승 (매집) (추후 지원)' },
+      { value: 'obv_falling', label: 'OBV 하락 (분산) (추후 지원)' },
+      { value: 'obv_divergence_bullish', label: 'OBV 강세 다이버전스 (추후 지원)' },
+      { value: 'obv_divergence_bearish', label: 'OBV 약세 다이버전스 (추후 지원)' },
+      { value: 'obv_above_ma', label: 'OBV > 이동평균 (추후 지원)' },
+      { value: 'obv_below_ma', label: 'OBV < 이동평균 (추후 지원)' },
+      { value: 'obv_breakout', label: 'OBV 신고점 돌파 (추후 지원)' },
+      { value: 'obv_breakdown', label: 'OBV 신저점 하향돌파 (추후 지원)' },
+      { value: 'obv_ma_cross_up', label: 'OBV 이평선 상향돌파 (추후 지원)' },
+      { value: 'obv_ma_cross_down', label: 'OBV 이평선 하향돌파 (추후 지원)' }
     ]
-    
+
     // VWAP (Volume Weighted Average Price) 전용
     const vwapOptions = [
       { value: 'price_above_vwap', label: '가격 > VWAP (강세)' },
       { value: 'price_below_vwap', label: '가격 < VWAP (약세)' },
-      { value: 'price_cross_vwap_up', label: '가격 VWAP 상향돌파' },
-      { value: 'price_cross_vwap_down', label: '가격 VWAP 하향돌파' },
-      { value: 'vwap_support', label: 'VWAP 지지선 역할' },
-      { value: 'vwap_resistance', label: 'VWAP 저항선 역할' }
+      { value: 'price_cross_vwap_up', label: '가격 VWAP 상향돌파 (추후 지원)' },
+      { value: 'price_cross_vwap_down', label: '가격 VWAP 하향돌파 (추후 지원)' },
+      { value: 'vwap_support', label: 'VWAP 지지선 역할 (추후 지원)' },
+      { value: 'vwap_resistance', label: 'VWAP 저항선 역할 (추후 지원)' }
     ]
-    
+
     // ADX (Average Directional Index) 전용
     const adxOptions = [
+      ...basicOptions,
       // 추세 강도
       { value: 'adx_strong_trend', label: 'ADX > 25 (강한 추세)' },
       { value: 'adx_weak_trend', label: 'ADX < 25 (약한 추세/횡보)' },
@@ -536,64 +540,66 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
       { value: 'adx_no_trend', label: 'ADX < 20 (무추세)' },
       { value: 'adx_extreme', label: 'ADX > 50 (극단 추세)' },
       // ADX 변화
-      { value: 'adx_rising', label: 'ADX 상승 (추세 강화)' },
-      { value: 'adx_falling', label: 'ADX 하락 (추세 약화)' },
-      { value: 'adx_turning_up', label: 'ADX 바닥에서 상승전환' },
-      { value: 'adx_turning_down', label: 'ADX 고점에서 하락전환' }
+      { value: 'adx_rising', label: 'ADX 상승 (추세 강화) (추후 지원)' },
+      { value: 'adx_falling', label: 'ADX 하락 (추세 약화) (추후 지원)' },
+      { value: 'adx_turning_up', label: 'ADX 바닥에서 상승전환 (추후 지원)' },
+      { value: 'adx_turning_down', label: 'ADX 고점에서 하락전환 (추후 지원)' }
     ]
-    
+
     // DMI (+DI, -DI) 전용
     const dmiOptions = [
       // 방향성 지표
       { value: 'di_bullish', label: '+DI > -DI (상승추세)' },
       { value: 'di_bearish', label: '-DI > +DI (하락추세)' },
-      { value: 'di_cross_bullish', label: '+DI가 -DI 상향교차' },
-      { value: 'di_cross_bearish', label: '-DI가 +DI 상향교차' },
+      { value: 'di_cross_bullish', label: '+DI가 -DI 상향교차 (추후 지원)' },
+      { value: 'di_cross_bearish', label: '-DI가 +DI 상향교차 (추후 지원)' },
       // ADX와 조합
-      { value: 'strong_bullish', label: '+DI>-DI & ADX>25' },
-      { value: 'strong_bearish', label: '-DI>+DI & ADX>25' }
+      { value: 'strong_bullish', label: '+DI>-DI & ADX>25 (추후 지원)' },
+      { value: 'strong_bearish', label: '-DI>+DI & ADX>25 (추후 지원)' }
     ]
-    
+
     // Parabolic SAR 전용
     const sarOptions = [
       { value: 'sar_below_price', label: 'SAR < 가격 (상승추세)' },
       { value: 'sar_above_price', label: 'SAR > 가격 (하락추세)' },
-      { value: 'sar_flip_bullish', label: 'SAR 상승전환 (매수신호)' },
-      { value: 'sar_flip_bearish', label: 'SAR 하락전환 (매도신호)' },
-      { value: 'sar_acceleration', label: 'SAR 가속 (추세강화)' }
+      { value: 'sar_flip_bullish', label: 'SAR 상승전환 (매수신호) (추후 지원)' },
+      { value: 'sar_flip_bearish', label: 'SAR 하락전환 (매도신호) (추후 지원)' },
+      { value: 'sar_acceleration', label: 'SAR 가속 (추세강화) (추후 지원)' }
     ]
-    
+
     // ATR (Average True Range) 전용
     const atrOptions = [
-      { value: 'atr_high', label: 'ATR 높음 (변동성 큼)' },
-      { value: 'atr_low', label: 'ATR 낮음 (변동성 작음)' },
-      { value: 'atr_increasing', label: 'ATR 증가 (변동성 확대)' },
-      { value: 'atr_decreasing', label: 'ATR 감소 (변동성 축소)' },
-      { value: 'atr_breakout', label: 'ATR 급증 (브레이크아웃)' },
-      { value: 'atr_squeeze', label: 'ATR 수축 (변동성 축소)' },
-      { value: 'atr_expansion', label: 'ATR 확장 (변동성 확대)' },
-      { value: 'atr_multiple', label: 'ATR 배수 (손절/익절용)' }
+      { value: 'atr_high', label: 'ATR 높음 (변동성 큼) (추후 지원)' },
+      { value: 'atr_low', label: 'ATR 낮음 (변동성 작음) (추후 지원)' },
+      { value: 'atr_increasing', label: 'ATR 증가 (변동성 확대) (추후 지원)' },
+      { value: 'atr_decreasing', label: 'ATR 감소 (변동성 축소) (추후 지원)' },
+      { value: 'atr_breakout', label: 'ATR 급증 (브레이크아웃) (추후 지원)' },
+      { value: 'atr_squeeze', label: 'ATR 수축 (변동성 축소) (추후 지원)' },
+      { value: 'atr_expansion', label: 'ATR 확장 (변동성 확대) (추후 지원)' },
+      { value: 'atr_multiple', label: 'ATR 배수 (손절/익절용) (추후 지원)' }
     ]
-    
+
     // CCI (Commodity Channel Index) 전용
     const cciOptions = [
+      ...basicOptions,
       { value: 'cci_overbought_100', label: 'CCI > +100 (과매수)' },
       { value: 'cci_oversold_100', label: 'CCI < -100 (과매도)' },
       { value: 'cci_extreme_200', label: 'CCI > +200 (극단 과매수)' },
       { value: 'cci_extreme_neg200', label: 'CCI < -200 (극단 과매도)' },
-      { value: 'cci_zero_cross_up', label: 'CCI 0선 상향돌파' },
-      { value: 'cci_zero_cross_down', label: 'CCI 0선 하향돌파' },
-      { value: 'cci_divergence', label: 'CCI 다이버전스' }
+      { value: 'cci_zero_cross_up', label: 'CCI 0선 상향돌파 (추후 지원)' },
+      { value: 'cci_zero_cross_down', label: 'CCI 0선 하향돌파 (추후 지원)' },
+      { value: 'cci_divergence', label: 'CCI 다이버전스 (추후 지원)' }
     ]
-    
+
     // Williams %R 전용
     const williamsOptions = [
+      ...basicOptions,
       { value: 'williams_oversold_80', label: '%R < -80 (과매도)' },
       { value: 'williams_overbought_20', label: '%R > -20 (과매수)' },
-      { value: 'williams_oversold_exit', label: '%R -80 탈출 (반등)' },
-      { value: 'williams_overbought_exit', label: '%R -20 탈출 (조정)' },
-      { value: 'williams_midline_cross', label: '%R -50 교차' },
-      { value: 'williams_divergence', label: 'Williams %R 다이버전스' }
+      { value: 'williams_oversold_exit', label: '%R -80 탈출 (반등) (추후 지원)' },
+      { value: 'williams_overbought_exit', label: '%R -20 탈출 (조정) (추후 지원)' },
+      { value: 'williams_midline_cross', label: '%R -50 교차 (추후 지원)' },
+      { value: 'williams_divergence', label: 'Williams %R 다이버전스 (추후 지원)' }
     ]
     
     // 지표별 조건 매핑
@@ -997,7 +1003,14 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
                   label="조건"
                 >
                   {getOperatorOptions(tempIndicator.indicatorId).map(op => (
-                    <MenuItem key={op.value} value={op.value}>
+                    <MenuItem
+                      key={op.value}
+                      value={op.value}
+                      sx={{
+                        color: op.label.includes('(추후 지원)') ? 'text.disabled' : 'inherit',
+                        opacity: op.label.includes('(추후 지원)') ? 0.5 : 1
+                      }}
+                    >
                       {op.label}
                     </MenuItem>
                   ))}

@@ -52,7 +52,6 @@ import BacktestComparison from './backtest/BacktestComparison';
 import { backtestStorageService } from '../services/backtestStorage';
 import SaveIcon from '@mui/icons-material/Save';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
-import { STRATEGY_TEMPLATES } from '../constants/strategyTemplates';
 import StyleIcon from '@mui/icons-material/Style';
 
 interface Strategy {
@@ -496,23 +495,26 @@ const BacktestRunner: React.FC = () => {
         // 3. 존재하지 않는 경우에만: 새로 생성
         console.log('Creating new template strategy');
 
+        // Supabase 템플릿은 이미 config 안에 데이터가 있음
+        const templateConfig = template.config || template.strategy || {};
+
         const strategyData = {
           name: templateStrategyName,
           description: template.description,
           type: template.type === 'complex' ? 'stage_based' : 'custom',
           config: template.type === 'complex'
             ? {
-                buyStageStrategy: template.stageStrategy.buyStages,
-                sellStageStrategy: template.stageStrategy.sellStages,
+                buyStageStrategy: template.stageStrategy?.buyStages || templateConfig.buyStageStrategy,
+                sellStageStrategy: template.stageStrategy?.sellStages || templateConfig.sellStageStrategy,
                 isStageBasedStrategy: true,
                 templateId: template.id,
                 templateName: template.name
               }
             : {
-                indicators: template.strategy.indicators,
-                buyConditions: template.strategy.buyConditions,
-                sellConditions: template.strategy.sellConditions,
-                riskManagement: template.strategy.riskManagement || {
+                indicators: templateConfig.indicators || [],
+                buyConditions: templateConfig.buyConditions || [],
+                sellConditions: templateConfig.sellConditions || [],
+                riskManagement: templateConfig.riskManagement || {
                   stopLoss: -5,
                   takeProfit: 10,
                   trailingStop: false,
@@ -1623,7 +1625,9 @@ const BacktestRunner: React.FC = () => {
             검증된 전략 템플릿을 선택하여 백테스트를 진행하세요
           </Typography>
           <Grid container spacing={2}>
-            {STRATEGY_TEMPLATES.map((template) => (
+            {strategies
+              .filter(s => s.name && s.name.startsWith('[템플릿]') && !s.user_id)
+              .map((template) => (
               <Grid item xs={12} sm={6} md={4} key={template.id}>
                 <Card 
                   sx={{ 
@@ -1639,29 +1643,12 @@ const BacktestRunner: React.FC = () => {
                   onClick={() => setSelectedTemplate(template)}
                 >
                   <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
-                      <Typography variant="h6">
-                        {template.name}
-                      </Typography>
-                      <Chip 
-                        label={template.difficulty === 'beginner' ? '초급' :
-                               template.difficulty === 'intermediate' ? '중급' :
-                               template.difficulty === 'advanced' ? '고급' : '전문가'}
-                        size="small"
-                        color={template.difficulty === 'beginner' ? 'success' :
-                               template.difficulty === 'intermediate' ? 'warning' :
-                               template.difficulty === 'advanced' ? 'error' : 'error'}
-                      />
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      {template.description}
+                    <Typography variant="h6" gutterBottom>
+                      {template.name.replace('[템플릿] ', '')}
                     </Typography>
-                    <Chip 
-                      label={template.type === 'complex' ? '3단계 전략' : '기본 전략'}
-                      size="small"
-                      variant="outlined"
-                      color={template.type === 'complex' ? 'secondary' : 'primary'}
-                    />
+                    <Typography variant="body2" color="text.secondary">
+                      {template.description || '전략 설명 없음'}
+                    </Typography>
                   </CardContent>
                 </Card>
               </Grid>

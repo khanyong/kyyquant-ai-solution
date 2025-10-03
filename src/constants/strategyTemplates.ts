@@ -34,8 +34,8 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     iconColor: 'success',
     strategy: {
       indicators: [
-        { type: 'ma', params: { period: 20 } },
-        { type: 'ma', params: { period: 60 } }
+        { name: 'ma', params: { period: 20 } },
+        { name: 'ma', params: { period: 60 } }
       ],
       buyConditions: [
         { id: '1', type: 'buy', indicator: 'ma_20', operator: 'cross_above', value: 'ma_60', combineWith: 'AND' }
@@ -55,13 +55,13 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     iconColor: 'secondary',
     strategy: {
       indicators: [
-        { type: 'rsi', params: { period: 14 } }
+        { name: 'rsi', params: { period: 14 } }
       ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'rsi_14', operator: '<', value: 30, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'rsi', operator: '<', value: 30, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '2', type: 'sell', indicator: 'rsi_14', operator: '>', value: 70, combineWith: 'AND' }
+        { id: '2', type: 'sell', indicator: 'rsi', operator: '>', value: 70, combineWith: 'AND' }
       ]
     }
   },
@@ -75,15 +75,15 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     iconColor: 'info',
     strategy: {
       indicators: [
-        { type: 'bb', params: { period: 20, std: 2 } },
-        { type: 'rsi', params: { period: 14 } }
+        { name: 'bollinger', params: { period: 20, std: 2 } },
+        { name: 'rsi', params: { period: 14 } }
       ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'close', operator: '<', value: 'bb_lower_20_2', combineWith: 'AND' },
-        { id: '2', type: 'buy', indicator: 'rsi_14', operator: '<', value: 40, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'close', operator: '<', value: 'bollinger_lower', combineWith: 'AND' },
+        { id: '2', type: 'buy', indicator: 'rsi', operator: '<', value: 40, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '3', type: 'sell', indicator: 'close', operator: '>', value: 'bb_upper_20_2', combineWith: 'AND' }
+        { id: '3', type: 'sell', indicator: 'close', operator: '>', value: 'bollinger_upper', combineWith: 'AND' }
       ]
     }
   },
@@ -97,14 +97,14 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     iconColor: 'primary',
     strategy: {
       indicators: [
-        { type: 'macd', params: { fast: 12, slow: 26, signal: 9 } }
+        { name: 'macd', params: { fast: 12, slow: 26, signal: 9 } }
       ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'macd', operator: 'cross_above', value: 'macd_signal', combineWith: 'AND' },
-        { id: '2', type: 'buy', indicator: 'macd', operator: '>', value: 0, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'macd_line', operator: 'cross_above', value: 'macd_signal', combineWith: 'AND' },
+        { id: '2', type: 'buy', indicator: 'macd_line', operator: '>', value: 0, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '3', type: 'sell', indicator: 'macd', operator: 'cross_below', value: 'macd_signal', combineWith: 'AND' }
+        { id: '3', type: 'sell', indicator: 'macd_line', operator: 'cross_below', value: 'macd_signal', combineWith: 'AND' }
       ]
     }
   },
@@ -216,15 +216,15 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     iconColor: 'warning',
     strategy: {
       indicators: [
-        { type: 'ma', period: 5 },
-        { type: 'rsi', period: 9 }
+        { name: 'ma', params: { period: 5 } },
+        { name: 'rsi', params: { period: 9 } }
       ],
       buyConditions: [
-        { id: '1', type: 'buy', indicator: 'price', operator: '>', value: 'ma_5', combineWith: 'AND' },
-        { id: '2', type: 'buy', indicator: 'rsi_9', operator: '<', value: 50, combineWith: 'AND' }
+        { id: '1', type: 'buy', indicator: 'close', operator: '>', value: 'ma_5', combineWith: 'AND' },
+        { id: '2', type: 'buy', indicator: 'rsi', operator: '<', value: 50, combineWith: 'AND' }
       ],
       sellConditions: [
-        { id: '3', type: 'sell', indicator: 'rsi_9', operator: '>', value: 70, combineWith: 'AND' }
+        { id: '3', type: 'sell', indicator: 'rsi', operator: '>', value: 70, combineWith: 'AND' }
       ],
       riskManagement: {
         stopLoss: -2,
@@ -246,19 +246,19 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     iconColor: 'info',
     strategy: {
       indicators: [
-        { type: 'ma', period: 20 },
-        { type: 'ma', period: 60 },
-        { type: 'rsi', period: 14 },
-        { type: 'macd', fast: 12, slow: 26, signal: 9 }
+        { name: 'ma', params: { period: 20 } },
+        { name: 'ma', params: { period: 60 } },
+        { name: 'rsi', params: { period: 14 } },
+        { name: 'macd', params: { fast: 12, slow: 26, signal: 9 } }
       ],
       buyConditions: [
         { id: '1', type: 'buy', indicator: 'ma_20', operator: '>', value: 'ma_60', combineWith: 'AND' },
-        { id: '2', type: 'buy', indicator: 'rsi_14', operator: '<', value: 60, combineWith: 'AND' },
-        { id: '3', type: 'buy', indicator: 'macd', operator: '>', value: 0, combineWith: 'AND' }
+        { id: '2', type: 'buy', indicator: 'rsi', operator: '<', value: 60, combineWith: 'AND' },
+        { id: '3', type: 'buy', indicator: 'macd_line', operator: '>', value: 0, combineWith: 'AND' }
       ],
       sellConditions: [
         { id: '4', type: 'sell', indicator: 'ma_20', operator: '<', value: 'ma_60', combineWith: 'AND' },
-        { id: '5', type: 'sell', indicator: 'rsi_14', operator: '>', value: 70, combineWith: 'AND' }
+        { id: '5', type: 'sell', indicator: 'rsi', operator: '>', value: 70, combineWith: 'AND' }
       ],
       riskManagement: {
         stopLoss: -7,

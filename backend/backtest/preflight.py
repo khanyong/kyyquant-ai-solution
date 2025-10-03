@@ -208,7 +208,7 @@ class IndicatorColumnMapper:
         self.calculator = calculator
         self._cache: Dict[str, List[str]] = {}
 
-    async def get_output_columns(
+    def get_output_columns(
         self,
         indicator_name: str,
         params: Dict[str, Any] = None
@@ -227,39 +227,99 @@ class IndicatorColumnMapper:
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        # 1. indicator_columns 테이블에서 표준 컬럼 조회 (우선)
+        # 1. 먼저 지표 정의에서 formula 확인하여 동적 컬럼 여부 체크
         try:
-            result = await self.calculator.supabase.table('indicator_columns') \
-                .select('column_name') \
-                .eq('indicator_name', indicator_name) \
-                .eq('is_active', True) \
-                .order('output_order') \
-                .execute()
-
-            if result.data and len(result.data) > 0:
-                columns = [row['column_name'] for row in result.data]
-                self._cache[cache_key] = columns
-                return columns
-        except Exception as e:
-            logger.warning(f"Failed to query indicator_columns: {e}")
-
-        # 2. Fallback: indicators 테이블의 output_columns
-        try:
-            definition = await self.calculator.supabase.table('indicators') \
-                .select('output_columns') \
+            definition = self.calculator.supabase.table('indicators') \
+                .select('output_columns, formula') \
                 .eq('name', indicator_name) \
                 .eq('is_active', True) \
                 .single() \
                 .execute()
 
             if definition.data:
-                columns = definition.data.get('output_columns', [])
-                self._cache[cache_key] = columns
-                return columns
+                formula_code = definition.data.get('formula', {}).get('code', '')
+                static_columns = definition.data.get('output_columns', [])
+
+                # 동적 컬럼명 계산: formula에서 f-string 패턴 찾기
+                dynamic_columns = self._extract_dynamic_columns(formula_code, params or {})
+
+                if dynamic_columns:
+                    print(f"[MAPPER DEBUG] Dynamic columns for '{indicator_name}' with {params}: {dynamic_columns}")
+                    self._cache[cache_key] = dynamic_columns
+                    return dynamic_columns
+
+                # 동적 컬럼이 아니면 indicator_columns 테이블 확인
+                try:
+                    result = self.calculator.supabase.table('indicator_columns') \
+                        .select('column_name') \
+                        .eq('indicator_name', indicator_name) \
+                        .eq('is_active', True) \
+                        .order('output_order') \
+                        .execute()
+
+                    if result.data and len(result.data) > 0:
+                        columns = [row['column_name'] for row in result.data]
+                        print(f"[MAPPER DEBUG] indicator_columns table returned for '{indicator_name}': {columns}")
+                        self._cache[cache_key] = columns
+                        return columns
+                except Exception as e:
+                    print(f"[MAPPER DEBUG] Failed to query indicator_columns for '{indicator_name}': {e}")
+
+                # indicator_columns도 없으면 static columns 사용
+                print(f"[MAPPER DEBUG] Static columns for '{indicator_name}': {static_columns}")
+                self._cache[cache_key] = static_columns
+                return static_columns
+
         except Exception as e:
-            logger.warning(f"Failed to query indicators: {e}")
+            print(f"[MAPPER DEBUG] Failed to query indicators for '{indicator_name}': {e}")
 
         return []
+
+    def _extract_dynamic_columns(self, formula_code: str, params: Dict[str, Any]) -> List[str]:
+        """
+        formula 코드에서 동적 컬럼명 추출
+
+        예: result = {f'sma_{period}': sma} + params={'period': 20} → ['sma_20']
+        """
+        if not formula_code:
+            return []
+
+        try:
+            # result dict의 키 패턴 추출: result = {f'sma_{period}': ...} 또는 result = {'sma': ...}
+            # 패턴: result\s*=\s*\{([^}]+)\}
+            match = re.search(r"result\s*=\s*\{([^}]+)\}", formula_code)
+            if not match:
+                return []
+
+            dict_content = match.group(1)
+
+            # f-string 키 패턴: f'...{param_name}...' 또는 f"...{param_name}..."
+            # 예: f'sma_{period}', f"macd_{fast}_{slow}"
+            fstring_patterns = re.findall(r"f['\"]([^'\"]+)['\"]", dict_content)
+
+            if not fstring_patterns:
+                # f-string이 없으면 동적 컬럼명 아님
+                return []
+
+            # f-string 내의 {param_name} 치환
+            columns = []
+            for pattern in fstring_patterns:
+                # {param_name} 패턴 찾아서 실제 값으로 치환
+                column_name = pattern
+                for param_name, param_value in params.items():
+                    placeholder = f"{{{param_name}}}"
+                    if placeholder in column_name:
+                        column_name = column_name.replace(placeholder, str(param_value))
+
+                # 모든 placeholder가 치환되었는지 확인
+                if '{' not in column_name and '}' not in column_name:
+                    columns.append(column_name)
+
+            return columns if columns else []
+
+        except Exception as e:
+            print(f"[MAPPER DEBUG] Failed to extract dynamic columns: {e}")
+            return []
 
     def get_builtin_columns(self, indicator_name: str) -> List[str]:
         """
@@ -443,7 +503,7 @@ class PreflightValidator:
 
             # Supabase에 지표 존재 확인
             try:
-                definition = await self.calculator.supabase.table('indicators') \
+                definition = self.calculator.supabase.table('indicators') \
                     .select('id, output_columns') \
                     .eq('name', name) \
                     .eq('is_active', True) \
@@ -494,15 +554,20 @@ class PreflightValidator:
                 continue
 
             try:
-                ind_columns = await self.mapper.get_output_columns(
+                ind_columns = self.mapper.get_output_columns(
                     name, ind.get('params')
                 )
+                print(f"[PREFLIGHT DEBUG] Indicator '{name}' columns: {ind_columns}")
                 columns.update(ind_columns)
-            except:
+            except Exception as e:
                 # Supabase 실패 시 내장 컬럼으로 폴백
+                print(f"[PREFLIGHT DEBUG] Failed to get columns for '{name}': {e}")
                 builtin = self.mapper.get_builtin_columns(name)
                 if builtin:
+                    print(f"[PREFLIGHT DEBUG] Using builtin columns for '{name}': {builtin}")
                     columns.update(builtin)
+                else:
+                    print(f"[PREFLIGHT DEBUG] No builtin columns for '{name}'")
 
         return columns
 

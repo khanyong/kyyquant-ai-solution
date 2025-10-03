@@ -108,10 +108,14 @@ async def run_backtest(request: BacktestRequest):
 
         # 2. 프리플라이트 검증 (실행 전 차단)
         print("[API] Running preflight validation...")
+        strategy_config = strategy.get('config', {})
+        print(f"[DEBUG] Strategy config type: {type(strategy_config)}")
+        print(f"[DEBUG] Strategy config keys: {list(strategy_config.keys()) if isinstance(strategy_config, dict) else 'NOT A DICT'}")
+        print(f"[DEBUG] Strategy config indicators: {strategy_config.get('indicators') if isinstance(strategy_config, dict) else 'N/A'}")
         try:
             calculator = IndicatorCalculator()
             report = await preflight_check(
-                strategy_config=strategy.get('config', {}),
+                strategy_config=strategy_config,
                 calculator=calculator,
                 stock_codes=request.stock_codes,
                 date_range=(request.start_date, request.end_date),
@@ -166,7 +170,13 @@ async def run_backtest(request: BacktestRequest):
         print(f"[API] Response prepared. Total return: {api_response['summary']['total_return']:.2f}%")
         return api_response
 
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"[API ERROR] Backtest execution failed:")
+        print(error_trace)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/quick")

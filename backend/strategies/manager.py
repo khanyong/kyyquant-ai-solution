@@ -24,11 +24,11 @@ class StrategyManager:
 
     def _load_builtin_strategies(self):
         """내장 전략 로드"""
-        # 기본 제공 전략들
-        self.register_strategy('golden_cross', GoldenCrossStrategy)
-        self.register_strategy('rsi_oversold', RSIOversoldStrategy)
-        self.register_strategy('bollinger_band', BollingerBandStrategy)
-        print(f"Loaded {len(self.strategies)} built-in strategies")
+        # 기본 제공 전략들 - 비활성화 (Supabase 템플릿 사용)
+        # self.register_strategy('golden_cross', GoldenCrossStrategy)
+        # self.register_strategy('rsi_oversold', RSIOversoldStrategy)
+        # self.register_strategy('bollinger_band', BollingerBandStrategy)
+        print(f"Built-in strategies disabled - using Supabase templates only")
 
     def _init_database(self):
         """데이터베이스 연결 초기화"""
@@ -81,6 +81,9 @@ class StrategyManager:
                 response = self.supabase.table('strategies').select('*').eq('id', strategy_id).single().execute()
                 if response.data:
                     print(f"[OK] Found strategy in database: {response.data.get('name', 'Unknown')}")
+                    print(f"[DEBUG] Strategy data keys: {list(response.data.keys())}")
+                    print(f"[DEBUG] Strategy config type: {type(response.data.get('config'))}")
+                    print(f"[DEBUG] Strategy config: {response.data.get('config')}")
                     return response.data
                 else:
                     print(f"[WARNING] Strategy {strategy_id} not found in database")

@@ -688,6 +688,9 @@ const TargetProfitSettingsEnhanced: React.FC<TargetProfitSettingsEnhancedProps> 
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Speed sx={{ mr: 1, fontSize: 20 }} />
                           <Typography variant="body2">트레일링 스톱</Typography>
+                          <Typography variant="caption" color="text.disabled" sx={{ ml: 1 }}>
+                            (추후 지원)
+                          </Typography>
                         </Box>
                       }
                     />

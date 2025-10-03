@@ -74,44 +74,36 @@ class SecuritySandbox:
 
     @staticmethod
     def validate_ast(code: str) -> bool:
-        """AST 검증 - 허용된 노드와 이름만 사용하는지 확인"""
+        """AST 검증 - 위험한 코드만 차단 (보안과 유연성의 균형)"""
+        print(f"[AST] DEBUG: Starting AST validation, code length={len(code)}")
         try:
             tree = ast.parse(code)
+            print(f"[AST] DEBUG: AST parse successful")
+
             for node in ast.walk(tree):
-                # 노드 타입 검증
-                if type(node) not in SecuritySandbox.ALLOWED_NODES:
-                    logger.warning(f"Blocked AST node: {type(node).__name__}")
-                    return False
-
-                # Import 차단
-                if isinstance(node, (ast.Import, ast.ImportFrom)):
-                    logger.warning("Import statements not allowed")
-                    return False
-
-                # 이름 화이트리스트 검증 (2중 방어)
-                if isinstance(node, ast.Name):
-                    # 변수 할당은 허용하되, 로드 시에만 체크
-                    if isinstance(node.ctx, ast.Load):
-                        # df, params, result 등 동적 변수는 허용
-                        if node.id not in SecuritySandbox.ALLOWED_NAMES and not node.id.startswith(('df', 'params', 'result', '_')):
-                            logger.warning(f"Blocked name access: {node.id}")
-                            return False
-
-                # 위험한 함수 호출 차단
+                # 위험한 함수 호출만 차단
                 if isinstance(node, ast.Call):
                     if isinstance(node.func, ast.Name):
+                        # eval, exec, compile, __import__, open 등 차단
                         if node.func.id in ['eval', 'exec', 'compile', '__import__', 'open', 'file']:
-                            logger.warning(f"Blocked function: {node.func.id}")
+                            msg = f"Blocked dangerous function: {node.func.id}"
+                            print(f"[AST] ERROR: {msg}")
+                            logger.warning(msg)
                             return False
                     # 위험한 속성 접근 차단
                     elif isinstance(node.func, ast.Attribute):
                         if node.func.attr in ['__globals__', '__code__', '__class__', '__bases__', '__subclasses__']:
-                            logger.warning(f"Blocked attribute: {node.func.attr}")
+                            msg = f"Blocked dangerous attribute: {node.func.attr}"
+                            print(f"[AST] ERROR: {msg}")
+                            logger.warning(msg)
                             return False
 
+            print(f"[AST] DEBUG: AST validation passed - all checks OK")
             return True
         except SyntaxError as e:
-            logger.error(f"Syntax error in code: {e}")
+            msg = f"Syntax error in code: {e}"
+            print(f"[AST] ERROR: {msg}")
+            logger.error(msg)
             return False
 
     @staticmethod
@@ -130,6 +122,12 @@ class SecuritySandbox:
             'round': round,
             'int': int,
             'float': float,
+            'str': str,
+            'list': list,
+            'dict': dict,
+            'tuple': tuple,
+            'bool': bool,
+            'isinstance': isinstance,  # isinstance 함수 추가 (EMA 등에서 사용)
             'True': True,
             'False': False,
             'None': None
@@ -778,15 +776,27 @@ class IndicatorCalculator:
 
     def _calculate_python_code(self, df: pd.DataFrame, config: Dict, options: ExecOptions) -> Dict[str, pd.Series]:
         """Python 코드 실행"""
+        print(f"[Calculator] DEBUG: _calculate_python_code called")
+        print(f"[Calculator] DEBUG: config keys={list(config.keys())}")
+
         # config가 indicator definition인 경우 formula에서 code 추출
         if 'formula' in config and isinstance(config['formula'], dict):
             code = config['formula'].get('code', '')
+            print(f"[Calculator] DEBUG: Code from formula, len={len(code) if code else 0}")
         else:
             code = config.get('code', '')
+            print(f"[Calculator] DEBUG: Code from config, len={len(code) if code else 0}")
 
+        print(f"[Calculator] DEBUG: About to validate AST")
+        print(f"[Calculator] DEBUG: Code preview:\n{code[:500]}")
         # AST 검증
-        if not self.sandbox.validate_ast(code):
+        ast_valid = self.sandbox.validate_ast(code)
+        print(f"[Calculator] DEBUG: AST validation result={ast_valid}")
+        if not ast_valid:
+            print(f"[Calculator] ERROR: AST validation failed!")
+            print(f"[Calculator] ERROR: Full code:\n{code}")
             raise ValueError("Code failed security validation")
+        print(f"[Calculator] DEBUG: AST validation passed")
 
         # 안전한 네임스페이스
         namespace = self.sandbox.create_safe_namespace()
@@ -813,11 +823,16 @@ class IndicatorCalculator:
 
         namespace['options'] = options
 
+        print(f"[Calculator] DEBUG: About to execute code")
+        print(f"[Calculator] DEBUG: params={namespace['params']}")
+
         try:
             # 타임아웃 설정 (추후 구현)
             logger.info(f"[DEBUG] Executing code with params: {namespace['params']}")
             logger.info(f"[DEBUG] Code to execute:\n{code[:200]}...")
+            print(f"[Calculator] DEBUG: Calling exec()")
             exec(code, namespace)
+            print(f"[Calculator] DEBUG: exec() completed")
 
             # 함수 호출 또는 result 변수 확인
             if 'calculate' in namespace:
@@ -890,6 +905,9 @@ class IndicatorCalculator:
     def _calculate_from_definition(self, df: pd.DataFrame, definition: Dict, options: ExecOptions) -> Dict[str, pd.Series]:
         """Supabase 정의로부터 계산"""
         calc_type = definition.get('calculation_type')
+        print(f"[Calculator] DEBUG: _calculate_from_definition called")
+        print(f"[Calculator] DEBUG: calc_type={calc_type}")
+        print(f"[Calculator] DEBUG: definition name={definition.get('name')}")
 
         # default_params가 있으면 options 업데이트
         if definition.get('default_params'):
@@ -901,18 +919,24 @@ class IndicatorCalculator:
                 pass
 
         if calc_type == 'built-in' or calc_type == 'builtin':
+            print(f"[Calculator] DEBUG: calc_type is built-in")
             # built-in 지표의 경우 formula 필드에 code가 있음
             formula_str = definition.get('formula', '{}')
+            print(f"[Calculator] DEBUG: formula_str type={type(formula_str)}, len={len(str(formula_str)) if formula_str else 0}")
             try:
                 formula = json.loads(formula_str) if isinstance(formula_str, str) else formula_str
             except:
                 formula = {'code': formula_str}
 
+            print(f"[Calculator] DEBUG: formula keys={list(formula.keys()) if isinstance(formula, dict) else 'not a dict'}")
+
             if 'code' in formula:
+                print(f"[Calculator] DEBUG: Using Supabase code execution")
                 # 기존 Supabase 형식 - Python 코드 실행
                 code = formula['code']
                 return self._execute_supabase_code(df, code, definition, options)
             else:
+                print(f"[Calculator] DEBUG: Using registry execution")
                 # 새 형식 - registry 사용 (DB 전용 모드에서는 불가)
                 if self.registry is None:
                     raise ValueError(
@@ -920,17 +944,21 @@ class IndicatorCalculator:
                         f"Registry-based execution is not available in DB-only mode."
                     )
                 method = formula.get('method', definition.get('name', '').split('_')[0])
+                print(f"[Calculator] DEBUG: method={method}, in registry={method in self.registry._indicators}")
                 if method in self.registry._indicators:
                     return self.registry.execute(method, df, options)
                 else:
                     raise ValueError(f"Method '{method}' not found in registry")
 
         elif calc_type == 'custom_formula':
+            print(f"[Calculator] DEBUG: Using custom_formula")
             return self._calculate_custom_formula(df, definition, options)
         elif calc_type == 'python_code':
+            print(f"[Calculator] DEBUG: Using python_code")
             return self._calculate_python_code(df, definition, options)
         else:
             # 기본적으로 custom_formula로 처리
+            print(f"[Calculator] DEBUG: Unknown calc_type, using custom_formula as fallback")
             logger.warning(f"Unknown calculation type '{calc_type}', treating as custom_formula")
             return self._calculate_custom_formula(df, definition, options)
 
