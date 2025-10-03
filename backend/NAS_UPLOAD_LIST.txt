@@ -1,0 +1,46 @@
+=== NAS 업로드 필수 파일 목록 ===
+
+[루트 필수 파일]
+main.py
+requirements.txt
+Dockerfile
+docker-compose.yml
+.env.production (또는 .env.example을 복사 후 수정)
+
+[api/]
+api/__init__.py
+api/backtest.py
+
+[backtest/]
+backtest/__init__.py
+backtest/engine.py
+backtest/models.py
+backtest/preflight.py
+
+[indicators/]
+indicators/__init__.py
+indicators/calculator.py
+indicators/sandbox.py
+
+[data/]
+data/__init__.py
+data/provider.py
+
+[strategies/]
+strategies/__init__.py
+strategies/base.py
+strategies/manager.py
+strategies/technical/__init__.py
+strategies/technical/bollinger_band.py
+strategies/technical/golden_cross.py
+strategies/technical/rsi_oversold.py
+
+=== 총 24개 파일 ===
+
+업로드 제외:
+- test_*.py (모든 테스트)
+- check_*.py (체크 스크립트)
+- fix_*.py (수정 스크립트)
+- download_*.py (다운로드 스크립트)
+- *_backup.py, *_v2.py, *_v3.py (백업 파일)
+- docker-compose.prod.yml, docker-compose.synology.yml

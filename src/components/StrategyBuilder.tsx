@@ -951,6 +951,56 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     const config = strategyData.config || {}
     if (config.useStageBasedStrategy !== undefined) {
       setUseStageBasedStrategy(config.useStageBasedStrategy)
+
+      // 단계별 전략인 경우 지표를 단계에서 수집
+      if (config.useStageBasedStrategy) {
+        const allStageIndicators: any[] = []
+        const indicatorSet = new Set<string>()
+
+        // 매수 단계에서 지표 수집
+        if (config.buyStageStrategy?.stages) {
+          config.buyStageStrategy.stages.forEach((stage: any) => {
+            if (stage.indicators) {
+              stage.indicators.forEach((ind: any) => {
+                const indicatorId = ind.indicatorId || ind.id
+                if (!indicatorSet.has(indicatorId)) {
+                  indicatorSet.add(indicatorId)
+                  allStageIndicators.push({
+                    id: indicatorId,
+                    name: ind.name || indicatorId.toUpperCase(),
+                    params: ind.params || {}
+                  })
+                }
+              })
+            }
+          })
+        }
+
+        // 매도 단계에서 지표 수집
+        if (config.sellStageStrategy?.stages) {
+          config.sellStageStrategy.stages.forEach((stage: any) => {
+            if (stage.indicators) {
+              stage.indicators.forEach((ind: any) => {
+                const indicatorId = ind.indicatorId || ind.id
+                if (!indicatorSet.has(indicatorId)) {
+                  indicatorSet.add(indicatorId)
+                  allStageIndicators.push({
+                    id: indicatorId,
+                    name: ind.name || indicatorId.toUpperCase(),
+                    params: ind.params || {}
+                  })
+                }
+              })
+            }
+          })
+        }
+
+        // 수집된 지표로 덮어쓰기
+        if (allStageIndicators.length > 0) {
+          indicators = allStageIndicators
+          formattedStrategy.indicators = allStageIndicators
+        }
+      }
     }
     if (config.buyStageStrategy) {
       setBuyStageStrategy(config.buyStageStrategy)
@@ -973,8 +1023,23 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
     setDialogOpen(false)
 
-    // 성공 메시지
-    alert(`전략 '${formattedStrategy.name}'을 불러왔습니다!\n\n지표: ${indicators.length}개\n매수조건: ${buyConditions.length}개\n매도조건: ${sellConditions.length}개`)
+    // 성공 메시지 - 단계별 전략인 경우 단계에서 조건 수 계산
+    let totalBuyConditions = buyConditions.length
+    let totalSellConditions = sellConditions.length
+
+    if (config.useStageBasedStrategy) {
+      // 매수 단계의 조건 수 계산
+      if (config.buyStageStrategy?.stages) {
+        totalBuyConditions = config.buyStageStrategy.stages.filter((s: any) => s.enabled).length
+      }
+
+      // 매도 단계의 조건 수 계산 (지표 조건 또는 목표수익률)
+      if (config.sellStageStrategy?.stages) {
+        totalSellConditions = config.sellStageStrategy.stages.filter((s: any) => s.enabled).length
+      }
+    }
+
+    alert(`전략 '${formattedStrategy.name}'을 불러왔습니다!\n\n지표: ${indicators.length}개\n매수조건: ${totalBuyConditions}개\n매도조건: ${totalSellConditions}개`)
   }
 
   // 프리셋 전략 적용

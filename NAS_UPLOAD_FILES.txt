@@ -1,0 +1,40 @@
+# NAS 서버 업로드 필수 파일 목록
+# 업로드 경로: /volume1/docker/auto-stock-backend/
+
+## 1. 루트 파일 (backend/ 디렉토리)
+main.py
+requirements.txt
+Dockerfile
+docker-compose.yml
+.env.production
+
+## 2. api/ 디렉토리
+api/__init__.py
+api/backtest.py
+
+## 3. backtest/ 디렉토리 (Phase 2.5a 핵심)
+backtest/__init__.py
+backtest/engine.py
+backtest/models.py
+backtest/preflight.py     # ✨ NEW: Preflight 검증
+backtest/runner.py        # 없으면 생략 가능
+
+## 4. indicators/ 디렉토리
+indicators/__init__.py
+indicators/calculator.py   # 표준화된 계산기
+indicators/sandbox.py      # ✨ NEW: 샌드박스
+
+## 5. data/ 디렉토리
+data/__init__.py
+data/provider.py
+
+## 6. strategies/ 디렉토리
+strategies/__init__.py
+strategies/base.py
+strategies/manager.py
+strategies/technical/__init__.py
+strategies/technical/bollinger_band.py
+strategies/technical/golden_cross.py
+strategies/technical/rsi_oversold.py
+
+총 파일 수: 약 24개

@@ -1,0 +1,440 @@
+{
+  "indicators": {
+    "adx": {
+      "type": "static",
+      "pattern": "adx",
+      "example": "adx",
+      "columns": [
+        "adx"
+      ]
+    },
+    "atr": {
+      "type": "static",
+      "pattern": "atr",
+      "example": "atr",
+      "columns": [
+        "atr"
+      ]
+    },
+    "bollinger": {
+      "type": "static",
+      "pattern": "bollinger_upper, bollinger_middle, bollinger_lower",
+      "example": "bollinger_upper, bollinger_middle, bollinger_lower",
+      "columns": [
+        "bollinger_upper",
+        "bollinger_middle",
+        "bollinger_lower"
+      ]
+    },
+    "cci": {
+      "type": "static",
+      "pattern": "cci",
+      "example": "cci",
+      "columns": [
+        "cci"
+      ]
+    },
+    "close": {
+      "type": "static",
+      "pattern": "close",
+      "example": "close",
+      "columns": [
+        "close"
+      ]
+    },
+    "dmi": {
+      "type": "static",
+      "pattern": "dmi_plus_di, dmi_minus_di",
+      "example": "dmi_plus_di, dmi_minus_di",
+      "columns": [
+        "dmi_plus_di",
+        "dmi_minus_di"
+      ]
+    },
+    "ema": {
+      "type": "static",
+      "pattern": "ema",
+      "example": "ema",
+      "columns": [
+        "ema"
+      ]
+    },
+    "ichimoku": {
+      "type": "static",
+      "pattern": "ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b, ichimoku_chikou",
+      "example": "ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b, ichimoku_chikou",
+      "columns": [
+        "ichimoku_tenkan",
+        "ichimoku_kijun",
+        "ichimoku_senkou_a",
+        "ichimoku_senkou_b",
+        "ichimoku_chikou"
+      ]
+    },
+    "ma": {
+      "type": "static",
+      "pattern": "ma",
+      "example": "ma",
+      "columns": [
+        "ma"
+      ]
+    },
+    "macd": {
+      "type": "static",
+      "pattern": "macd_line, macd_signal, macd_hist",
+      "example": "macd_line, macd_signal, macd_hist",
+      "columns": [
+        "macd_line",
+        "macd_signal",
+        "macd_hist"
+      ]
+    },
+    "obv": {
+      "type": "static",
+      "pattern": "obv",
+      "example": "obv",
+      "columns": [
+        "obv"
+      ]
+    },
+    "parabolic": {
+      "type": "static",
+      "pattern": "psar, psar_trend",
+      "example": "psar, psar_trend",
+      "columns": [
+        "psar",
+        "psar_trend"
+      ]
+    },
+    "price": {
+      "type": "static",
+      "pattern": "price",
+      "example": "price",
+      "columns": [
+        "price"
+      ]
+    },
+    "rsi": {
+      "type": "static",
+      "pattern": "rsi",
+      "example": "rsi",
+      "columns": [
+        "rsi"
+      ]
+    },
+    "sma": {
+      "type": "dynamic",
+      "pattern": "sma_{period}",
+      "example": "sma_20",
+      "columns": [
+        "sma"
+      ]
+    },
+    "stochastic": {
+      "type": "static",
+      "pattern": "stochastic_k, stochastic_d",
+      "example": "stochastic_k, stochastic_d",
+      "columns": [
+        "stochastic_k",
+        "stochastic_d"
+      ]
+    },
+    "volume": {
+      "type": "static",
+      "pattern": "volume",
+      "example": "volume",
+      "columns": [
+        "volume"
+      ]
+    },
+    "volume_ma": {
+      "type": "dynamic",
+      "pattern": "volume_ma_{period}",
+      "example": "volume_ma_20",
+      "columns": [
+        "volume_ma"
+      ]
+    },
+    "vwap": {
+      "type": "static",
+      "pattern": "vwap",
+      "example": "vwap",
+      "columns": [
+        "vwap"
+      ]
+    },
+    "williams": {
+      "type": "static",
+      "pattern": "williams_r",
+      "example": "williams_r",
+      "columns": [
+        "williams_r"
+      ]
+    }
+  },
+  "templates": {
+    "[템플릿] MACD 시그널": {
+      "indicators": [
+        {
+          "name": "macd",
+          "params": {
+            "fast": 12,
+            "slow": 26,
+            "signal": 9
+          }
+        }
+      ],
+      "buy_columns": [
+        "macd_line",
+        "macd_signal"
+      ],
+      "sell_columns": [
+        "macd_line",
+        "macd_signal"
+      ],
+      "all_columns": [
+        "macd_line",
+        "macd_signal"
+      ]
+    },
+    "[템플릿] RSI 반전": {
+      "indicators": [
+        {
+          "name": "rsi",
+          "params": {
+            "period": 14
+          }
+        }
+      ],
+      "buy_columns": [
+        "rsi"
+      ],
+      "sell_columns": [
+        "rsi"
+      ],
+      "all_columns": [
+        "rsi"
+      ]
+    },
+    "[템플릿] 골든크로스": {
+      "indicators": [
+        {
+          "name": "sma",
+          "params": {
+            "period": 20
+          }
+        },
+        {
+          "name": "sma",
+          "params": {
+            "period": 60
+          }
+        }
+      ],
+      "buy_columns": [
+        "sma_20",
+        "sma_60"
+      ],
+      "sell_columns": [
+        "sma_20",
+        "sma_60"
+      ],
+      "all_columns": [
+        "sma_20",
+        "sma_60"
+      ]
+    },
+    "[템플릿] 복합 전략 A": {
+      "indicators": [
+        {
+          "name": "rsi",
+          "params": {
+            "period": 14
+          }
+        },
+        {
+          "name": "macd",
+          "params": {
+            "fast": 12,
+            "slow": 26,
+            "signal": 9
+          }
+        },
+        {
+          "name": "volume_ma",
+          "params": {
+            "period": 20
+          }
+        }
+      ],
+      "buy_columns": [
+        "macd_line",
+        "macd_signal",
+        "rsi",
+        "volume",
+        "volume_ma_20"
+      ],
+      "sell_columns": [
+        "macd_line",
+        "macd_signal",
+        "rsi"
+      ],
+      "all_columns": [
+        "macd_line",
+        "macd_signal",
+        "rsi",
+        "volume",
+        "volume_ma_20"
+      ]
+    },
+    "[템플릿] 복합 전략 B": {
+      "indicators": [
+        {
+          "name": "sma",
+          "params": {
+            "period": 20
+          }
+        },
+        {
+          "name": "bollinger",
+          "params": {
+            "std": 2,
+            "period": 20
+          }
+        },
+        {
+          "name": "rsi",
+          "params": {
+            "period": 14
+          }
+        }
+      ],
+      "buy_columns": [
+        "bollinger_lower",
+        "close",
+        "rsi",
+        "sma_20"
+      ],
+      "sell_columns": [
+        "bollinger_upper",
+        "close",
+        "rsi"
+      ],
+      "all_columns": [
+        "bollinger_lower",
+        "bollinger_upper",
+        "close",
+        "rsi",
+        "sma_20"
+      ]
+    },
+    "[템플릿] 볼린저밴드": {
+      "indicators": [
+        {
+          "name": "bollinger",
+          "params": {
+            "std": 2,
+            "period": 20
+          }
+        },
+        {
+          "name": "rsi",
+          "params": {
+            "period": 14
+          }
+        }
+      ],
+      "buy_columns": [
+        "bollinger_lower",
+        "close",
+        "rsi"
+      ],
+      "sell_columns": [
+        "bollinger_upper",
+        "close"
+      ],
+      "all_columns": [
+        "bollinger_lower",
+        "bollinger_upper",
+        "close",
+        "rsi"
+      ]
+    },
+    "[템플릿] 스윙 트레이딩": {
+      "indicators": [
+        {
+          "name": "sma",
+          "params": {
+            "period": 20
+          }
+        },
+        {
+          "name": "sma",
+          "params": {
+            "period": 60
+          }
+        },
+        {
+          "name": "rsi",
+          "params": {
+            "period": 14
+          }
+        },
+        {
+          "name": "macd",
+          "params": {
+            "fast": 12,
+            "slow": 26,
+            "signal": 9
+          }
+        }
+      ],
+      "buy_columns": [
+        "macd_line",
+        "rsi",
+        "sma_20",
+        "sma_60"
+      ],
+      "sell_columns": [
+        "rsi",
+        "sma_20",
+        "sma_60"
+      ],
+      "all_columns": [
+        "macd_line",
+        "rsi",
+        "sma_20",
+        "sma_60"
+      ]
+    },
+    "[템플릿] 스캘핑": {
+      "indicators": [
+        {
+          "name": "sma",
+          "params": {
+            "period": 5
+          }
+        },
+        {
+          "name": "rsi",
+          "params": {
+            "period": 14
+          }
+        }
+      ],
+      "buy_columns": [
+        "close",
+        "rsi",
+        "sma_5"
+      ],
+      "sell_columns": [
+        "rsi"
+      ],
+      "all_columns": [
+        "close",
+        "rsi",
+        "sma_5"
+      ]
+    }
+  }
+}
