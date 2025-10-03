@@ -121,14 +121,17 @@ export const convertConditionToStandard = (
     left = oldCondition.stochLine
   } else if (oldCondition.indicator === 'ichimoku' && oldCondition.ichimokuLine) {
     left = oldCondition.ichimokuLine
-  } else {
+  } else if (oldCondition.indicator) {
     left = normalizeIndicatorName(oldCondition.indicator)
+  } else {
+    // fallback: indicator도 없으면 에러 방지
+    left = 'close'
   }
 
   const operator = OPERATOR_MAPPING[oldCondition.operator] || oldCondition.operator
   const right = typeof oldCondition.value === 'string'
     ? normalizeIndicatorName(oldCondition.value)
-    : oldCondition.value
+    : (oldCondition.value ?? 0)
 
   return {
     left,
