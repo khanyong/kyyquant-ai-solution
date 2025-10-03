@@ -62,6 +62,7 @@ interface Strategy {
   config?: any;  // config 필드 추가
   parameters: any;
   created_at?: string;
+  user_id?: string;  // 사용자 ID (템플릿 필터링용)
 }
 
 interface BacktestConfig {

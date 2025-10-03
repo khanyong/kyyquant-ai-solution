@@ -114,6 +114,7 @@ interface Strategy {
   name: string
   description: string
   isOwn?: boolean  // 자신의 전략인지 표시 (개발 모드용)
+  userId?: string  // 사용자 ID (템플릿 필터링용)
   indicators: Indicator[]
   buyConditions: Condition[]
   sellConditions: Condition[]
