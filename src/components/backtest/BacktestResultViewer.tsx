@@ -443,7 +443,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                       <TableCell>
                         <Stack spacing={0.5}>
                           <Typography variant="caption" sx={{ maxWidth: 200, display: 'block' }}>
-                            {trade.signal_reason || '-'}
+                            {(trade as any).reason || trade.signal_reason || '-'}
                           </Typography>
                           {trade.signal_details?.type && (
                             <Chip

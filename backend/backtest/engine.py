@@ -352,6 +352,10 @@ class BacktestEngine:
                             # 자본금 확인
                             if buy_amount + commission_fee <= capital:
                                 # 거래 기록
+                                # 매수 이유 포맷팅
+                                buy_reason_detail = buy_signal_info.get('reason', 'Signal')
+                                buy_reason = f"매수 {stage_num}단계 ({buy_reason_detail})"
+
                                 trades.append({
                                     'trade_id': str(uuid.uuid4()),
                                     'date': date,
@@ -361,7 +365,7 @@ class BacktestEngine:
                                     'price': buy_price,
                                     'amount': buy_amount,
                                     'commission': commission_fee,
-                                    'reason': f"stage_{stage_num}_buy ({buy_signal_info.get('reason', 'Signal')})"
+                                    'reason': buy_reason
                                 })
 
                                 # 포지션 업데이트 또는 생성
