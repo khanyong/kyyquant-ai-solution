@@ -882,7 +882,16 @@ const BacktestRunner: React.FC = () => {
           totalWinningTrades += stockResult.result?.winning_trades || 0;
           totalLosingTrades += stockResult.result?.losing_trades || 0;
           totalTradeCount += stockResult.result?.total_trades || 0;
-          
+
+          // 거래 사유 필드 디버깅
+          if (stockTrades.length > 0) {
+            const firstTrade = stockTrades[0];
+            console.log(`[BacktestRunner] ${stockResult.stock_code} 첫 거래:`, firstTrade);
+            console.log(`[BacktestRunner] reason 필드:`, firstTrade.reason);
+            console.log(`[BacktestRunner] signal_reason 필드:`, firstTrade.signal_reason);
+            console.log(`[BacktestRunner] 모든 키:`, Object.keys(firstTrade));
+          }
+
           stockTrades.forEach((trade: any) => {
             allTrades.push({
               ...trade,
@@ -927,6 +936,7 @@ const BacktestRunner: React.FC = () => {
             amount: trade.amount || trade.cost || trade.proceeds || trade.revenue || 0,
             profit_loss: trade.profit_loss || trade.profit || 0,
             profit_rate: trade.profit_rate || trade.profit_pct || trade.return_rate || 0,
+            reason: trade.reason || '',  // ✅ 백엔드 reason 필드 추가
             signal_reason: trade.signal_reason || '',
             signal_details: trade.signal_details || {},
             trade_date: trade.date || trade.trade_date || ''
@@ -941,6 +951,14 @@ const BacktestRunner: React.FC = () => {
         console.log('Formatted result:', formattedResult);
         console.log('Formatted trades count:', formattedResult.trades.length);
         console.log('Formatted daily_returns count:', formattedResult.daily_returns.length);
+
+        // 거래 사유 필드 최종 확인
+        if (formattedResult.trades.length > 0) {
+          const sampleFormattedTrade = formattedResult.trades[0];
+          console.log('[BacktestRunner] Formatted 첫 거래:', sampleFormattedTrade);
+          console.log('[BacktestRunner] Formatted reason:', sampleFormattedTrade.reason);
+          console.log('[BacktestRunner] Formatted signal_reason:', sampleFormattedTrade.signal_reason);
+        }
         
         setBacktestResults(formattedResult);
         // 결과 다이얼로그 자동 표시

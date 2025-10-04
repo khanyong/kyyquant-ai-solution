@@ -141,6 +141,14 @@ async def run_backtest(request: BacktestRequest):
 
         # API 응답 형식 맞추기 - 프론트엔드가 기대하는 형식
         print(f"[API] Backtest completed. Preparing response...")
+
+        # 디버깅: trades 샘플 출력
+        all_trades = result.get('trades', [])
+        if all_trades:
+            sample_trade = all_trades[0]
+            print(f"[API DEBUG] Sample trade keys: {list(sample_trade.keys())}")
+            print(f"[API DEBUG] Sample trade reason: {sample_trade.get('reason', 'MISSING')}")
+
         api_response = {
             'success': True,
             'status': result.get('status', 'completed'),

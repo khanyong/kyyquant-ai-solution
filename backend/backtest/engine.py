@@ -274,6 +274,8 @@ class BacktestEngine:
                             profit_rate = profit / sold_cost * 100
 
                             # 거래 기록
+                            print(f"[Engine] Recording sell trade: stock={stock_code}, reason={exit_reason}, ratio={exit_ratio}%")
+
                             trades.append({
                                 'trade_id': str(uuid.uuid4()),
                                 'date': date,
@@ -355,6 +357,7 @@ class BacktestEngine:
                                 # 매수 이유 포맷팅
                                 buy_reason_detail = buy_signal_info.get('reason', 'Signal')
                                 buy_reason = f"매수 {stage_num}단계 ({buy_reason_detail})"
+                                print(f"[Engine] Recording staged buy trade: stock={stock_code}, stage={stage_num}, reason={buy_reason}")
 
                                 trades.append({
                                     'trade_id': str(uuid.uuid4()),
@@ -415,6 +418,9 @@ class BacktestEngine:
                             commission_fee = buy_amount * commission
 
                             # 거래 기록
+                            buy_reason = row.get('buy_reason', 'Signal')
+                            print(f"[Engine] Recording buy trade: stock={stock_code}, reason={buy_reason}")
+
                             trades.append({
                                 'trade_id': str(uuid.uuid4()),
                                 'date': date,
@@ -424,7 +430,7 @@ class BacktestEngine:
                                 'price': buy_price,
                                 'amount': buy_amount,
                                 'commission': commission_fee,
-                                'reason': row.get('buy_reason', 'Signal')
+                                'reason': buy_reason
                             })
 
                             # 포지션 추가

@@ -109,7 +109,8 @@ interface Trade {
   profit_rate?: number;
   profit_pct?: number;  // 백엔드에서 사용하는 수익률 필드
   proceeds?: number;  // 백엔드에서 사용하는 매도 수익금
-  signal_reason?: string;  // 매매 이유
+  reason?: string;  // 백엔드 거래 이유 (engine.py에서 생성)
+  signal_reason?: string;  // 매매 이유 (레거시)
   signal_details?: {  // 신호 상세 정보
     type?: string;
     profit_pct?: number;
@@ -165,6 +166,14 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
     if (propResult) {
       setResult(propResult);
       console.log('Result set with trades:', propResult.trades?.length, 'daily_returns:', propResult.daily_returns?.length);
+
+      // 거래 사유 필드 디버깅
+      if (propResult.trades && propResult.trades.length > 0) {
+        const sampleTrade = propResult.trades[0];
+        console.log('[Trade Debug] Sample trade keys:', Object.keys(sampleTrade));
+        console.log('[Trade Debug] Sample trade reason field:', sampleTrade.reason);
+        console.log('[Trade Debug] Sample trade signal_reason field:', sampleTrade.signal_reason);
+      }
     }
   }, [propResult]);
 
@@ -443,7 +452,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                       <TableCell>
                         <Stack spacing={0.5}>
                           <Typography variant="caption" sx={{ maxWidth: 200, display: 'block' }}>
-                            {(trade as any).reason || trade.signal_reason || '-'}
+                            {trade.reason || trade.signal_reason || '-'}
                           </Typography>
                           {trade.signal_details?.type && (
                             <Chip
