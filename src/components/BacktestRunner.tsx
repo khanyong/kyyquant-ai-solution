@@ -1056,8 +1056,9 @@ const BacktestRunner: React.FC = () => {
         test_period_end: config.endDate?.toISOString().split('T')[0],
         // 필수 숫자 필드들
         initial_capital: config.initialCapital,
-        final_capital: backtestResults.final_capital || (config.initialCapital + (backtestResults.total_return * config.initialCapital / 100)),
-        total_return: backtestResults.total_return || 0,
+        final_capital: backtestResults.final_capital || config.initialCapital,
+        // total_return은 수익률(%)로 저장 (백엔드의 total_return_rate 사용)
+        total_return: backtestResults.total_return_rate || 0,
         max_drawdown: Math.abs(backtestResults.max_drawdown || 0),
         sharpe_ratio: backtestResults.sharpe_ratio || null,
         win_rate: backtestResults.win_rate || null,

@@ -154,7 +154,9 @@ async def run_backtest(request: BacktestRequest):
             'status': result.get('status', 'completed'),
             'backtest_id': result.get('backtest_id'),
             'summary': {
-                'total_return': result.get('total_return_rate', 0),
+                'total_return': result.get('total_return_rate', 0),  # 수익률(%)
+                'total_return_pct': result.get('total_return_rate', 0),  # 명확한 필드명
+                'total_return_amount': result.get('total_return', 0),  # 절대값(원)
                 'average_win_rate': result.get('win_rate', 0),
                 'max_drawdown': result.get('max_drawdown', 0),
                 'total_trades': result.get('total_trades', 0),
@@ -172,7 +174,19 @@ async def run_backtest(request: BacktestRequest):
                         'losing_trades': len([t for t in result.get('trades', []) if t.get('stock_code') == code and t.get('type') == 'sell' and t.get('profit', 0) <= 0])
                     }
                 } for code in request.stock_codes
-            ] if request.stock_codes else []
+            ] if request.stock_codes else [],
+            # 전체 데이터 포함 (프론트엔드 호환성)
+            'initial_capital': result.get('initial_capital'),
+            'final_capital': result.get('final_capital'),
+            'total_return': result.get('total_return'),  # 절대값(원)
+            'total_return_rate': result.get('total_return_rate'),  # 수익률(%)
+            'win_rate': result.get('win_rate'),
+            'max_drawdown': result.get('max_drawdown'),
+            'total_trades': result.get('total_trades'),
+            'winning_trades': result.get('winning_trades'),
+            'losing_trades': result.get('losing_trades'),
+            'trades': result.get('trades', []),
+            'daily_values': result.get('daily_values', [])
         }
 
         print(f"[API] Response prepared. Total return: {api_response['summary']['total_return']:.2f}%")

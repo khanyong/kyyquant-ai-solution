@@ -270,7 +270,10 @@ class BacktestEngine:
 
                             # 수익 계산 (매도한 비율만큼의 원가 계산)
                             sold_cost = position['total_cost'] * (sell_quantity / position['quantity'])
-                            profit = sell_amount - sold_cost - commission_fee
+                            # 매도 금액에서 수수료를 뺀 실수령액
+                            net_sell_amount = sell_amount - commission_fee
+                            # 수익 = 실수령액 - 원가 (원가에는 이미 매수 수수료 포함)
+                            profit = net_sell_amount - sold_cost
                             profit_rate = profit / sold_cost * 100
 
                             # 거래 기록
@@ -291,8 +294,8 @@ class BacktestEngine:
                                 'exit_ratio': exit_ratio
                             })
 
-                            # 자본금 업데이트
-                            capital += sell_amount - commission_fee
+                            # 자본금 업데이트 (실수령액 = 매도금액 - 수수료)
+                            capital += net_sell_amount
 
                             # 포지션 업데이트 또는 제거
                             if exit_ratio >= 100:
