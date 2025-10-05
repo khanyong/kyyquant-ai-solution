@@ -1291,6 +1291,77 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 22,
+      title: '백테스트 수익률 계산 검증 및 수정',
+      status: 'done',
+      priority: 'high',
+      icon: <Assessment />,
+      period: '2025.10.05',
+      description: '백테스트 수익률 산식 검증 및 DB 저장 형식 수정',
+      subtasks: [
+        {
+          title: '✅ 수익률 차이 원인 분석',
+          details: [
+            '엑셀 매도 수익(1,417,912원) vs UI 표시(1,752,288원) 차이 분석',
+            '차이 334,376원은 미청산 포지션 평가손익으로 확인',
+            'Supabase trade_details 데이터와 엑셀 완벽 일치 검증',
+            '65건 매도 거래 모두 소수점까지 일치 확인',
+            '수익 계산 산식 100% 정확성 검증 완료'
+          ]
+        },
+        {
+          title: '✅ 수익 계산 로직 명확화',
+          details: [
+            'backend/backtest/engine.py - net_sell_amount 변수 추가',
+            '코드 가독성 향상: 실수령액 계산 로직 명확화',
+            '수수료 처리 로직 주석 추가',
+            '수학적으로 동일하지만 의도가 명확한 코드로 개선',
+            '자본금 업데이트 로직 주석 개선'
+          ]
+        },
+        {
+          title: '✅ DB 저장 형식 수정',
+          details: [
+            'BacktestRunner.tsx - total_return_rate 사용으로 변경',
+            '기존: total_return(절대값 원) 저장 → 수정: total_return_rate(%) 저장',
+            'DB total_return 필드는 수익률(%)을 저장해야 함',
+            'final_capital 계산 로직 단순화',
+            'TypeScript 타입 정의 정확성 검증'
+          ]
+        },
+        {
+          title: '✅ API 응답 명확화',
+          details: [
+            'backend/api/backtest.py - API 응답 필드 추가',
+            'total_return_pct: 수익률(%) - 명확한 필드명',
+            'total_return_amount: 절대값(원)',
+            '프론트엔드 호환성을 위한 전체 데이터 포함',
+            'initial_capital, final_capital, trades 등 포함'
+          ]
+        },
+        {
+          title: '✅ 실제 데이터 검증',
+          details: [
+            '백테스트 ID: 823cff99-55d7-4716-a721-1fa171c01345',
+            '전략: [실전] 볼린저밴드 2단계 매수',
+            '초기자본 10,000,000원 → 최종자본 11,752,289원',
+            '수익률 17.5229% (DB 정확히 저장됨)',
+            '엑셀 vs 엔진: 65건 거래 완벽 일치'
+          ]
+        },
+        {
+          title: '✅ 문서화 및 배포',
+          details: [
+            'BACKTEST_PROFIT_CALCULATION_FIX.md 작성',
+            '문제 원인, 해결 방법, 검증 결과 상세 문서화',
+            'NAS 서버 백엔드 파일 동기화 (MD5 체크섬 확인)',
+            'Git 커밋 및 푸시 완료',
+            '수익 계산 산식 정확성 최종 확인'
+          ]
+        }
+      ]
+    },
+    {
+      id: 23,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -1351,7 +1422,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 23,
+      id: 24,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -1412,7 +1483,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 24,
+      id: 25,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1473,7 +1544,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 25,
+      id: 26,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -1534,7 +1605,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 26,
+      id: 27,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1595,7 +1666,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 27,
+      id: 28,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
@@ -1660,7 +1731,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 80 // 2025-10-03 기준 진행률 (매도 OR 로직 및 UI 개선 완료)
+  const progress = 81 // 2025-10-05 기준 진행률 (백테스트 수익률 계산 검증 및 수정 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 
