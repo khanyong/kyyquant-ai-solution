@@ -1047,6 +1047,7 @@ const BacktestRunner: React.FC = () => {
       console.log('Strategy name to save:', strategyName);
 
       // 실제 테이블 스키마에 맞춰서 데이터 구성
+      // DB에 존재하지 않는 JSONB 컬럼들은 metadata에 저장
       const resultToSave = {
         strategy_id: config.strategyId,
         strategy_name: strategyName,
@@ -1066,23 +1067,23 @@ const BacktestRunner: React.FC = () => {
         profit_factor: backtestResults.profit_factor || null,
         recovery_factor: backtestResults.recovery_factor || null,
         volatility: backtestResults.volatility || null,
-        // JSONB 필드들
-        trades: backtestResults.trades || [],
-        daily_returns: backtestResults.daily_returns || [],
-        investment_settings: {
-          initial_capital: config.initialCapital,
-          commission: config.commission,
-          slippage: config.slippage,
-          data_interval: config.dataInterval
-        },
-        strategy_conditions: backtestResults.strategy_config || {},
-        filter_conditions: currentFilters || {},
+        // metadata JSONB에 모든 추가 데이터 저장
         metadata: {
           filtering_mode: filteringMode,
           stock_codes: config.stockCodes,
           filter_id: currentFilterId,
           final_capital: backtestResults.final_capital || (config.initialCapital + (backtestResults.total_return * config.initialCapital / 100)),
-          annual_return: backtestResults.annual_return || 0
+          annual_return: backtestResults.annual_return || 0,
+          trades: backtestResults.trades || [],
+          daily_returns: backtestResults.daily_returns || [],
+          investment_settings: {
+            initial_capital: config.initialCapital,
+            commission: config.commission,
+            slippage: config.slippage,
+            data_interval: config.dataInterval
+          },
+          strategy_conditions: backtestResults.strategy_config || {},
+          filter_conditions: currentFilters || {}
         }
       };
 
