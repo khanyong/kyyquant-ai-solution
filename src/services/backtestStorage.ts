@@ -33,11 +33,23 @@ export interface BacktestResultData {
 export const backtestStorageService = {
   async saveResult(result: BacktestResultData): Promise<{ data: any, error: any }> {
     try {
+      console.log('🔐 Checking authentication...')
       const { data: userData, error: userError } = await supabase.auth.getUser()
-      
-      if (userError || !userData?.user) {
+
+      if (userError) {
+        console.error('❌ Auth error:', userError)
+        return { data: null, error: `Authentication error: ${userError.message}` }
+      }
+
+      if (!userData?.user) {
+        console.error('❌ No user data found')
         return { data: null, error: 'User not authenticated' }
       }
+
+      console.log('✅ User authenticated:', {
+        userId: userData.user.id,
+        email: userData.user.email
+      })
 
       const resultToSave = {
         ...result,
@@ -46,6 +58,12 @@ export const backtestStorageService = {
         updated_at: new Date().toISOString()
       }
 
+      console.log('💾 Attempting to save backtest result:', {
+        userId: resultToSave.user_id,
+        strategyName: resultToSave.strategy_name,
+        totalReturn: resultToSave.total_return
+      })
+
       const { data, error } = await supabase
         .from('backtest_results')
         .insert([resultToSave])
@@ -53,13 +71,19 @@ export const backtestStorageService = {
         .single()
 
       if (error) {
-        console.error('Error saving backtest result:', error)
+        console.error('❌ Error saving backtest result:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
         return { data: null, error }
       }
 
+      console.log('✅ Backtest result saved successfully:', data.id)
       return { data, error: null }
     } catch (error) {
-      console.error('Error in saveResult:', error)
+      console.error('❌ Exception in saveResult:', error)
       return { data: null, error }
     }
   },

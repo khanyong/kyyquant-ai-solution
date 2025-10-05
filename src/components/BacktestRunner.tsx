@@ -1051,40 +1051,39 @@ const BacktestRunner: React.FC = () => {
         strategy_name: strategyName,
         start_date: config.startDate?.toISOString().split('T')[0] || '',
         end_date: config.endDate?.toISOString().split('T')[0] || '',
-        test_period_start: config.startDate?.toISOString().split('T')[0],
-        test_period_end: config.endDate?.toISOString().split('T')[0],
         initial_capital: config.initialCapital,
-        final_capital: backtestResults.final_capital || (config.initialCapital + (backtestResults.total_return * config.initialCapital / 100)),
-        total_return: backtestResults.total_return,
-        max_drawdown: backtestResults.max_drawdown,
-        sharpe_ratio: backtestResults.sharpe_ratio || null,
-        win_rate: backtestResults.win_rate || null,
+        total_return: backtestResults.total_return || 0,
+        total_return_rate: backtestResults.total_return || 0, // DB 스키마 필수 필드
+        max_drawdown: Math.abs(backtestResults.max_drawdown || 0), // 양수로 저장
+        sharpe_ratio: backtestResults.sharpe_ratio || 0,
+        win_rate: backtestResults.win_rate || 0, // NOT NULL 필드
         total_trades: backtestResults.total_trades || 0,
-        profitable_trades: backtestResults.winning_trades || 0,
         winning_trades: backtestResults.winning_trades || 0,
         losing_trades: backtestResults.losing_trades || 0,
         avg_profit: backtestResults.avg_profit || null,
         avg_loss: backtestResults.avg_loss || null,
         profit_factor: backtestResults.profit_factor || null,
         recovery_factor: backtestResults.recovery_factor || null,
+        volatility: backtestResults.volatility || null,
         // JSONB 필드들
-        results_data: {
-          strategy_config: backtestResults.strategy_config || {},
-          investment_config: {
-            initial_capital: config.initialCapital,
-            commission: config.commission,
-            slippage: config.slippage,
-            data_interval: config.dataInterval
-          },
-          filter_config: currentFilters || {},
+        trades: backtestResults.trades || [],
+        daily_returns: backtestResults.daily_returns || [],
+        equity_curve: backtestResults.equity_curve || null,
+        investment_settings: {
+          initial_capital: config.initialCapital,
+          commission: config.commission,
+          slippage: config.slippage,
+          data_interval: config.dataInterval
+        },
+        strategy_conditions: backtestResults.strategy_config || {},
+        filter_conditions: currentFilters || {},
+        metadata: {
           filtering_mode: filteringMode,
           stock_codes: config.stockCodes,
           filter_id: currentFilterId,
-          volatility: backtestResults.volatility || 0,
+          final_capital: backtestResults.final_capital || (config.initialCapital + (backtestResults.total_return * config.initialCapital / 100)),
           annual_return: backtestResults.annual_return || 0
-        },
-        trade_details: backtestResults.trades || [],
-        daily_returns: backtestResults.daily_returns || []
+        }
       };
 
       const { data, error } = await backtestStorageService.saveResult(resultToSave);
