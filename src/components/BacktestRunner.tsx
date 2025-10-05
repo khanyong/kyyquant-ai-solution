@@ -1091,18 +1091,19 @@ const BacktestRunner: React.FC = () => {
         throw error;
       }
 
+      console.log('✅ Backtest result saved successfully:', data);
       setSavedResultId(data.id);
-      setSuccess('백테스트 결과가 저장되었습니다.');
+      setSuccess(`✅ 백테스트 결과가 저장되었습니다! (ID: ${data.id.substring(0, 8)}...)`);
 
-      // 저장 성공 후 다이얼로그 닫기
+      // 저장 성공 후 3초 뒤에 다이얼로그 닫기 (사용자가 메시지를 볼 수 있도록)
       setTimeout(() => {
         setShowResultDialog(false);
         // 백테스트 상태 초기화
         resetBacktestState();
-      }, 1500);
+      }, 3000); // 1.5초 → 3초로 변경
     } catch (err: any) {
-      console.error('Failed to save backtest result:', err);
-      setError('결과 저장 중 오류가 발생했습니다.');
+      console.error('❌ Failed to save backtest result:', err);
+      setError(`결과 저장 중 오류가 발생했습니다: ${err.message || err.code || '알 수 없는 오류'}`);
     } finally {
       setIsSaving(false);
     }

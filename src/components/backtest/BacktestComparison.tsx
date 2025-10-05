@@ -653,7 +653,13 @@ const BacktestComparison: React.FC = () => {
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      {new Date(record.created_at).toLocaleDateString('ko-KR')}
+                      {new Date(record.created_at).toLocaleString('ko-KR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </TableCell>
                     <TableCell>
                       {record.start_date} ~ {record.end_date}
