@@ -27,6 +27,7 @@ import {
   IconButton,
   Tabs,
   Tab,
+  Snackbar,
 } from '@mui/material';
 // import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 // import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -1706,6 +1707,18 @@ const BacktestRunner: React.FC = () => {
           </Box>
         </DialogTitle>
         <DialogContent dividers>
+          {/* 저장 성공/실패 메시지 */}
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+              {success}
+            </Alert>
+          )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
           {backtestResults && (
             <BacktestResultViewer
               result={backtestResults}
@@ -1734,6 +1747,18 @@ const BacktestRunner: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 저장 성공 Snackbar (다이얼로그가 닫혀도 보이도록) */}
+      <Snackbar
+        open={!!savedResultId && !showResultDialog}
+        autoHideDuration={3000}
+        onClose={() => setSavedResultId(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" sx={{ width: '100%' }}>
+          ✅ 백테스트 결과가 성공적으로 저장되었습니다!
+        </Alert>
+      </Snackbar>
         </Box>
       ) : (
         // 결과 보기 탭
