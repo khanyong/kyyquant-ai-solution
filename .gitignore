@@ -77,3 +77,11 @@ nul
 # Deprecated folders
 nas_upload/
 nas_upload_OLD_*/
+
+# Media files (videos stored in Supabase Storage)
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.flv
+*.webm
