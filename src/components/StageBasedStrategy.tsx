@@ -335,8 +335,13 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
     const movingAverageOptions = [
       { value: 'price_above', label: '현재가 > 이평선' },
       { value: 'price_below', label: '현재가 < 이평선' },
-      { value: 'golden_cross', label: '골든크로스 (단기 > 장기)' },
-      { value: 'death_cross', label: '데드크로스 (단기 < 장기)' },
+      { value: '>', label: '이평선 > 값 (단순 비교)' },
+      { value: '<', label: '이평선 < 값 (단순 비교)' },
+      { value: 'crossover', label: '가격이 이평선 상향 돌파' },
+      { value: 'crossunder', label: '가격이 이평선 하향 돌파' },
+      // 골든크로스/데드크로스는 2개의 이동평균이 필요하므로 비활성화
+      // { value: 'golden_cross', label: '골든크로스 (단기 > 장기) - 2개 MA 필요' },
+      // { value: 'death_cross', label: '데드크로스 (단기 < 장기) - 2개 MA 필요' },
       { value: 'ma_rising', label: '이평선 상승중 (추후 지원)' },
       { value: 'ma_falling', label: '이평선 하락중 (추후 지원)' },
       { value: 'perfect_order_bull', label: '정배열 (단기>중기>장기) (추후 지원)' },
@@ -362,8 +367,9 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
       { value: 'cloud_thickness_increasing', label: '구름대 두께 증가 (변동성 확대) (추후 지원)' },
       { value: 'cloud_thickness_decreasing', label: '구름대 두께 감소 (변동성 축소) (추후 지원)' },
       // 전환선/기준선 관련
-      { value: 'tenkan_above_kijun', label: '전환선 > 기준선 (단기강세)' },
-      { value: 'tenkan_below_kijun', label: '전환선 < 기준선 (단기약세)' },
+      // 주의: 아래 연산자들은 자동으로 tenkan > kijun 형태로 변환됩니다
+      // { value: 'tenkan_above_kijun', label: '전환선 > 기준선 (단기강세) - 사용 중단' },
+      // { value: 'tenkan_below_kijun', label: '전환선 < 기준선 (단기약세) - 사용 중단' },
       { value: 'tenkan_cross_kijun_up', label: '전환선 기준선 상향교차 (추후 지원)' },
       { value: 'tenkan_cross_kijun_down', label: '전환선 기준선 하향교차 (추후 지원)' },
       { value: 'price_above_kijun', label: '가격 > 기준선' },

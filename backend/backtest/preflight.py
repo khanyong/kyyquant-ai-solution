@@ -346,7 +346,7 @@ class IndicatorColumnMapper:
             'macd': ['macd', 'macd_signal', 'macd_hist'],
 
             # Stochastic
-            'stochastic': ['stoch_k', 'stoch_d'],
+            'stochastic': ['stochastic_k', 'stochastic_d'],
 
             # ATR
             'atr': ['atr'],

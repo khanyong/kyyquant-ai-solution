@@ -49,14 +49,27 @@ const OPERATOR_MAPPING: Record<string, string> = {
 }
 
 /**
+ * 지표 컬럼 매핑 (다중 출력 지표)
+ * 예: 'stochastic' → 'stochastic_k' (기본값)
+ */
+const INDICATOR_COLUMN_MAPPING: Record<string, string> = {
+  'stochastic': 'stochastic_k',  // stochastic → stochastic_k (기본값)
+  'stoch_k': 'stochastic_k',     // 레거시 호환
+  'stoch_d': 'stochastic_d',     // 레거시 호환
+}
+
+/**
  * 지표명 정규화 (대문자 → 소문자, 언더스코어 제거)
  */
 const normalizeIndicatorName = (name: string): string => {
-  return name
+  const normalized = name
     .toLowerCase()
     .replace(/_/g, '_')  // 일단 유지
     .replace('ma_', 'sma_')  // MA → SMA
     .replace('price', 'close')  // PRICE → close
+
+  // 컬럼 매핑 적용
+  return INDICATOR_COLUMN_MAPPING[normalized] || normalized
 }
 
 /**
@@ -65,6 +78,43 @@ const normalizeIndicatorName = (name: string): string => {
 export const convertConditionToStandard = (
   oldCondition: OldCondition
 ): StandardCondition => {
+  // golden_cross / death_cross 특수 처리 (잘못된 조건 수정)
+  // 문제: golden_cross는 2개의 MA가 필요한데 숫자 값과 비교하려고 함
+  // 해결: 단순 비교로 변환하거나 에러 표시
+  if (oldCondition.operator === 'golden_cross' || oldCondition.operator === 'death_cross') {
+    const isGolden = oldCondition.operator === 'golden_cross'
+
+    // right가 숫자인 경우 (잘못된 설정)
+    if (typeof oldCondition.right === 'number' || !isNaN(Number(oldCondition.right))) {
+      console.warn(`[ConditionConverter] ${oldCondition.operator} requires two MAs, but got number value. Converting to simple comparison.`)
+      return {
+        left: oldCondition.left || oldCondition.indicator || 'sma',
+        operator: isGolden ? '>' : '<',
+        right: oldCondition.right || oldCondition.value || 0
+      }
+    }
+  }
+
+  // Ichimoku 커스텀 연산자 특수 처리
+  // 중요: Ichimoku 컬럼명은 ichimoku_ 접두사가 붙음 (ichimoku_tenkan, ichimoku_kijun)
+  if (oldCondition.operator === 'tenkan_above_kijun' || oldCondition.operator === 'tenkan_below_kijun') {
+    const isAbove = oldCondition.operator === 'tenkan_above_kijun'
+
+    console.warn(`[ConditionConverter] ${oldCondition.operator} converted to ichimoku_tenkan ${isAbove ? '>' : '<'} ichimoku_kijun`)
+    return {
+      left: 'ichimoku_tenkan',
+      operator: isAbove ? '>' : '<',
+      right: 'ichimoku_kijun'
+    }
+  }
+
+  // 기타 Ichimoku 연산자들
+  if (oldCondition.operator === 'tenkan_cross_kijun_up') {
+    return { left: 'ichimoku_tenkan', operator: 'crossover', right: 'ichimoku_kijun' }
+  } else if (oldCondition.operator === 'tenkan_cross_kijun_down') {
+    return { left: 'ichimoku_tenkan', operator: 'crossunder', right: 'ichimoku_kijun' }
+  }
+
   // MACD 커스텀 연산자 특수 처리
   const isMacdCondition = oldCondition.indicator === 'macd' ||
                           oldCondition.left === 'macd' ||
@@ -118,7 +168,8 @@ export const convertConditionToStandard = (
   } else if (oldCondition.indicator === 'macd' && oldCondition.macdLine) {
     left = oldCondition.macdLine
   } else if (oldCondition.indicator === 'stochastic' && oldCondition.stochLine) {
-    left = oldCondition.stochLine
+    // stochLine 매핑 (stoch_k → stochastic_k)
+    left = INDICATOR_COLUMN_MAPPING[oldCondition.stochLine] || oldCondition.stochLine
   } else if (oldCondition.indicator === 'ichimoku' && oldCondition.ichimokuLine) {
     left = oldCondition.ichimokuLine
   } else if (oldCondition.indicator) {
@@ -210,19 +261,77 @@ export const detectStrategyFormat = (strategy: {
 export const ensureStandardFormat = (strategy: {
   buyConditions?: any[]
   sellConditions?: any[]
+  indicators?: any[]
 }) => {
   const format = detectStrategyFormat(strategy)
 
   if (format === 'standard') {
-    // 이미 표준 형식
-    return strategy
+    // 표준 형식이지만 SMA/EMA 같은 동적 컬럼명 수정 필요
+    const fixedStrategy = fixDynamicColumnNames(strategy)
+    return fixedStrategy
   }
 
   // 레거시 또는 혼재 → 변환
   console.log(`[Converter] Detected ${format} format, converting to standard...`)
 
-  return {
+  const converted = {
     ...strategy,
     ...convertStrategyConditions(strategy)
+  }
+
+  // 동적 컬럼명 수정
+  return fixDynamicColumnNames(converted)
+}
+
+/**
+ * SMA/EMA 같은 동적 컬럼명 수정
+ * sma → sma_20, ema → ema_12 등
+ */
+const fixDynamicColumnNames = (strategy: {
+  buyConditions?: any[]
+  sellConditions?: any[]
+  indicators?: any[]
+}) => {
+  const indicators = strategy.indicators || []
+
+  // 지표별 실제 컬럼명 매핑 생성
+  const columnMap: Record<string, string> = {}
+
+  indicators.forEach((ind: any) => {
+    const name = ind.name?.toLowerCase()
+    const params = ind.params || {}
+
+    // SMA, EMA: sma_20, ema_12 형태
+    if (name === 'sma' || name === 'ema') {
+      const period = params.period || 20
+      columnMap[name] = `${name}_${period}`
+    }
+  })
+
+  // 조건의 left/right 값 수정
+  const fixConditions = (conditions: any[]) => {
+    return conditions.map(cond => {
+      const fixed = { ...cond }
+
+      // left 수정
+      if (typeof fixed.left === 'string' && columnMap[fixed.left]) {
+        console.log(`[ConditionConverter] Fixing column: ${fixed.left} → ${columnMap[fixed.left]}`)
+        fixed.left = columnMap[fixed.left]
+      }
+
+      // right 수정 (문자열인 경우만)
+      if (typeof fixed.right === 'string' && columnMap[fixed.right]) {
+        console.log(`[ConditionConverter] Fixing column: ${fixed.right} → ${columnMap[fixed.right]}`)
+        fixed.right = columnMap[fixed.right]
+      }
+
+      return fixed
+    })
+  }
+
+  return {
+    ...strategy,
+    buyConditions: strategy.buyConditions ? fixConditions(strategy.buyConditions) : [],
+    sellConditions: strategy.sellConditions ? fixConditions(strategy.sellConditions) : []
   }
 }

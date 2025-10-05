@@ -106,7 +106,7 @@ interface Condition {
   // MACD 전용 파라미터
   macdLine?: 'macd' | 'macd_signal' | 'macd_hist'
   // 스토캐스틱 전용 파라미터
-  stochLine?: 'stoch_k' | 'stoch_d'
+  stochLine?: 'stochastic_k' | 'stochastic_d'
 }
 
 interface Strategy {
@@ -630,7 +630,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       // ===== 조건 형식 변환 (구 형식 → 표준 형식) =====
       const convertedStrategy = ensureStandardFormat({
         buyConditions: strategy.buyConditions,
-        sellConditions: strategy.sellConditions
+        sellConditions: strategy.sellConditions,
+        indicators: strategy.indicators  // indicators 정보 전달 (동적 컬럼명 매핑용)
       })
       console.log('[StrategyBuilder] Converted to standard format:', convertedStrategy)
 

@@ -85,8 +85,8 @@ ON CONFLICT (indicator_name, column_name) DO NOTHING;
 
 -- 2.6 Stochastic Oscillator
 INSERT INTO indicator_columns (indicator_name, column_name, column_description, is_primary, output_order) VALUES
-('stochastic', 'stoch_k', '%K line (fast stochastic)', true, 1),
-('stochastic', 'stoch_d', '%D line (slow stochastic, SMA of %K)', false, 2)
+('stochastic', 'stochastic_k', '%K line (fast stochastic)', true, 1),
+('stochastic', 'stochastic_d', '%D line (slow stochastic, SMA of %K)', false, 2)
 ON CONFLICT (indicator_name, column_name) DO NOTHING;
 
 -- 2.7 ATR (Average True Range)

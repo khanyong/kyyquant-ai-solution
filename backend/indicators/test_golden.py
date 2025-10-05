@@ -298,10 +298,10 @@ class GoldenTest(unittest.TestCase):
         # 1. 분모 0 처리
         df_zero_range = self.df_constant.copy()
         result = self.calculator.calculate(df_zero_range, {'name': 'stochastic'})
-        stoch_k = result.columns['stoch_k']
+        stochastic_k = result.columns['stochastic_k']
 
         # 분모가 0일 때 NaN 처리 확인
-        self.assertTrue(stoch_k.isna().any(), "Stochastic should have NaN for zero range")
+        self.assertTrue(stochastic_k.isna().any(), "Stochastic should have NaN for zero range")
 
         # 2. 음수 volume
         df_neg_vol = self.df_normal.copy()

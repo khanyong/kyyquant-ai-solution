@@ -149,7 +149,7 @@ class IndicatorRegistry:
 
         # 오실레이터
         self.register('rsi', self._calc_rsi_wilder, ['close'], ['rsi'])
-        self.register('stochastic', self._calc_stochastic, ['high', 'low', 'close'], ['stoch_k', 'stoch_d'])
+        self.register('stochastic', self._calc_stochastic, ['high', 'low', 'close'], ['stochastic_k', 'stochastic_d'])
         self.register('cci', self._calc_cci_optimized, ['high', 'low', 'close'], ['cci'])
         self.register('williams_r', self._calc_williams_r, ['high', 'low', 'close'], ['williams_r'])
 
@@ -256,11 +256,11 @@ class IndicatorRegistry:
         denominator = high_max - low_min
         denominator = denominator.replace(0, np.nan)
 
-        stoch_k = 100 * ((df['close'] - low_min) / denominator)
-        stoch_k = stoch_k.clip(0, 100)
-        stoch_d = stoch_k.rolling(window=d_period, min_periods=1).mean()
+        stochastic_k = 100 * ((df['close'] - low_min) / denominator)
+        stochastic_k = stochastic_k.clip(0, 100)
+        stochastic_d = stochastic_k.rolling(window=d_period, min_periods=1).mean()
 
-        return {'stoch_k': stoch_k, 'stoch_d': stoch_d}
+        return {'stochastic_k': stochastic_k, 'stochastic_d': stochastic_d}
 
     @staticmethod
     def _calc_cci_optimized(df: pd.DataFrame, options: ExecOptions) -> Dict[str, pd.Series]:
