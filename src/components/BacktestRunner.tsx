@@ -1068,7 +1068,6 @@ const BacktestRunner: React.FC = () => {
         // JSONB 필드들
         trades: backtestResults.trades || [],
         daily_returns: backtestResults.daily_returns || [],
-        equity_curve: backtestResults.equity_curve || null,
         investment_settings: {
           initial_capital: config.initialCapital,
           commission: config.commission,
