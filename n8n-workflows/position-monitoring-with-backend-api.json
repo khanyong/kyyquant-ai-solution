@@ -1,0 +1,403 @@
+{
+  "name": "포지션 모니터링 (손절/익절)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "schedule-30sec",
+      "name": "30초마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "dateTime": [
+            {
+              "value1": "={{$now.format('HH:mm')}}",
+              "operation": "after",
+              "value2": "09:00"
+            },
+            {
+              "value1": "={{$now.format('HH:mm')}}",
+              "operation": "before",
+              "value2": "15:35"
+            }
+          ]
+        }
+      },
+      "id": "market-hours",
+      "name": "장시간 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "positions",
+        "returnAll": false,
+        "limit": 100,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "keyValue": "active",
+              "condition": "equals"
+            }
+          ]
+        }
+      },
+      "id": "get-active-positions",
+      "name": "활성 포지션 조회",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "name": "auto_stock Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-positions",
+      "name": "포지션별 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_URL || 'http://localhost:8001'}}/api/strategy/check-position-exit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"position_id\": \"{{$json.id}}\",\n  \"stock_code\": \"{{$json.stock_code}}\",\n  \"entry_price\": {{$json.entry_price}},\n  \"current_quantity\": {{$json.current_quantity}},\n  \"strategy_id\": \"{{$json.strategy_id}}\"\n}",
+        "options": {}
+      },
+      "id": "check-exit-api",
+      "name": "청산 조건 확인 (Backend API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.should_exit}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "should-exit-check",
+      "name": "청산 필요 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.TRADING_MODE === 'real' ? 'https://openapi.kiwoom.com' : 'https://mockapi.kiwoom.com') + '/oauth2/token'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$env.KIWOOM_APP_KEY}}\",\n  \"secretkey\": \"{{$env.KIWOOM_APP_SECRET}}\"\n}",
+        "options": {}
+      },
+      "id": "kiwoom-auth",
+      "name": "키움 인증",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.TRADING_MODE === 'real' ? 'https://openapi.kiwoom.com' : 'https://mockapi.kiwoom.com') + '/uapi/domestic-stock/v1/trading/order-cash'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{$node['kiwoom-auth'].json.token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$env.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$env.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "={{$env.TRADING_MODE === 'real' ? 'TTTC0801U' : 'VTTC0801U'}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"CANO\": \"{{$env.KIWOOM_ACCOUNT_NO.split('-')[0]}}\",\n  \"ACNT_PRDT_CD\": \"{{$env.KIWOOM_ACCOUNT_NO.split('-')[1]}}\",\n  \"PDNO\": \"{{$node['check-exit-api'].json.stock_code}}\",\n  \"ORD_DVSN\": \"01\",\n  \"ORD_QTY\": \"{{$node['check-exit-api'].json.exit_quantity}}\",\n  \"ORD_UNPR\": \"0\"\n}",
+        "options": {}
+      },
+      "id": "place-sell-order",
+      "name": "매도 주문 실행",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "orders",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "position_id",
+              "fieldValue": "={{$node['check-exit-api'].json.position_id}}"
+            },
+            {
+              "fieldName": "strategy_id",
+              "fieldValue": "={{$node['split-positions'].json.strategy_id}}"
+            },
+            {
+              "fieldName": "stock_code",
+              "fieldValue": "={{$node['check-exit-api'].json.stock_code}}"
+            },
+            {
+              "fieldName": "order_type",
+              "fieldValue": "SELL"
+            },
+            {
+              "fieldName": "quantity",
+              "fieldValue": "={{$node['check-exit-api'].json.exit_quantity}}"
+            },
+            {
+              "fieldName": "order_price",
+              "fieldValue": "={{$node['check-exit-api'].json.current_price}}"
+            },
+            {
+              "fieldName": "exit_type",
+              "fieldValue": "={{$node['check-exit-api'].json.exit_type}}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "={{$json.rt_cd === '0' ? 'EXECUTED' : 'FAILED'}}"
+            },
+            {
+              "fieldName": "kiwoom_order_id",
+              "fieldValue": "={{$json.output?.ODNO || ''}}"
+            },
+            {
+              "fieldName": "reason",
+              "fieldValue": "={{$node['check-exit-api'].json.reason}}"
+            }
+          ]
+        }
+      },
+      "id": "save-sell-order",
+      "name": "매도 주문 저장",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1850, 200],
+      "credentials": {
+        "supabaseApi": {
+          "name": "auto_stock Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "positions",
+        "filterType": "id",
+        "id": "={{$node['check-exit-api'].json.position_id}}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "current_quantity",
+              "fieldValue": "={{$node['split-positions'].json.current_quantity - $node['check-exit-api'].json.exit_quantity}}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "={{$node['check-exit-api'].json.exit_percentage === 1.0 ? 'closed' : 'active'}}"
+            },
+            {
+              "fieldName": "exit_price",
+              "fieldValue": "={{$node['check-exit-api'].json.current_price}}"
+            },
+            {
+              "fieldName": "exit_type",
+              "fieldValue": "={{$node['check-exit-api'].json.exit_type}}"
+            },
+            {
+              "fieldName": "profit_loss",
+              "fieldValue": "={{$node['check-exit-api'].json.profit_loss}}"
+            },
+            {
+              "fieldName": "updated_at",
+              "fieldValue": "={{$now.toISO()}}"
+            }
+          ]
+        }
+      },
+      "id": "update-position",
+      "name": "포지션 업데이트",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2050, 200],
+      "credentials": {
+        "supabaseApi": {
+          "name": "auto_stock Supabase"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "30초마다 실행": {
+      "main": [
+        [
+          {
+            "node": "장시간 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장시간 체크": {
+      "main": [
+        [
+          {
+            "node": "활성 포지션 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "활성 포지션 조회": {
+      "main": [
+        [
+          {
+            "node": "포지션별 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "포지션별 처리": {
+      "main": [
+        [
+          {
+            "node": "청산 조건 확인 (Backend API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "청산 조건 확인 (Backend API)": {
+      "main": [
+        [
+          {
+            "node": "청산 필요 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "청산 필요 확인": {
+      "main": [
+        [
+          {
+            "node": "키움 인증",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 인증": {
+      "main": [
+        [
+          {
+            "node": "매도 주문 실행",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "매도 주문 실행": {
+      "main": [
+        [
+          {
+            "node": "매도 주문 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "매도 주문 저장": {
+      "main": [
+        [
+          {
+            "node": "포지션 업데이트",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "instanceId": "position-monitoring-backend-api"
+  },
+  "tags": ["production", "position-monitoring"]
+}

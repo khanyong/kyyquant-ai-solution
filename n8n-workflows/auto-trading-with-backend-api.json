@@ -1,0 +1,438 @@
+{
+  "name": "자동매매 (Backend API 연동)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "dateTime": [
+            {
+              "value1": "={{$now.format('HH:mm')}}",
+              "operation": "after",
+              "value2": "09:00"
+            },
+            {
+              "value1": "={{$now.format('HH:mm')}}",
+              "operation": "before",
+              "value2": "15:30"
+            }
+          ]
+        }
+      },
+      "id": "market-hours-check",
+      "name": "장시간 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "strategies",
+        "returnAll": false,
+        "limit": 100,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "is_active",
+              "keyValue": true,
+              "condition": "equals"
+            }
+          ]
+        }
+      },
+      "id": "get-active-strategies",
+      "name": "활성 전략 조회",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "name": "auto_stock Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-strategies",
+      "name": "전략별 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 전략 정보 추출\nconst strategy = $input.item.json;\nconst targetStocks = strategy.target_stocks || ['005930'];\n\n// 종목별 아이템 생성\nconst items = [];\nfor (const stockCode of targetStocks) {\n  items.push({\n    json: {\n      strategy_id: strategy.id,\n      strategy_name: strategy.name,\n      stock_code: stockCode,\n      conditions: strategy.conditions || {}\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "prepare-stocks",
+      "name": "종목 준비",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_URL || 'http://localhost:8001'}}/api/strategy/check-signal",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"strategy_id\": \"{{$json.strategy_id}}\",\n  \"stock_code\": \"{{$json.stock_code}}\"\n}",
+        "options": {}
+      },
+      "id": "check-signal-api",
+      "name": "매매 신호 확인 (Backend API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.signal_type}}",
+              "operation": "equals",
+              "value2": "BUY"
+            }
+          ],
+          "number": [
+            {
+              "value1": "={{$json.signal_strength}}",
+              "operation": "larger",
+              "value2": 0.5
+            }
+          ]
+        }
+      },
+      "id": "check-buy-signal",
+      "name": "매수 신호 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "trading_signals",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "strategy_id",
+              "fieldValue": "={{$json.strategy_id}}"
+            },
+            {
+              "fieldName": "stock_code",
+              "fieldValue": "={{$json.stock_code}}"
+            },
+            {
+              "fieldName": "stock_name",
+              "fieldValue": "={{$json.stock_name || ''}}"
+            },
+            {
+              "fieldName": "signal_type",
+              "fieldValue": "={{$json.signal_type}}"
+            },
+            {
+              "fieldName": "signal_strength",
+              "fieldValue": "={{$json.signal_strength}}"
+            },
+            {
+              "fieldName": "current_price",
+              "fieldValue": "={{$json.current_price}}"
+            },
+            {
+              "fieldName": "indicators",
+              "fieldValue": "={{JSON.stringify($json.indicators)}}"
+            },
+            {
+              "fieldName": "entry_conditions_met",
+              "fieldValue": "={{JSON.stringify($json.entry_conditions_met)}}"
+            },
+            {
+              "fieldName": "order_status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "id": "save-signal",
+      "name": "신호 저장",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1650, 200],
+      "credentials": {
+        "supabaseApi": {
+          "name": "auto_stock Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.TRADING_MODE === 'real' ? 'https://openapi.kiwoom.com' : 'https://mockapi.kiwoom.com') + '/oauth2/token'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$env.KIWOOM_APP_KEY}}\",\n  \"secretkey\": \"{{$env.KIWOOM_APP_SECRET}}\"\n}",
+        "options": {}
+      },
+      "id": "kiwoom-auth",
+      "name": "키움 인증",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.TRADING_MODE === 'real' ? 'https://openapi.kiwoom.com' : 'https://mockapi.kiwoom.com') + '/uapi/domestic-stock/v1/trading/order-cash'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{$node['kiwoom-auth'].json.token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$env.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$env.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "={{$env.TRADING_MODE === 'real' ? 'TTTC0802U' : 'VTTC0802U'}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"CANO\": \"{{$env.KIWOOM_ACCOUNT_NO.split('-')[0]}}\",\n  \"ACNT_PRDT_CD\": \"{{$env.KIWOOM_ACCOUNT_NO.split('-')[1]}}\",\n  \"PDNO\": \"{{$node['check-signal-api'].json.stock_code}}\",\n  \"ORD_DVSN\": \"01\",\n  \"ORD_QTY\": \"1\",\n  \"ORD_UNPR\": \"0\"\n}",
+        "options": {}
+      },
+      "id": "place-order",
+      "name": "주문 실행",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2050, 200]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "orders",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "signal_id",
+              "fieldValue": "={{$node['save-signal'].json.id}}"
+            },
+            {
+              "fieldName": "strategy_id",
+              "fieldValue": "={{$node['check-signal-api'].json.strategy_id}}"
+            },
+            {
+              "fieldName": "stock_code",
+              "fieldValue": "={{$node['check-signal-api'].json.stock_code}}"
+            },
+            {
+              "fieldName": "stock_name",
+              "fieldValue": "={{$node['check-signal-api'].json.stock_name || ''}}"
+            },
+            {
+              "fieldName": "order_type",
+              "fieldValue": "BUY"
+            },
+            {
+              "fieldName": "quantity",
+              "fieldValue": "1"
+            },
+            {
+              "fieldName": "order_price",
+              "fieldValue": "={{$node['check-signal-api'].json.current_price}}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "={{$json.rt_cd === '0' ? 'EXECUTED' : 'FAILED'}}"
+            },
+            {
+              "fieldName": "kiwoom_order_id",
+              "fieldValue": "={{$json.output?.ODNO || ''}}"
+            }
+          ]
+        }
+      },
+      "id": "save-order",
+      "name": "주문 저장",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2250, 200],
+      "credentials": {
+        "supabaseApi": {
+          "name": "auto_stock Supabase"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "1분마다 실행": {
+      "main": [
+        [
+          {
+            "node": "장시간 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장시간 체크": {
+      "main": [
+        [
+          {
+            "node": "활성 전략 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "활성 전략 조회": {
+      "main": [
+        [
+          {
+            "node": "전략별 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "전략별 처리": {
+      "main": [
+        [
+          {
+            "node": "종목 준비",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "종목 준비": {
+      "main": [
+        [
+          {
+            "node": "매매 신호 확인 (Backend API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "매매 신호 확인 (Backend API)": {
+      "main": [
+        [
+          {
+            "node": "매수 신호 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "매수 신호 체크": {
+      "main": [
+        [
+          {
+            "node": "신호 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "신호 저장": {
+      "main": [
+        [
+          {
+            "node": "키움 인증",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 인증": {
+      "main": [
+        [
+          {
+            "node": "주문 실행",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "주문 실행": {
+      "main": [
+        [
+          {
+            "node": "주문 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "instanceId": "auto-trading-backend-api"
+  },
+  "tags": ["production", "backend-api"]
+}

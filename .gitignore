@@ -73,3 +73,7 @@ temp/
 backend/venv32/
 backend_backup_20250917_140712/ backend_backup_20250929_150156/
 nul
+
+# Deprecated folders
+nas_upload/
+nas_upload_OLD_*/
