@@ -100,6 +100,13 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
   const [samplePrice, setSamplePrice] = useState(50000)
   const [sampleVolume, setSampleVolume] = useState(1000000)
 
+  // initialStrategy가 변경되면 selectedStrategy 업데이트
+  useEffect(() => {
+    if (initialStrategy) {
+      setSelectedStrategy(initialStrategy)
+    }
+  }, [initialStrategy])
+
   // 지표 시뮬레이션 값들
   const [indicatorValues, setIndicatorValues] = useState<any>({
     RSI_14: 50,
@@ -127,6 +134,20 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
         .order('created_at', { ascending: false })
 
       if (!error && data) {
+        console.log('📊 Loaded strategies from DB:', data)
+        // 데이터 구조 확인을 위한 샘플 로그
+        if (data.length > 0) {
+          console.log('📋 First strategy structure:', {
+            id: data[0].id,
+            name: data[0].name,
+            hasConfig: !!data[0].config,
+            configKeys: data[0].config ? Object.keys(data[0].config) : [],
+            hasBuyConditions: !!data[0].buyConditions,
+            hasSellConditions: !!data[0].sellConditions,
+            configBuyConditions: data[0].config?.buyConditions,
+            configSellConditions: data[0].config?.sellConditions
+          })
+        }
         setSavedStrategies(data)
       }
     } catch (err) {
@@ -245,17 +266,27 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
             <FormControl fullWidth size="small">
               <InputLabel>분석할 전략 선택</InputLabel>
               <Select
-                value={selectedStrategy?.id || 'current'}
+                value={
+                  selectedStrategy
+                    ? (initialStrategy && selectedStrategy.id === initialStrategy.id
+                        ? 'current'
+                        : selectedStrategy.id)
+                    : 'current'
+                }
                 onChange={(e) => {
                   const value = e.target.value
-                  if (value === 'current' || (initialStrategy && value === initialStrategy.id)) {
-                    console.log('Selected initial strategy:', initialStrategy)
+                  console.log('🔄 Strategy selection changed to:', value)
+
+                  if (value === 'current') {
+                    console.log('✅ Selected initial strategy:', initialStrategy)
                     setSelectedStrategy(initialStrategy)
                   } else {
                     const strategy = savedStrategies.find(s => s.id === value)
-                    console.log('Selected saved strategy:', strategy)
+                    console.log('📦 Found saved strategy:', strategy)
+
                     // config 객체에서 실제 전략 데이터 추출 (parameters 대신 config 사용)
                     if (strategy?.config) {
+                      console.log('🔍 Strategy has config object:', strategy.config)
                       const extractedStrategy = {
                         ...strategy,
                         buyConditions: strategy.config.buyConditions || strategy.entry_conditions?.buy || [],
@@ -270,9 +301,18 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                           maxPositions: strategy.config.maxPositions
                         }
                       }
-                      console.log('Extracted strategy data:', extractedStrategy)
+                      console.log('✨ Extracted strategy:', {
+                        name: extractedStrategy.name,
+                        buyConditionsCount: extractedStrategy.buyConditions?.length,
+                        sellConditionsCount: extractedStrategy.sellConditions?.length,
+                        buyConditions: extractedStrategy.buyConditions,
+                        sellConditions: extractedStrategy.sellConditions,
+                        buyConditionsSample: extractedStrategy.buyConditions?.[0],
+                        sellConditionsSample: extractedStrategy.sellConditions?.[0]
+                      })
                       setSelectedStrategy(extractedStrategy)
                     } else if (strategy?.parameters) {
+                      console.log('🔍 Strategy has parameters object (legacy):', strategy.parameters)
                       // 구버전 호환성 유지
                       const extractedStrategy = {
                         ...strategy,
@@ -286,9 +326,15 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                           trailingStopPercent: strategy.parameters.trailingStopPercent
                         }
                       }
-                      console.log('Extracted strategy data (legacy):', extractedStrategy)
+                      console.log('✨ Extracted strategy (legacy):', extractedStrategy)
                       setSelectedStrategy(extractedStrategy)
                     } else {
+                      console.log('⚠️ Strategy has no config or parameters, using as-is')
+                      console.log('📄 Strategy structure:', {
+                        keys: Object.keys(strategy || {}),
+                        buyConditions: strategy?.buyConditions,
+                        sellConditions: strategy?.sellConditions
+                      })
                       setSelectedStrategy(strategy)
                     }
                   }
@@ -297,15 +343,17 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                 label="분석할 전략 선택"
               >
                 {initialStrategy && (
-                  <MenuItem value={initialStrategy.id || 'current'}>
+                  <MenuItem value="current">
                     현재 편집 중인 전략
                   </MenuItem>
                 )}
-                {savedStrategies.map((strat) => (
-                  <MenuItem key={strat.id} value={strat.id}>
-                    {strat.name} {strat.is_public ? '(공개)' : '(비공개)'}
-                  </MenuItem>
-                ))}
+                {savedStrategies
+                  .filter(strat => !initialStrategy || strat.id !== initialStrategy.id)
+                  .map((strat) => (
+                    <MenuItem key={strat.id} value={strat.id}>
+                      {strat.name} {strat.is_public ? '(공개)' : '(비공개)'}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
           </Grid>
@@ -349,6 +397,20 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
 
               <TabPanel value={tabValue} index={0}>
                 {/* 전략 로직 해석 */}
+                {(() => {
+                  console.log('🎨 Rendering strategy logic tab with:', {
+                    selectedStrategyName: selectedStrategy?.name,
+                    hasBuyConditions: !!selectedStrategy?.buyConditions,
+                    buyConditionsIsArray: Array.isArray(selectedStrategy?.buyConditions),
+                    buyConditionsLength: selectedStrategy?.buyConditions?.length,
+                    buyConditions: selectedStrategy?.buyConditions,
+                    hasSellConditions: !!selectedStrategy?.sellConditions,
+                    sellConditionsIsArray: Array.isArray(selectedStrategy?.sellConditions),
+                    sellConditionsLength: selectedStrategy?.sellConditions?.length,
+                    sellConditions: selectedStrategy?.sellConditions
+                  })
+                  return null
+                })()}
                 <Grid container spacing={3}>
                   {/* 매수 로직 */}
                   <Grid item xs={12} md={6}>
@@ -364,25 +426,28 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                           <Typography variant="body2" sx={{ mb: 2 }}>
                             다음 조건들이 충족될 때 매수 신호가 발생합니다:
                           </Typography>
-                          {selectedStrategy.buyConditions.map((condition: any, index: number) => (
-                            <Box key={index} sx={{ mb: 1 }}>
-                              <Chip
-                                label={`조건 ${index + 1}`}
-                                size="small"
-                                sx={{ mr: 1, bgcolor: 'success.dark' }}
-                              />
-                              <Typography variant="body2" component="span">
-                                {condition.indicator} {condition.operator} {condition.value}
-                              </Typography>
-                              {index < selectedStrategy.buyConditions.length - 1 && (
+                          {selectedStrategy.buyConditions.map((condition: any, index: number) => {
+                            console.log(`📝 Rendering buy condition ${index}:`, condition)
+                            return (
+                              <Box key={index} sx={{ mb: 1 }}>
                                 <Chip
-                                  label={condition.combineWith || 'AND'}
+                                  label={`조건 ${index + 1}`}
                                   size="small"
-                                  sx={{ ml: 1, bgcolor: 'warning.dark' }}
+                                  sx={{ mr: 1, bgcolor: 'success.dark' }}
                                 />
-                              )}
-                            </Box>
-                          ))}
+                                <Typography variant="body2" component="span">
+                                  {condition.indicator || condition.left || '(지표 없음)'} {condition.operator || '(연산자 없음)'} {condition.value !== undefined ? condition.value : (condition.right || '(값 없음)')}
+                                </Typography>
+                                {index < selectedStrategy.buyConditions.length - 1 && (
+                                  <Chip
+                                    label={condition.combineWith || 'AND'}
+                                    size="small"
+                                    sx={{ ml: 1, bgcolor: 'warning.dark' }}
+                                  />
+                                )}
+                              </Box>
+                            )
+                          })}
 
                           <Alert severity="success" sx={{ mt: 2 }}>
                             <Typography variant="caption">
@@ -422,25 +487,28 @@ const StrategyAnalyzer: React.FC<StrategyAnalyzerProps> = ({ strategy: initialSt
                           <Typography variant="body2" sx={{ mb: 2 }}>
                             다음 조건들이 충족될 때 매도 신호가 발생합니다:
                           </Typography>
-                          {selectedStrategy.sellConditions.map((condition: any, index: number) => (
-                            <Box key={index} sx={{ mb: 1 }}>
-                              <Chip
-                                label={`조건 ${index + 1}`}
-                                size="small"
-                                sx={{ mr: 1, bgcolor: 'error.dark' }}
-                              />
-                              <Typography variant="body2" component="span">
-                                {condition.indicator} {condition.operator} {condition.value}
-                              </Typography>
-                              {index < selectedStrategy.sellConditions.length - 1 && (
+                          {selectedStrategy.sellConditions.map((condition: any, index: number) => {
+                            console.log(`📝 Rendering sell condition ${index}:`, condition)
+                            return (
+                              <Box key={index} sx={{ mb: 1 }}>
                                 <Chip
-                                  label={condition.combineWith || 'AND'}
+                                  label={`조건 ${index + 1}`}
                                   size="small"
-                                  sx={{ ml: 1, bgcolor: 'warning.dark' }}
+                                  sx={{ mr: 1, bgcolor: 'error.dark' }}
                                 />
-                              )}
-                            </Box>
-                          ))}
+                                <Typography variant="body2" component="span">
+                                  {condition.indicator || condition.left || '(지표 없음)'} {condition.operator || '(연산자 없음)'} {condition.value !== undefined ? condition.value : (condition.right || '(값 없음)')}
+                                </Typography>
+                                {index < selectedStrategy.sellConditions.length - 1 && (
+                                  <Chip
+                                    label={condition.combineWith || 'AND'}
+                                    size="small"
+                                    sx={{ ml: 1, bgcolor: 'warning.dark' }}
+                                  />
+                                )}
+                              </Box>
+                            )
+                          })}
 
                           <Alert severity="error" sx={{ mt: 2 }}>
                             <Typography variant="caption">
