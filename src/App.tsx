@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material'
 import Header from './components/common/Header'
 import LoginDialog from './components/common/LoginDialog'
+import LandingPage from './components/landing/LandingPage'
 import StrategyBuilder from './components/StrategyBuilder'
 import UnifiedStrategyBuilder from './components/UnifiedStrategyBuilder'
 import InvestmentUniverse from './components/InvestmentUniverse'
@@ -183,37 +184,20 @@ function App() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Header onLoginClick={() => setLoginOpen(true)} />
-      
-      <Container maxWidth="xl" sx={{ mt: 3, mb: 3, flexGrow: 1 }}>
-        {serverStatus === 'offline' && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            데모 모드: 백엔드 서버를 사용할 수 없어 모의 데이터를 사용합니다.
-          </Alert>
-        )}
+      {!isConnected ? (
+        // Landing Page - Full Screen
+        <LandingPage onLoginClick={() => setLoginOpen(true)} />
+      ) : (
+        <>
+          <Header onLoginClick={() => setLoginOpen(true)} />
 
-        {!isConnected ? (
-          <Paper sx={{ p: 6, textAlign: 'center' }}>
-            <Stack spacing={3} alignItems="center">
-              <ShowChart sx={{ fontSize: 80, color: 'primary.main' }} />
-              <Typography variant="h3" fontWeight="bold">
-                KyyQuant AI Solution
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                AI 기반 알고리즘 트레이딩 플랫폼
-              </Typography>
-              <Stack direction="row" spacing={2}>
-                <Chip icon={<Code />} label="보조지표 기반 자동매매" />
-                <Chip icon={<Assessment />} label="백테스팅 & 최적화" />
-                <Chip icon={<Speed />} label="실시간 신호 모니터링" />
-              </Stack>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-                로그인하여 프로그램 매매를 시작하세요
-              </Typography>
-            </Stack>
-          </Paper>
-        ) : (
-          <>
+          <Container maxWidth="xl" sx={{ mt: 3, mb: 3, flexGrow: 1 }}>
+            {serverStatus === 'offline' && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                데모 모드: 백엔드 서버를 사용할 수 없어 모의 데이터를 사용합니다.
+              </Alert>
+            )}
+
             {/* 탭 메뉴 */}
             <Paper 
               elevation={3}
@@ -401,13 +385,13 @@ function App() {
                 <TradingSettings />
               </Stack>
             </TabPanel>
-          </>
-        )}
-      </Container>
+          </Container>
+        </>
+      )}
 
-      <LoginDialog 
-        open={loginOpen} 
-        onClose={() => setLoginOpen(false)} 
+      <LoginDialog
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
       />
     </Box>
   )
