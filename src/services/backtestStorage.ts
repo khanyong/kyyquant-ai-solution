@@ -10,22 +10,32 @@ export interface BacktestResultData {
   test_period_start?: string
   test_period_end?: string
   initial_capital: number
-  final_capital: number
+  final_capital?: number
   total_return: number
+  total_return_rate?: number
   max_drawdown: number
   sharpe_ratio?: number
   win_rate?: number
   total_trades: number
-  profitable_trades: number
+  profitable_trades?: number
   winning_trades?: number
   losing_trades?: number
   avg_profit?: number
   avg_loss?: number
   profit_factor?: number
   recovery_factor?: number
+  volatility?: number
+  // JSONB fields
+  trades?: any
+  daily_returns?: any
+  equity_curve?: any
+  investment_settings?: any
+  strategy_conditions?: any
+  filter_conditions?: any
+  metadata?: any
+  // Legacy fields
   results_data?: any
   trade_details?: any
-  daily_returns?: any
   created_at?: string
   updated_at?: string
 }
