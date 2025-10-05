@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   Box,
   Container,
@@ -9,6 +9,7 @@ import {
   useTheme
 } from '@mui/material'
 import { ArrowForward, PlayArrow } from '@mui/icons-material'
+import VideoPlayerModal from './VideoPlayerModal'
 
 interface HeroSectionProps {
   onLoginClick: () => void
@@ -17,6 +18,7 @@ interface HeroSectionProps {
 const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
   const theme = useTheme()
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [videoOpen, setVideoOpen] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -302,6 +304,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
               variant="outlined"
               size="large"
               startIcon={<PlayArrow />}
+              onClick={() => setVideoOpen(true)}
               sx={{
                 py: 2,
                 px: 5,
@@ -426,6 +429,14 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
           </Box>
         </Stack>
       </Container>
+
+      {/* Video Player Modal */}
+      <VideoPlayerModal
+        open={videoOpen}
+        onClose={() => setVideoOpen(false)}
+        videoSrc={import.meta.env.VITE_DEMO_VIDEO_URL || '/Company_CI/video-1759676192502.mp4'}
+        onCtaClick={onLoginClick}
+      />
     </Box>
   )
 }
