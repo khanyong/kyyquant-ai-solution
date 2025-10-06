@@ -226,7 +226,7 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
       includedStocks: includedStocks,
       lastExecuted: executionData?.[0]?.created_at || null,
       backtestResults: backtestData ? {
-        totalReturn: backtestData.total_return || 0,
+        totalReturn: backtestData.total_return_rate || 0,
         sharpeRatio: backtestData.sharpe_ratio || 0,
         maxDrawdown: backtestData.max_drawdown || 0
       } : undefined

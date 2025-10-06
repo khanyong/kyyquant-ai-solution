@@ -99,7 +99,7 @@ export interface BacktestResult {
   end_date: Date
   initial_capital: number
   final_capital: number
-  total_return: number // 총 수익률
+  total_return_rate: number // 총 수익률 (%, percentage)
   max_drawdown: number // 최대 낙폭
   sharpe_ratio?: number // 샤프 비율
   win_rate?: number // 승률

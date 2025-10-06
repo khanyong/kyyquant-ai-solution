@@ -76,7 +76,7 @@ interface AnalysisResult {
     signals: any[]
   }
   backtest_analysis: {
-    total_return: number
+    total_return_rate: number // 수익률 (%, percentage)
     win_rate: number
     sharpe_ratio: number
     max_drawdown: number
@@ -226,7 +226,7 @@ const StrategyAnalysis: React.FC<StrategyAnalysisProps> = ({ strategy: initialSt
       ]
     },
     backtest_analysis: {
-      total_return: 12.5,
+      total_return_rate: 12.5,
       win_rate: 65,
       sharpe_ratio: 1.35,
       max_drawdown: 8.2,
@@ -465,8 +465,8 @@ const StrategyAnalysis: React.FC<StrategyAnalysisProps> = ({ strategy: initialSt
                           <Typography variant="caption" color="text.secondary">
                             총 수익률
                           </Typography>
-                          <Typography variant="h5" color={getPerformanceColor(analysisResult.backtest_analysis.total_return, 'return')}>
-                            {analysisResult.backtest_analysis.total_return.toFixed(2)}%
+                          <Typography variant="h5" color={getPerformanceColor(analysisResult.backtest_analysis.total_return_rate, 'return')}>
+                            {analysisResult.backtest_analysis.total_return_rate.toFixed(2)}%
                           </Typography>
                         </Stack>
                       </CardContent>
@@ -721,7 +721,7 @@ const StrategyAnalysis: React.FC<StrategyAnalysisProps> = ({ strategy: initialSt
                 </Typography>
               )}
               {analysisResult.backtest_analysis.win_rate > 60 &&
-               analysisResult.backtest_analysis.total_return > 10 && (
+               analysisResult.backtest_analysis.total_return_rate > 10 && (
                 <Typography variant="body2" color="success.main">
                   • 전략 성과가 양호합니다!
                 </Typography>

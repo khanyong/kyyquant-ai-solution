@@ -84,7 +84,7 @@ interface BacktestRecord {
   end_date: string;
   initial_capital: number;
   final_capital: number;
-  total_return: number;
+  total_return_rate: number; // 수익률 (%, percentage)
   max_drawdown: number;
   win_rate?: number;
   sharpe_ratio?: number;
@@ -178,7 +178,7 @@ const BacktestComparison: React.FC = () => {
             end_date: '2023-12-31',
             initial_capital: 10000000,
             final_capital: 11550000,
-            total_return: 15.5,
+            total_return_rate: 15.5,
             max_drawdown: -8.3,
             win_rate: 65.2,
             sharpe_ratio: 1.45,
@@ -197,7 +197,7 @@ const BacktestComparison: React.FC = () => {
             end_date: '2023-12-31',
             initial_capital: 10000000,
             final_capital: 11230000,
-            total_return: 12.3,
+            total_return_rate: 12.3,
             max_drawdown: -6.5,
             win_rate: 58.7,
             sharpe_ratio: 1.23,
@@ -216,7 +216,7 @@ const BacktestComparison: React.FC = () => {
             end_date: '2023-12-31',
             initial_capital: 10000000,
             final_capital: 11870000,
-            total_return: 18.7,
+            total_return_rate: 18.7,
             max_drawdown: -10.2,
             win_rate: 61.4,
             sharpe_ratio: 1.56,
@@ -295,7 +295,7 @@ const BacktestComparison: React.FC = () => {
             end_date: item.end_date,
             initial_capital: Number(item.initial_capital) || 0,
             final_capital: Number(item.final_capital) || 0,
-            total_return: Number(item.total_return) || 0,
+            total_return_rate: Number(item.total_return_rate) || 0,
             annual_return: item.results_data?.annual_return || 0,
             max_drawdown: Number(item.max_drawdown) || 0,
             win_rate: Number(item.win_rate) || 0,
@@ -319,7 +319,7 @@ const BacktestComparison: React.FC = () => {
             end_date: item.end_date,
             initial_capital: Number(item.initial_capital) || 0,
             final_capital: Number(item.final_capital) || 0,
-            total_return: Number(item.total_return) || 0,
+            total_return_rate: Number(item.total_return_rate) || 0,
             max_drawdown: Number(item.max_drawdown) || 0,
             win_rate: Number(item.win_rate) || 0,
             sharpe_ratio: Number(item.sharpe_ratio) || 0,
@@ -434,7 +434,7 @@ const BacktestComparison: React.FC = () => {
         datasets: visibleRecords.map(record => ({
           label: record.strategy_name,
           data: [
-            record.total_return,
+            record.total_return_rate,
             record.win_rate || 0,
             (record.sharpe_ratio || 0) * 20,
             Math.abs(record.max_drawdown),
@@ -460,7 +460,7 @@ const BacktestComparison: React.FC = () => {
         datasets: visibleRecords.map(record => ({
           label: record.strategy_name,
           data: [
-            record.total_return,
+            record.total_return_rate,
             record.win_rate || 0,
             (record.sharpe_ratio || 0) * 10,
             Math.abs(record.max_drawdown),
@@ -666,14 +666,14 @@ const BacktestComparison: React.FC = () => {
                     </TableCell>
                     <TableCell align="right">
                       <Typography
-                        color={record.total_return >= 0 ? 'success.main' : 'error.main'}
+                        color={record.total_return_rate >= 0 ? 'success.main' : 'error.main'}
                         fontWeight="bold"
                       >
-                        {record.total_return >= 0 ? '+' : ''}{(record.total_return || 0).toFixed(2)}%
+                        {record.total_return_rate >= 0 ? '+' : ''}{(record.total_return_rate || 0).toFixed(2)}%
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      {(record.annual_return || record.total_return || 0).toFixed(2)}%
+                      {(record.annual_return || record.total_return_rate || 0).toFixed(2)}%
                     </TableCell>
                     <TableCell align="right">
                       {(record.win_rate || 0).toFixed(1)}%
@@ -792,11 +792,11 @@ const BacktestComparison: React.FC = () => {
                   최고 수익률
                 </Typography>
                 <Typography variant="h6">
-                  {Math.max(...selectedRecords.map(r => r.total_return || 0)).toFixed(2)}%
+                  {Math.max(...selectedRecords.map(r => r.total_return_rate || 0)).toFixed(2)}%
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {selectedRecords.find(r => 
-                    r.total_return === Math.max(...selectedRecords.map(r => r.total_return))
+                    r.total_return_rate === Math.max(...selectedRecords.map(r => r.total_return_rate))
                   )?.strategy_name}
                 </Typography>
               </Grid>
@@ -805,7 +805,7 @@ const BacktestComparison: React.FC = () => {
                   평균 수익률
                 </Typography>
                 <Typography variant="h6">
-                  {(selectedRecords.reduce((sum, r) => sum + (r.total_return || 0), 0) / selectedRecords.length).toFixed(2)}%
+                  {(selectedRecords.reduce((sum, r) => sum + (r.total_return_rate || 0), 0) / selectedRecords.length).toFixed(2)}%
                 </Typography>
               </Grid>
               <Grid item xs={12} md={3}>

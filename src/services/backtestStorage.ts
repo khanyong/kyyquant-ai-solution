@@ -70,7 +70,7 @@ export const backtestStorageService = {
       console.log('💾 Attempting to save backtest result:', {
         userId: resultToSave.user_id,
         strategyName: resultToSave.strategy_name,
-        totalReturn: resultToSave.total_return
+        totalReturnRate: resultToSave.total_return_rate
       })
 
       const { data, error } = await supabase

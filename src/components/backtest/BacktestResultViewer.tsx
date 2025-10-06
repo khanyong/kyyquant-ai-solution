@@ -74,7 +74,7 @@ interface BacktestResult {
   end_date: string;
   initial_capital: number;
   final_capital: number;
-  total_return: number;
+  total_return_rate: number; // 수익률 (%, percentage)
   annual_return: number;
   max_drawdown: number;
   win_rate: number;
@@ -531,7 +531,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                 datasets: [
                   {
                     label: '누적 수익률 (%)',
-                    data: [0, result?.total_return || 0],
+                    data: [0, result?.total_return_rate || 0],
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     tension: 0.1,

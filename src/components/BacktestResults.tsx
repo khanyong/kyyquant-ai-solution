@@ -141,9 +141,9 @@ const BacktestResults: React.FC = () => {
               <Typography color="text.secondary" gutterBottom>
                 총 수익률
               </Typography>
-              <Typography variant="h4" component="div" color={result.total_return >= 0 ? 'success.main' : 'error.main'}>
-                {result.total_return >= 0 ? '+' : ''}{result.total_return?.toFixed(2)}%
-                {result.total_return >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+              <Typography variant="h4" component="div" color={result.total_return_rate >= 0 ? 'success.main' : 'error.main'}>
+                {result.total_return_rate >= 0 ? '+' : ''}{result.total_return_rate?.toFixed(2)}%
+                {result.total_return_rate >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
               </Typography>
             </CardContent>
           </Card>

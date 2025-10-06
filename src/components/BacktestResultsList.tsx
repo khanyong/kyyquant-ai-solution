@@ -41,7 +41,7 @@ interface BacktestResult {
   id: string;
   strategy_name: string;
   created_at: string;
-  total_return: number;
+  total_return_rate: number; // 수익률 (%, percentage)
   max_drawdown: number;
   total_trades: number;
   win_rate: number;
@@ -280,8 +280,8 @@ const BacktestResultsList: React.FC = () => {
                   </TableCell>
                   <TableCell align="right">
                     <Chip
-                      label={`${(result.total_return * 100).toFixed(2)}%`}
-                      color={result.total_return >= 0 ? 'success' : 'error'}
+                      label={`${result.total_return_rate.toFixed(2)}%`}
+                      color={result.total_return_rate >= 0 ? 'success' : 'error'}
                       size="small"
                     />
                   </TableCell>
