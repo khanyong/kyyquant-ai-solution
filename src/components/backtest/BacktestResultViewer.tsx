@@ -543,10 +543,10 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
               return (
                 <Box>
                   <Alert severity="info" sx={{ mb: 2 }}>
-                    상세 일일 수익률 데이터가 없습니다. 총 수익률만 표시합니다.
+                    거래 데이터가 없습니다. 총 수익률만 표시합니다.
                   </Alert>
                   <Box sx={{ height: 400, position: 'relative' }}>
-                    <Line data={dummyData} options={chartOptions} />
+                    <Chart type='line' data={dummyData} options={chartOptions} />
                   </Box>
                 </Box>
               );
