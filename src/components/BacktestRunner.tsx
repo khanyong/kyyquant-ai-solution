@@ -944,7 +944,9 @@ const BacktestRunner: React.FC = () => {
             reason: trade.reason || '',  // ✅ 백엔드 reason 필드 추가
             signal_reason: trade.signal_reason || '',
             signal_details: trade.signal_details || {},
-            trade_date: trade.date || trade.trade_date || ''
+            trade_date: trade.date || trade.trade_date || '',
+            stage: trade.stage,  // ✅ 매수 단계 추가
+            indicators: trade.indicators || {}  // ✅ 거래 시점 지표 값 추가 (RSI 등)
           })),
           // daily_returns 변환 (백엔드의 daily_values를 사용)
           daily_returns: (result.daily_values || backtestData.daily_values || []).map((dv: any, index: number) => {

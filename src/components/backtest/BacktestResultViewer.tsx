@@ -914,13 +914,60 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
           variant="contained"
           startIcon={<Download />}
           onClick={() => {
-            // CSV 다운로드 로직
-            const csvContent = `날짜,종목코드,종목명,구분,수량,단가,금액,손익,수익률\n` +
-              result.trades.map(t => 
-                `${t.date},${t.stock_code},${t.stock_name},${t.action},${t.quantity},${t.price},${t.amount},${t.profit_loss || ''},${t.profit_rate || ''}`
-              ).join('\n');
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            // CSV 다운로드 로직 (UTF-8 BOM 추가, 모든 지표 포함)
+
+            // 1. 모든 거래에서 사용된 지표 목록 수집
+            const allIndicatorKeys = new Set<string>();
+            result.trades.forEach(t => {
+              const indicators = (t as any).indicators || {};
+              Object.keys(indicators).forEach(key => allIndicatorKeys.add(key));
+            });
+            const indicatorColumns = Array.from(allIndicatorKeys).sort();
+
+            // 2. 헤더 생성 (기본 컬럼 + 단계 + 지표들)
+            const baseHeaders = ['날짜', '종목코드', '종목명', '구분', '수량', '단가', '금액', '손익', '수익률', '단계', '매수이유'];
+            const indicatorHeaders = indicatorColumns.map(key => {
+              // 지표명을 한글로 변환 (선택적)
+              const displayName = key.toUpperCase();
+              return displayName;
+            });
+            const headers = [...baseHeaders, ...indicatorHeaders].join(',');
+
+            // 3. 데이터 행 생성
+            const rows = result.trades.map(t => {
+              const baseData = [
+                t.date,
+                t.stock_code,
+                t.stock_name,
+                t.action,
+                t.quantity,
+                t.price,
+                t.amount,
+                t.profit_loss || '',
+                t.profit_rate || '',
+                (t as any).stage || '',
+                (t as any).reason || ''
+              ];
+
+              // 각 지표 값 추가
+              const indicators = (t as any).indicators || {};
+              const indicatorValues = indicatorColumns.map(key => {
+                const value = indicators[key];
+                if (value !== undefined && value !== null) {
+                  // 숫자면 소수점 2자리로 포맷
+                  return typeof value === 'number' ? value.toFixed(2) : value;
+                }
+                return '';
+              });
+
+              return [...baseData, ...indicatorValues].join(',');
+            });
+
+            const csvContent = headers + '\n' + rows.join('\n');
+
+            // UTF-8 BOM 추가 (엑셀에서 한글 깨짐 방지)
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `backtest_result_${result.id}.csv`;

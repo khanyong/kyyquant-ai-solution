@@ -279,6 +279,11 @@ class BacktestEngine:
                             # 거래 기록
                             print(f"[Engine] Recording sell trade: stock={stock_code}, reason={exit_reason}, ratio={exit_ratio}%")
 
+                            # 거래 시점의 지표 값 기록
+                            indicators_at_trade = {}
+                            if 'rsi' in row.index:
+                                indicators_at_trade['rsi'] = float(row['rsi']) if not pd.isna(row['rsi']) else None
+
                             trades.append({
                                 'trade_id': str(uuid.uuid4()),
                                 'date': date,
@@ -291,7 +296,8 @@ class BacktestEngine:
                                 'profit': profit,
                                 'profit_rate': profit_rate,
                                 'reason': exit_reason,
-                                'exit_ratio': exit_ratio
+                                'exit_ratio': exit_ratio,
+                                'indicators': indicators_at_trade  # 거래 시점 RSI 기록
                             })
 
                             # 자본금 업데이트 (실수령액 = 매도금액 - 수수료)
@@ -362,6 +368,11 @@ class BacktestEngine:
                                 buy_reason = f"매수 {stage_num}단계 ({buy_reason_detail})"
                                 print(f"[Engine] Recording staged buy trade: stock={stock_code}, stage={stage_num}, reason={buy_reason}")
 
+                                # 거래 시점의 지표 값 기록
+                                indicators_at_trade = {}
+                                if 'rsi' in row.index:
+                                    indicators_at_trade['rsi'] = float(row['rsi']) if not pd.isna(row['rsi']) else None
+
                                 trades.append({
                                     'trade_id': str(uuid.uuid4()),
                                     'date': date,
@@ -371,7 +382,9 @@ class BacktestEngine:
                                     'price': buy_price,
                                     'amount': buy_amount,
                                     'commission': commission_fee,
-                                    'reason': buy_reason
+                                    'reason': buy_reason,
+                                    'stage': stage_num,
+                                    'indicators': indicators_at_trade  # 거래 시점 RSI 기록
                                 })
 
                                 # 포지션 업데이트 또는 생성
@@ -424,6 +437,11 @@ class BacktestEngine:
                             buy_reason = row.get('buy_reason', 'Signal')
                             print(f"[Engine] Recording buy trade: stock={stock_code}, reason={buy_reason}")
 
+                            # 거래 시점의 지표 값 기록
+                            indicators_at_trade = {}
+                            if 'rsi' in row.index:
+                                indicators_at_trade['rsi'] = float(row['rsi']) if not pd.isna(row['rsi']) else None
+
                             trades.append({
                                 'trade_id': str(uuid.uuid4()),
                                 'date': date,
@@ -433,7 +451,8 @@ class BacktestEngine:
                                 'price': buy_price,
                                 'amount': buy_amount,
                                 'commission': commission_fee,
-                                'reason': buy_reason
+                                'reason': buy_reason,
+                                'indicators': indicators_at_trade  # 거래 시점 RSI 기록
                             })
 
                             # 포지션 추가
@@ -764,6 +783,14 @@ class BacktestEngine:
                     if result:
                         reasons.append(self._format_condition_reason(condition))
 
+                    # RSI 조건 디버깅
+                    if condition.get('left') == 'rsi' or condition.get('indicator') == 'rsi':
+                        rsi_value = row.get('rsi', None)
+                        compare_val = condition.get('right', condition.get('value'))
+                        operator = condition.get('operator')
+                        if not pd.isna(rsi_value):
+                            print(f"[Debug] Stage {stage_num} - RSI check: {rsi_value:.2f} {operator} {compare_val} = {result}")
+
                 # passAllRequired에 따라 판단
                 if pass_all_required:
                     # AND: 모든 조건 만족
@@ -774,6 +801,9 @@ class BacktestEngine:
 
                 if stage_satisfied:
                     # 신호 설정 (dict 형태로 stage 정보 포함)
+                    rsi_debug = row.get('rsi', 'N/A')
+                    print(f"[Debug] BUY SIGNAL GENERATED: Stage {stage_num}, RSI={rsi_debug}, Conditions={conditions}")
+
                     df.at[df.index[i], 'buy_signal'] = {
                         'stage': stage_num,
                         'positionPercent': position_percent,
