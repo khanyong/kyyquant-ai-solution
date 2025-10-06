@@ -50,6 +50,7 @@ import {
   Filler,
   TimeScale,
   TimeSeriesScale,
+  ScatterController,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 
@@ -64,7 +65,8 @@ ChartJS.register(
   Legend,
   Filler,
   TimeScale,
-  TimeSeriesScale
+  TimeSeriesScale,
+  ScatterController
 );
 
 interface BacktestResult {
