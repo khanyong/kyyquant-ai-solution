@@ -908,15 +908,19 @@ const BacktestRunner: React.FC = () => {
         const actualWinningTrades = sellTrades.filter(t => (t.profit || t.profit_loss || 0) > 0).length;
         const actualLosingTrades = sellTrades.filter(t => (t.profit || t.profit_loss || 0) <= 0).length;
 
+        const totalReturnPct = backtestData.summary?.total_return || 0;
+        const finalCapital = config.initialCapital * (1 + totalReturnPct / 100);
+
         const formattedResult = {
           id: result.backtest_id || `backtest_${Date.now()}`,
           strategy_name: finalStrategyName,
           start_date: config.startDate.toISOString().split('T')[0],
           end_date: config.endDate.toISOString().split('T')[0],
           initial_capital: config.initialCapital,
-          final_capital: config.initialCapital * (1 + (backtestData.summary?.total_return || 0) / 100),
-          total_return: backtestData.summary?.total_return || 0,
-          annual_return: backtestData.summary?.total_return || 0, // 연간 수익률은 별도 계산 필요
+          final_capital: finalCapital,
+          total_return: totalReturnPct, // 수익률 (%)
+          total_return_rate: totalReturnPct, // 명확한 필드명
+          annual_return: totalReturnPct, // 연간 수익률은 별도 계산 필요
           max_drawdown: backtestData.summary?.max_drawdown || 0,
           win_rate: backtestData.summary?.average_win_rate || 0,
           total_trades: backtestData.summary?.total_trades || totalTradeCount || sellTrades.length || backtestData.summary?.processed_count || 0,
@@ -1057,8 +1061,8 @@ const BacktestRunner: React.FC = () => {
         // 필수 숫자 필드들
         initial_capital: config.initialCapital,
         final_capital: backtestResults.final_capital || config.initialCapital,
-        // total_return은 수익률(%)로 저장 (백엔드의 total_return_rate 사용)
-        total_return: backtestResults.total_return_rate || 0,
+        // total_return은 수익률(%)로 저장
+        total_return: backtestResults.total_return || 0,
         max_drawdown: Math.abs(backtestResults.max_drawdown || 0),
         sharpe_ratio: backtestResults.sharpe_ratio || null,
         win_rate: backtestResults.win_rate || null,
