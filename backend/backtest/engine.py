@@ -22,6 +22,42 @@ class BacktestEngine:
         self.indicator_calculator = IndicatorCalculator()
         self.data_provider = DataProvider()
 
+    def _collect_indicators_at_trade(self, row: pd.Series) -> Dict[str, Any]:
+        """
+        거래 시점의 모든 지표 값을 수집
+
+        Args:
+            row: DataFrame의 현재 행 (pd.Series)
+
+        Returns:
+            지표명: 값 딕셔너리
+        """
+        indicators = {}
+
+        # 기본 가격 지표
+        price_indicators = ['open', 'high', 'low', 'close', 'volume']
+
+        # 기술적 지표 목록 (일반적으로 사용되는 지표들)
+        technical_indicators = [
+            'rsi', 'macd', 'macd_signal', 'macd_hist',
+            'bb_upper', 'bb_middle', 'bb_lower', 'bb_width',
+            'stochastic_k', 'stochastic_d',
+            'ichimoku_tenkan', 'ichimoku_kijun', 'ichimoku_senkou_a', 'ichimoku_senkou_b', 'ichimoku_chikou',
+            'ema_5', 'ema_10', 'ema_20', 'ema_50', 'ema_120', 'ema_200',
+            'sma_5', 'sma_10', 'sma_20', 'sma_50', 'sma_120', 'sma_200',
+            'atr', 'adx', 'cci', 'roc', 'willr', 'obv', 'mfi',
+            'vwap', 'pivot', 'resistance_1', 'resistance_2', 'support_1', 'support_2'
+        ]
+
+        # DataFrame에 존재하는 모든 지표 수집
+        for indicator_name in technical_indicators:
+            if indicator_name in row.index:
+                value = row[indicator_name]
+                if not pd.isna(value):
+                    indicators[indicator_name] = float(value)
+
+        return indicators
+
     async def run(
         self,
         strategy_id: str,
@@ -279,10 +315,8 @@ class BacktestEngine:
                             # 거래 기록
                             print(f"[Engine] Recording sell trade: stock={stock_code}, reason={exit_reason}, ratio={exit_ratio}%")
 
-                            # 거래 시점의 지표 값 기록
-                            indicators_at_trade = {}
-                            if 'rsi' in row.index:
-                                indicators_at_trade['rsi'] = float(row['rsi']) if not pd.isna(row['rsi']) else None
+                            # 거래 시점의 모든 지표 값 기록
+                            indicators_at_trade = self._collect_indicators_at_trade(row)
 
                             trades.append({
                                 'trade_id': str(uuid.uuid4()),
@@ -368,10 +402,8 @@ class BacktestEngine:
                                 buy_reason = f"매수 {stage_num}단계 ({buy_reason_detail})"
                                 print(f"[Engine] Recording staged buy trade: stock={stock_code}, stage={stage_num}, reason={buy_reason}")
 
-                                # 거래 시점의 지표 값 기록
-                                indicators_at_trade = {}
-                                if 'rsi' in row.index:
-                                    indicators_at_trade['rsi'] = float(row['rsi']) if not pd.isna(row['rsi']) else None
+                                # 거래 시점의 모든 지표 값 기록
+                                indicators_at_trade = self._collect_indicators_at_trade(row)
 
                                 trades.append({
                                     'trade_id': str(uuid.uuid4()),
@@ -384,7 +416,7 @@ class BacktestEngine:
                                     'commission': commission_fee,
                                     'reason': buy_reason,
                                     'stage': stage_num,
-                                    'indicators': indicators_at_trade  # 거래 시점 RSI 기록
+                                    'indicators': indicators_at_trade  # 거래 시점 모든 지표 기록
                                 })
 
                                 # 포지션 업데이트 또는 생성
@@ -437,10 +469,8 @@ class BacktestEngine:
                             buy_reason = row.get('buy_reason', 'Signal')
                             print(f"[Engine] Recording buy trade: stock={stock_code}, reason={buy_reason}")
 
-                            # 거래 시점의 지표 값 기록
-                            indicators_at_trade = {}
-                            if 'rsi' in row.index:
-                                indicators_at_trade['rsi'] = float(row['rsi']) if not pd.isna(row['rsi']) else None
+                            # 거래 시점의 모든 지표 값 기록
+                            indicators_at_trade = self._collect_indicators_at_trade(row)
 
                             trades.append({
                                 'trade_id': str(uuid.uuid4()),
