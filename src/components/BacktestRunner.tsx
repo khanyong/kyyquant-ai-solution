@@ -848,9 +848,9 @@ const BacktestRunner: React.FC = () => {
         const backtestData = result;
         setProgress(100);
         setSuccess(`백테스트가 완료되었습니다.
-          총 수익률: ${backtestData.summary?.total_return?.toFixed(2)}%,
-          평균 승률: ${backtestData.summary?.average_win_rate?.toFixed(2)}%,
-          최대 손실: ${backtestData.summary?.max_drawdown?.toFixed(2)}%`);
+          총 수익률: ${backtestData.total_return_rate?.toFixed(2)}%,
+          승률: ${backtestData.win_rate?.toFixed(2)}%,
+          최대 손실: ${backtestData.max_drawdown?.toFixed(2)}%`);
         setIsRunning(false);
 
         // 결과를 state에 저장하고 상세 정보 포맷팅
@@ -908,8 +908,8 @@ const BacktestRunner: React.FC = () => {
         const actualWinningTrades = sellTrades.filter(t => (t.profit || t.profit_loss || 0) > 0).length;
         const actualLosingTrades = sellTrades.filter(t => (t.profit || t.profit_loss || 0) <= 0).length;
 
-        const totalReturnPct = backtestData.summary?.total_return || 0;
-        const finalCapital = config.initialCapital * (1 + totalReturnPct / 100);
+        const totalReturnPct = backtestData.total_return_rate || 0;
+        const finalCapital = backtestData.final_capital || (config.initialCapital * (1 + totalReturnPct / 100));
 
         const formattedResult = {
           id: result.backtest_id || `backtest_${Date.now()}`,
@@ -921,14 +921,14 @@ const BacktestRunner: React.FC = () => {
           total_return: totalReturnPct, // 수익률 (%)
           total_return_rate: totalReturnPct, // 명확한 필드명
           annual_return: totalReturnPct, // 연간 수익률은 별도 계산 필요
-          max_drawdown: backtestData.summary?.max_drawdown || 0,
-          win_rate: backtestData.summary?.average_win_rate || 0,
-          total_trades: backtestData.summary?.total_trades || totalTradeCount || sellTrades.length || backtestData.summary?.processed_count || 0,
-          winning_trades: backtestData.summary?.winning_trades || actualWinningTrades || totalWinningTrades,
-          losing_trades: backtestData.summary?.losing_trades || actualLosingTrades || totalLosingTrades,
-          buy_count: backtestData.summary?.buy_count || buyTrades.length,
-          sell_count: backtestData.summary?.sell_count || sellTrades.length,
-          sharpe_ratio: backtestData.summary?.average_sharpe_ratio || 0,
+          max_drawdown: backtestData.max_drawdown || 0,
+          win_rate: backtestData.win_rate || 0,
+          total_trades: backtestData.total_trades || totalTradeCount || sellTrades.length || 0,
+          winning_trades: backtestData.winning_trades || actualWinningTrades || totalWinningTrades,
+          losing_trades: backtestData.losing_trades || actualLosingTrades || totalLosingTrades,
+          buy_count: buyTrades.length,
+          sell_count: sellTrades.length,
+          sharpe_ratio: backtestData.sharpe_ratio || 0,
           volatility: 0, // 변동성은 별도 계산 필요
           // trades 배열 포맷팅
           trades: allTrades.map((trade: any) => ({
@@ -1076,8 +1076,8 @@ const BacktestRunner: React.FC = () => {
         // 필수 숫자 필드들
         initial_capital: config.initialCapital,
         final_capital: backtestResults.final_capital || config.initialCapital,
-        // total_return은 수익률(%)로 저장
-        total_return: backtestResults.total_return || 0,
+        // total_return_rate는 수익률(%)로 저장
+        total_return_rate: backtestResults.total_return_rate || backtestResults.total_return || 0,
         max_drawdown: Math.abs(backtestResults.max_drawdown || 0),
         sharpe_ratio: backtestResults.sharpe_ratio || null,
         win_rate: backtestResults.win_rate || null,

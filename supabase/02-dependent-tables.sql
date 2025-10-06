@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS backtest_results (
     end_date DATE NOT NULL,
     initial_capital DECIMAL(15, 2) NOT NULL,
     final_capital DECIMAL(15, 2) NOT NULL,
-    total_return DECIMAL(10, 4) NOT NULL,
+    total_return_rate DECIMAL(10, 4) NOT NULL, -- 총 수익률 (%, percentage)
     max_drawdown DECIMAL(10, 4) NOT NULL,
     sharpe_ratio DECIMAL(10, 4),
     win_rate DECIMAL(5, 2),

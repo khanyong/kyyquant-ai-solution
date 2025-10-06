@@ -259,7 +259,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
     // 종료점 추가
     tradePoints.push({
       x: result.end_date,
-      y: result.total_return || 0,
+      y: result.total_return_rate || 0,
       label: '종료',
       capital: result.final_capital
     });
@@ -440,11 +440,11 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                 <Typography color="textSecondary" variant="body2">
                   총 수익률
                 </Typography>
-                <Typography 
-                  variant="h4" 
-                  color={result.total_return >= 0 ? 'success.main' : 'error.main'}
+                <Typography
+                  variant="h4"
+                  color={result.total_return_rate >= 0 ? 'success.main' : 'error.main'}
                 >
-                  {result.total_return >= 0 ? '+' : ''}{result.total_return.toFixed(2)}%
+                  {result.total_return_rate >= 0 ? '+' : ''}{result.total_return_rate.toFixed(2)}%
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   연간 수익률: {result.annual_return.toFixed(2)}%

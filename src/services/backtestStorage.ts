@@ -11,7 +11,7 @@ export interface BacktestResultData {
   test_period_end?: string
   initial_capital: number
   final_capital?: number
-  total_return: number  // 수익률 (%)
+  total_return_rate: number  // 수익률 (%, percentage)
   max_drawdown: number
   sharpe_ratio?: number
   win_rate?: number
@@ -134,11 +134,11 @@ export const backtestStorageService = {
       }
 
       if (filters?.min_return !== undefined) {
-        query = query.gte('total_return', filters.min_return)
+        query = query.gte('total_return_rate', filters.min_return)
       }
 
       if (filters?.max_return !== undefined) {
-        query = query.lte('total_return', filters.max_return)
+        query = query.lte('total_return_rate', filters.max_return)
       }
 
       const orderBy = filters?.order_by || 'created_at'
@@ -287,7 +287,7 @@ export const backtestStorageService = {
 
       const { data, error } = await supabase
         .from('backtest_results')
-        .select('total_return, sharpe_ratio, max_drawdown, win_rate, total_trades')
+        .select('total_return_rate, sharpe_ratio, max_drawdown, win_rate, total_trades')
         .eq('user_id', userData.user.id)
 
       if (error) {
@@ -313,9 +313,9 @@ export const backtestStorageService = {
 
       const stats = {
         total_results: data.length,
-        avg_return: data.reduce((sum, r) => sum + (r.total_return || 0), 0) / data.length,
-        best_return: Math.max(...data.map(r => r.total_return || 0)),
-        worst_return: Math.min(...data.map(r => r.total_return || 0)),
+        avg_return: data.reduce((sum, r) => sum + (r.total_return_rate || 0), 0) / data.length,
+        best_return: Math.max(...data.map(r => r.total_return_rate || 0)),
+        worst_return: Math.min(...data.map(r => r.total_return_rate || 0)),
         avg_sharpe: data.reduce((sum, r) => sum + (r.sharpe_ratio || 0), 0) / data.length,
         avg_drawdown: data.reduce((sum, r) => sum + (r.max_drawdown || 0), 0) / data.length,
         avg_win_rate: data.reduce((sum, r) => sum + (r.win_rate || 0), 0) / data.length,
