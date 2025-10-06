@@ -24,7 +24,7 @@ class BacktestEngine:
 
     def _collect_indicators_at_trade(self, row: pd.Series) -> Dict[str, Any]:
         """
-        거래 시점의 모든 지표 값을 수집
+        거래 시점의 모든 지표 값을 수집 (DataFrame의 모든 컬럼 자동 수집)
 
         Args:
             row: DataFrame의 현재 행 (pd.Series)
@@ -34,27 +34,22 @@ class BacktestEngine:
         """
         indicators = {}
 
-        # 기본 가격 지표
-        price_indicators = ['open', 'high', 'low', 'close', 'volume']
+        # 기본 OHLCV 및 시스템 컬럼은 제외
+        exclude_columns = {'open', 'high', 'low', 'close', 'volume', 'date', 'stock_code',
+                          'buy_signal', 'sell_signal', 'position', 'returns', 'buy_reason'}
 
-        # 기술적 지표 목록 (일반적으로 사용되는 지표들)
-        technical_indicators = [
-            'rsi', 'macd', 'macd_signal', 'macd_hist',
-            'bb_upper', 'bb_middle', 'bb_lower', 'bb_width',
-            'stochastic_k', 'stochastic_d',
-            'ichimoku_tenkan', 'ichimoku_kijun', 'ichimoku_senkou_a', 'ichimoku_senkou_b', 'ichimoku_chikou',
-            'ema_5', 'ema_10', 'ema_20', 'ema_50', 'ema_120', 'ema_200',
-            'sma_5', 'sma_10', 'sma_20', 'sma_50', 'sma_120', 'sma_200',
-            'atr', 'adx', 'cci', 'roc', 'willr', 'obv', 'mfi',
-            'vwap', 'pivot', 'resistance_1', 'resistance_2', 'support_1', 'support_2'
-        ]
-
-        # DataFrame에 존재하는 모든 지표 수집
-        for indicator_name in technical_indicators:
-            if indicator_name in row.index:
-                value = row[indicator_name]
+        # DataFrame의 모든 컬럼을 순회하면서 지표 값 수집
+        for col_name in row.index:
+            # 제외 컬럼이 아니고, NaN이 아닌 경우만 수집
+            if col_name not in exclude_columns:
+                value = row[col_name]
                 if not pd.isna(value):
-                    indicators[indicator_name] = float(value)
+                    try:
+                        # 숫자로 변환 가능한 경우만 포함
+                        indicators[col_name] = float(value)
+                    except (ValueError, TypeError):
+                        # 변환 실패 시 무시 (문자열 등)
+                        pass
 
         return indicators
 
