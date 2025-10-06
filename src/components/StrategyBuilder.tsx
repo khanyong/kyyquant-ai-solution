@@ -1363,10 +1363,10 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     .filter(s => s.enabled)
                     .flatMap(s => s.indicators.map(ind => ({
                       id: ind.id,
-                      type: 'buy',
+                      type: 'buy' as const,
                       indicator: ind.indicatorId,
                       operator: ind.operator as any,
-                      value: ind.value,
+                      value: ind.value ?? '',
                       combineWith: ind.combineWith,
                       bollingerLine: ind.bollingerLine,
                       macdLine: ind.macdLine,
@@ -1379,7 +1379,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     return {
                       ...converted,
                       combineWith: cond.combineWith
-                    }
+                    } as Condition
                   })
 
                   setStrategy({
@@ -1410,10 +1410,10 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     .filter(s => s.enabled)
                     .flatMap(s => s.indicators.map(ind => ({
                       id: ind.id,
-                      type: 'sell',
+                      type: 'sell' as const,
                       indicator: ind.indicatorId,
                       operator: ind.operator as any,
-                      value: ind.value,
+                      value: ind.value ?? '',
                       combineWith: ind.combineWith,
                       bollingerLine: ind.bollingerLine,
                       macdLine: ind.macdLine,
@@ -1426,7 +1426,7 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     return {
                       ...converted,
                       combineWith: cond.combineWith
-                    }
+                    } as Condition
                   })
 
                   setStrategy({

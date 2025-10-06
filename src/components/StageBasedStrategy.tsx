@@ -59,10 +59,12 @@ interface StageIndicator {
   indicatorId: string
   name: string
   operator: string
-  value: number | string
+  value?: number | string
   params?: { [key: string]: any }
   combineWith: 'AND' | 'OR'
   bollingerLine?: 'bollinger_upper' | 'bollinger_middle' | 'bollinger_lower'
+  macdLine?: string
+  stochLine?: string
 }
 
 interface Stage {
