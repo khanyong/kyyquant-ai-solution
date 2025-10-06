@@ -249,6 +249,23 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
     const indicator = availableIndicators.find(i => i.id === tempIndicator.indicatorId)
     if (!indicator) return
 
+    // 값이 필요 없는 연산자 목록
+    const operatorsWithoutValue = [
+      'price_above_tenkan', 'price_below_tenkan',
+      'price_above_kijun', 'price_below_kijun',
+      'price_above_senkou_a', 'price_below_senkou_a',
+      'price_above_senkou_b', 'price_below_senkou_b',
+      'price_above_cloud', 'price_below_cloud', 'price_in_cloud',
+      'cloud_green', 'cloud_red',
+      'price_above', 'price_below', 'cross_above', 'cross_below', // 볼린저 밴드
+      'macd_above_signal', 'macd_below_signal',
+      'macd_cross_signal_up', 'macd_cross_signal_down',
+      'macd_above_zero', 'macd_below_zero',
+      'histogram_positive', 'histogram_negative',
+      'stoch_k_above_d', 'stoch_k_below_d',
+      'crossover', 'crossunder'
+    ]
+
     const newIndicator: StageIndicator = {
       ...tempIndicator,
       id: `ind_${Date.now()}`,
@@ -256,9 +273,14 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
       params: indicator.defaultParams
     }
 
+    // value가 필요 없는 연산자인 경우 value 제거
+    if (operatorsWithoutValue.includes(tempIndicator.operator)) {
+      delete newIndicator.value
+    }
+
     const newStages = [...strategy.stages]
     const stageIndex = currentStage - 1
-    
+
     // 최대 5개까지만 추가 가능
     if (newStages[stageIndex].indicators.length >= 5) {
       alert('각 단계당 최대 5개의 지표만 추가할 수 있습니다.')

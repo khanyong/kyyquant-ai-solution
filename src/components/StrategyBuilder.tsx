@@ -549,6 +549,23 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
     // 디버그용 콘솔 로그
     console.log('Saving strategy...', strategy);
 
+    // 매도 조건 검증 (단계별 전략인 경우)
+    if (useStageBasedStrategy) {
+      const hasSellConditions = sellStageStrategy?.stages?.some((s: any) => s.enabled && s.indicators?.length > 0)
+      const hasTargetProfit = strategy.targetProfit?.staged?.enabled || strategy.targetProfit?.simple?.enabled
+
+      // 매도 조건도 없고 목표 수익률도 없으면 경고
+      if (!hasSellConditions && !hasTargetProfit) {
+        alert('매도 조건이 없습니다!\n\n매도 조건을 설정하지 않으면 자동 매매가 실행되지 않습니다.\n\n다음 중 하나를 설정해주세요:\n1. 매도 단계에 지표 조건 추가\n2. 목표 수익률 설정 활성화')
+        return null
+      }
+
+      // 목표 수익률이 있으면 매도 조건 없어도 OK (안내 메시지만)
+      if (!hasSellConditions && hasTargetProfit) {
+        console.log('[StrategyBuilder] 목표 수익률 설정으로 매도 진행 (지표 조건 없음)')
+      }
+    }
+
     // 데이터 검증
     const validationResult = validateStrategyData({
       ...strategy,
@@ -778,6 +795,13 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                   macdLine: ind.macdLine,
                   stochLine: ind.stochLine
                 })
+
+                // 디버깅: 변환 결과 확인
+                console.log(`[StrategyBuilder] BUY Stage ${stage.stage} - Converting:`, {
+                  original: { indicator: ind.indicatorId, operator: ind.operator, value: ind.value },
+                  converted: standardCondition
+                })
+
                 return {
                   ...standardCondition,
                   combineWith: ind.combineWith || 'AND'
@@ -1334,20 +1358,33 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 }}
                 onStrategyChange={(stageStrategy) => {
                   setBuyStageStrategy(stageStrategy)
-                  // 기존 strategy 객체에도 반영
+                  // 기존 strategy 객체에도 반영 (표준 형식으로 변환)
+                  const legacyConditions = stageStrategy.stages
+                    .filter(s => s.enabled)
+                    .flatMap(s => s.indicators.map(ind => ({
+                      id: ind.id,
+                      type: 'buy',
+                      indicator: ind.indicatorId,
+                      operator: ind.operator as any,
+                      value: ind.value,
+                      combineWith: ind.combineWith,
+                      bollingerLine: ind.bollingerLine,
+                      macdLine: ind.macdLine,
+                      stochLine: ind.stochLine
+                    })))
+
+                  // 표준 형식으로 변환
+                  const standardConditions = legacyConditions.map(cond => {
+                    const converted = convertConditionToStandard(cond)
+                    return {
+                      ...converted,
+                      combineWith: cond.combineWith
+                    }
+                  })
+
                   setStrategy({
                     ...strategy,
-                    buyConditions: stageStrategy.stages
-                      .filter(s => s.enabled)
-                      .flatMap(s => s.indicators.map(ind => ({
-                        id: ind.id,
-                        type: 'buy',
-                        indicator: ind.indicatorId,
-                        operator: ind.operator as any,
-                        value: ind.value,
-                        combineWith: ind.combineWith,
-                        bollingerLine: ind.bollingerLine  // 볼린저 밴드 라인 추가
-                      })))
+                    buyConditions: standardConditions
                   })
                 }}
               />
@@ -1368,20 +1405,33 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                 }}
                 onStrategyChange={(stageStrategy) => {
                   setSellStageStrategy(stageStrategy)
-                  // 기존 strategy 객체에도 반영
+                  // 기존 strategy 객체에도 반영 (표준 형식으로 변환)
+                  const legacyConditions = stageStrategy.stages
+                    .filter(s => s.enabled)
+                    .flatMap(s => s.indicators.map(ind => ({
+                      id: ind.id,
+                      type: 'sell',
+                      indicator: ind.indicatorId,
+                      operator: ind.operator as any,
+                      value: ind.value,
+                      combineWith: ind.combineWith,
+                      bollingerLine: ind.bollingerLine,
+                      macdLine: ind.macdLine,
+                      stochLine: ind.stochLine
+                    })))
+
+                  // 표준 형식으로 변환
+                  const standardConditions = legacyConditions.map(cond => {
+                    const converted = convertConditionToStandard(cond)
+                    return {
+                      ...converted,
+                      combineWith: cond.combineWith
+                    }
+                  })
+
                   setStrategy({
                     ...strategy,
-                    sellConditions: stageStrategy.stages
-                      .filter(s => s.enabled)
-                      .flatMap(s => s.indicators.map(ind => ({
-                        id: ind.id,
-                        type: 'sell',
-                        indicator: ind.indicatorId,
-                        operator: ind.operator as any,
-                        value: ind.value,
-                        combineWith: ind.combineWith,
-                        bollingerLine: ind.bollingerLine  // 볼린저 밴드 라인 추가
-                      })))
+                    sellConditions: standardConditions
                   })
                 }}
               />

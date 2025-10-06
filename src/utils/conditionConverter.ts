@@ -115,6 +115,40 @@ export const convertConditionToStandard = (
     return { left: 'ichimoku_tenkan', operator: 'crossunder', right: 'ichimoku_kijun' }
   }
 
+  // 가격 vs 일목균형표 선 비교 연산자들
+  if (oldCondition.operator === 'price_above_tenkan') {
+    return { left: 'close', operator: '>', right: 'ichimoku_tenkan' }
+  } else if (oldCondition.operator === 'price_below_tenkan') {
+    return { left: 'close', operator: '<', right: 'ichimoku_tenkan' }
+  } else if (oldCondition.operator === 'price_above_kijun') {
+    return { left: 'close', operator: '>', right: 'ichimoku_kijun' }
+  } else if (oldCondition.operator === 'price_below_kijun') {
+    return { left: 'close', operator: '<', right: 'ichimoku_kijun' }
+  } else if (oldCondition.operator === 'price_above_senkou_a') {
+    return { left: 'close', operator: '>', right: 'ichimoku_senkou_a' }
+  } else if (oldCondition.operator === 'price_below_senkou_a') {
+    return { left: 'close', operator: '<', right: 'ichimoku_senkou_a' }
+  } else if (oldCondition.operator === 'price_above_senkou_b') {
+    return { left: 'close', operator: '>', right: 'ichimoku_senkou_b' }
+  } else if (oldCondition.operator === 'price_below_senkou_b') {
+    return { left: 'close', operator: '<', right: 'ichimoku_senkou_b' }
+  }
+
+  // 구름대(Cloud) 관련 연산자들
+  if (oldCondition.operator === 'price_above_cloud') {
+    // 가격 > 구름대 → close > max(senkou_a, senkou_b)
+    return { left: 'close', operator: '>', right: 'ichimoku_cloud_top' }
+  } else if (oldCondition.operator === 'price_below_cloud') {
+    // 가격 < 구름대 → close < min(senkou_a, senkou_b)
+    return { left: 'close', operator: '<', right: 'ichimoku_cloud_bottom' }
+  } else if (oldCondition.operator === 'cloud_green') {
+    // 양운 → senkou_a > senkou_b
+    return { left: 'ichimoku_senkou_a', operator: '>', right: 'ichimoku_senkou_b' }
+  } else if (oldCondition.operator === 'cloud_red') {
+    // 음운 → senkou_a < senkou_b
+    return { left: 'ichimoku_senkou_a', operator: '<', right: 'ichimoku_senkou_b' }
+  }
+
   // MACD 커스텀 연산자 특수 처리
   const isMacdCondition = oldCondition.indicator === 'macd' ||
                           oldCondition.left === 'macd' ||
