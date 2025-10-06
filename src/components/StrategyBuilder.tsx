@@ -1377,16 +1377,15 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                   const standardConditions = legacyConditions.map(cond => {
                     const converted = convertConditionToStandard(cond)
                     return {
+                      ...converted,
                       id: cond.id,
                       type: cond.type,
                       indicator: cond.indicator,
-                      operator: converted.operator as any,
                       value: cond.value,
                       combineWith: cond.combineWith,
                       bollingerLine: cond.bollingerLine,
                       macdLine: cond.macdLine,
-                      stochLine: cond.stochLine,
-                      ...converted
+                      stochLine: cond.stochLine
                     } as Condition
                   })
 
@@ -1432,16 +1431,15 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                   const standardConditions = legacyConditions.map(cond => {
                     const converted = convertConditionToStandard(cond)
                     return {
+                      ...converted,
                       id: cond.id,
                       type: cond.type,
                       indicator: cond.indicator,
-                      operator: converted.operator as any,
                       value: cond.value,
                       combineWith: cond.combineWith,
                       bollingerLine: cond.bollingerLine,
                       macdLine: cond.macdLine,
-                      stochLine: cond.stochLine,
-                      ...converted
+                      stochLine: cond.stochLine
                     } as Condition
                   })
 
