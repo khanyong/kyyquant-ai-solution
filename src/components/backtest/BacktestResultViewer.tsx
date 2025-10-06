@@ -37,7 +37,7 @@ import {
   ArrowUpward,
   ArrowDownward,
 } from '@mui/icons-material';
-import { Line } from 'react-chartjs-2';
+import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -48,7 +48,10 @@ import {
   Tooltip as ChartTooltip,
   Legend,
   Filler,
+  TimeScale,
+  TimeSeriesScale,
 } from 'chart.js';
+import 'chartjs-adapter-date-fns';
 
 // Chart.js 등록
 ChartJS.register(
@@ -59,7 +62,9 @@ ChartJS.register(
   Title,
   ChartTooltip,
   Legend,
-  Filler
+  Filler,
+  TimeScale,
+  TimeSeriesScale
 );
 
 interface BacktestResult {
@@ -190,37 +195,122 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
     setPage(0);
   };
 
-  // 수익률 차트 데이터 생성
+  // 거래 중심 수익률 차트 데이터 생성
   const getChartData = () => {
-    if (!result?.daily_returns || !Array.isArray(result.daily_returns) || result.daily_returns.length === 0) {
-      console.log('No daily_returns data available for chart', {
-        exists: !!result?.daily_returns,
-        isArray: Array.isArray(result?.daily_returns),
-        type: typeof result?.daily_returns,
-        value: result?.daily_returns
-      });
+    if (!result?.trades || !Array.isArray(result.trades) || result.trades.length === 0) {
+      console.log('No trades data available for chart');
       return null;
     }
 
-    console.log('Creating chart data with', result.daily_returns.length, 'data points');
+    // 거래를 날짜순으로 정렬
+    const sortedTrades = [...result.trades].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // 초기 자본금으로 시작
+    let cumulativeCapital = result.initial_capital;
+    const tradePoints: any[] = [];
+    const buyPoints: any[] = [];
+    const sellProfitPoints: any[] = [];
+    const sellLossPoints: any[] = [];
+
+    // 시작점 추가
+    tradePoints.push({
+      x: result.start_date,
+      y: 0,
+      label: '시작',
+      capital: cumulativeCapital
+    });
+
+    sortedTrades.forEach((trade, index) => {
+      const isBuy = trade.action === 'buy';
+      const isSell = trade.action === 'sell';
+
+      if (isSell) {
+        // 매도 시 수익/손실 반영
+        const profit = trade.profit_loss || trade.profit || 0;
+        cumulativeCapital += profit;
+      }
+
+      const cumulativeReturn = ((cumulativeCapital - result.initial_capital) / result.initial_capital) * 100;
+
+      const point = {
+        x: trade.date,
+        y: cumulativeReturn,
+        trade: trade,
+        capital: cumulativeCapital
+      };
+
+      tradePoints.push(point);
+
+      // 매수/매도 포인트 분리
+      if (isBuy) {
+        buyPoints.push(point);
+      } else if (isSell) {
+        const profitRate = trade.profit_rate || trade.profit_pct || 0;
+        if (profitRate >= 0) {
+          sellProfitPoints.push(point);
+        } else {
+          sellLossPoints.push(point);
+        }
+      }
+    });
+
+    // 종료점 추가
+    tradePoints.push({
+      x: result.end_date,
+      y: result.total_return || 0,
+      label: '종료',
+      capital: result.final_capital
+    });
+
+    console.log('Creating trade-based chart with', sortedTrades.length, 'trades');
+
     return {
-      labels: result.daily_returns.map(d => d.date || ''),
       datasets: [
         {
-          label: '누적 수익률 (%)',
-          data: result.daily_returns.map(d => d.cumulative_return || 0),
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          tension: 0.1,
+          type: 'line' as const,
+          label: '포트폴리오 수익률',
+          data: tradePoints,
+          borderColor: 'rgb(100, 149, 237)',
+          backgroundColor: 'rgba(100, 149, 237, 0.1)',
+          borderWidth: 2,
+          tension: 0.3,
           fill: true,
+          pointRadius: 0,
+          pointHoverRadius: 0,
         },
         {
-          label: '일일 수익률 (%)',
-          data: result.daily_returns.map(d => d.daily_return || 0),
-          borderColor: 'rgb(255, 99, 132)',
-          backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          tension: 0.1,
-          fill: false,
+          type: 'scatter' as const,
+          label: '매수',
+          data: buyPoints,
+          backgroundColor: 'rgb(59, 130, 246)',
+          borderColor: 'rgb(37, 99, 235)',
+          borderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+        },
+        {
+          type: 'scatter' as const,
+          label: '매도 (수익)',
+          data: sellProfitPoints,
+          backgroundColor: 'rgb(34, 197, 94)',
+          borderColor: 'rgb(22, 163, 74)',
+          borderWidth: 2,
+          pointRadius: 7,
+          pointHoverRadius: 9,
+          pointStyle: 'triangle',
+        },
+        {
+          type: 'scatter' as const,
+          label: '매도 (손실)',
+          data: sellLossPoints,
+          backgroundColor: 'rgb(239, 68, 68)',
+          borderColor: 'rgb(220, 38, 38)',
+          borderWidth: 2,
+          pointRadius: 7,
+          pointHoverRadius: 9,
+          pointStyle: 'triangle',
         },
       ],
     };
@@ -232,42 +322,102 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
     plugins: {
       legend: {
         position: 'top' as const,
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+        }
       },
       title: {
         display: true,
-        text: '수익률 추이',
+        text: '거래별 수익률 추이',
+        font: {
+          size: 16,
+          weight: 'bold' as const,
+        }
       },
       tooltip: {
-        mode: 'index' as const,
-        intersect: false,
+        enabled: true,
+        callbacks: {
+          title: function(context: any) {
+            const dataPoint = context[0]?.raw;
+            if (dataPoint?.label) {
+              return dataPoint.label;
+            }
+            return dataPoint?.x || '';
+          },
+          label: function(context: any) {
+            const dataPoint = context.raw;
+            const labels = [];
+
+            if (dataPoint?.trade) {
+              const trade = dataPoint.trade;
+              labels.push(`${trade.stock_name || trade.stock_code || ''}`);
+              labels.push(`${trade.action === 'buy' ? '매수' : '매도'}: ${(trade.price || 0).toLocaleString()}원`);
+              labels.push(`수량: ${(trade.quantity || trade.shares || 0).toLocaleString()}주`);
+
+              if (trade.action === 'sell') {
+                const profitRate = trade.profit_rate || trade.profit_pct || 0;
+                const profit = trade.profit_loss || trade.profit || 0;
+                labels.push(`수익: ${profit >= 0 ? '+' : ''}${profit.toLocaleString()}원 (${profitRate >= 0 ? '+' : ''}${profitRate.toFixed(2)}%)`);
+                if (trade.reason) {
+                  labels.push(`사유: ${trade.reason}`);
+                }
+              }
+            }
+
+            labels.push(`누적 수익률: ${(dataPoint?.y || 0).toFixed(2)}%`);
+            labels.push(`포트폴리오: ${(dataPoint?.capital || 0).toLocaleString()}원`);
+
+            return labels;
+          }
+        }
       },
     },
     scales: {
       x: {
-        display: true,
+        type: 'time' as const,
+        time: {
+          unit: 'day' as const,
+          displayFormats: {
+            day: 'MM/dd'
+          },
+          tooltipFormat: 'yyyy-MM-dd'
+        },
         title: {
           display: true,
-          text: '날짜'
+          text: '거래 날짜'
+        },
+        grid: {
+          display: true,
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 15,
         }
       },
       y: {
         display: true,
-        beginAtZero: true,
         title: {
           display: true,
-          text: '수익률 (%)'
+          text: '누적 수익률 (%)'
         },
         ticks: {
           callback: function(value: any) {
-            return value + '%';
+            return value.toFixed(1) + '%';
           },
         },
+        grid: {
+          display: true,
+          color: 'rgba(255, 255, 255, 0.1)',
+        }
       },
     },
     interaction: {
       mode: 'nearest' as const,
-      axis: 'x' as const,
-      intersect: false
+      intersect: true
     }
   };
 
@@ -403,8 +553,8 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
             }
             
             return (
-              <Box sx={{ height: 400, position: 'relative' }}>
-                <Line data={chartData} options={chartOptions} />
+              <Box sx={{ height: 500, position: 'relative' }}>
+                <Chart type='line' data={chartData} options={chartOptions} />
               </Box>
             );
           })()}

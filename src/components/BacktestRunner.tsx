@@ -946,8 +946,21 @@ const BacktestRunner: React.FC = () => {
             signal_details: trade.signal_details || {},
             trade_date: trade.date || trade.trade_date || ''
           })),
-          // daily_returns는 개별 종목 결과에서 필요시 집계
-          daily_returns: [],
+          // daily_returns 변환 (백엔드의 daily_values를 사용)
+          daily_returns: (result.daily_values || backtestData.daily_values || []).map((dv: any, index: number) => {
+            const portfolioValue = dv.total_value || dv.portfolio_value || config.initialCapital;
+            const dailyReturn = index === 0 ? 0 :
+              ((portfolioValue - (result.daily_values?.[index - 1]?.total_value || config.initialCapital)) /
+               (result.daily_values?.[index - 1]?.total_value || config.initialCapital) * 100);
+            const cumulativeReturn = ((portfolioValue - config.initialCapital) / config.initialCapital * 100);
+
+            return {
+              date: dv.date,
+              portfolio_value: portfolioValue,
+              daily_return: dailyReturn,
+              cumulative_return: cumulativeReturn
+            };
+          }),
           strategy_config: strategies.find(s => s.id === config.strategyId)?.parameters || {},
           investment_config: currentFilters || {},
           filtering_config: filteringMode || {},
