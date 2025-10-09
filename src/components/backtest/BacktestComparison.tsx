@@ -305,6 +305,8 @@ const BacktestComparison: React.FC = () => {
             winning_trades: item.winning_trades || item.profitable_trades || 0,
             losing_trades: item.losing_trades || 0,
             sharpe_ratio: Number(item.sharpe_ratio) || 0,
+            sortino_ratio: Number(item.sortino_ratio) || 0,
+            treynor_ratio: Number(item.treynor_ratio) || 0,
             volatility: item.results_data?.volatility || 0,
             trades: trades,  // 파싱된 배열 사용
             daily_returns: dailyReturns,  // 파싱된 배열 사용
@@ -325,6 +327,8 @@ const BacktestComparison: React.FC = () => {
             max_drawdown: Number(item.max_drawdown) || 0,
             win_rate: Number(item.win_rate) || 0,
             sharpe_ratio: Number(item.sharpe_ratio) || 0,
+            sortino_ratio: Number(item.sortino_ratio) || 0,
+            treynor_ratio: Number(item.treynor_ratio) || 0,
             total_trades: item.total_trades || 0,
             profitable_trades: item.profitable_trades || 0,
             winning_trades: item.winning_trades || item.profitable_trades || 0,

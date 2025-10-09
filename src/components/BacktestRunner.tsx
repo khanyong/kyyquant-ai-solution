@@ -1082,6 +1082,8 @@ const BacktestRunner: React.FC = () => {
         total_return_rate: backtestResults.total_return_rate || backtestResults.total_return || 0,
         max_drawdown: Math.abs(backtestResults.max_drawdown || 0),
         sharpe_ratio: backtestResults.sharpe_ratio || null,
+        sortino_ratio: backtestResults.sortino_ratio || null,
+        treynor_ratio: backtestResults.treynor_ratio || null,
         win_rate: backtestResults.win_rate || null,
         total_trades: backtestResults.total_trades || 0,
         profitable_trades: backtestResults.winning_trades || 0, // 필수 필드
