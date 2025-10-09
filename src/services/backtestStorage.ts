@@ -14,6 +14,8 @@ export interface BacktestResultData {
   total_return_rate: number  // 수익률 (%, percentage)
   max_drawdown: number
   sharpe_ratio?: number
+  sortino_ratio?: number
+  treynor_ratio?: number
   win_rate?: number
   total_trades: number
   profitable_trades?: number

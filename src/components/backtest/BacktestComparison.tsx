@@ -88,6 +88,8 @@ interface BacktestRecord {
   max_drawdown: number;
   win_rate?: number;
   sharpe_ratio?: number;
+  sortino_ratio?: number;
+  treynor_ratio?: number;
   total_trades: number;
   profitable_trades: number;
   winning_trades?: number;
@@ -616,6 +618,8 @@ const BacktestComparison: React.FC = () => {
                 <TableCell align="right">승률</TableCell>
                 <TableCell align="right">최대 낙폭</TableCell>
                 <TableCell align="right">샤프 비율</TableCell>
+                <TableCell align="right">소르티노 비율</TableCell>
+                <TableCell align="right">트레이너 비율</TableCell>
                 <TableCell align="right">거래 횟수</TableCell>
                 <TableCell align="center">액션</TableCell>
               </TableRow>
@@ -685,6 +689,12 @@ const BacktestComparison: React.FC = () => {
                     </TableCell>
                     <TableCell align="right">
                       {(record.sharpe_ratio || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {(record.sortino_ratio || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {(record.treynor_ratio || 0).toFixed(2)}
                     </TableCell>
                     <TableCell align="right">
                       {record.total_trades}
