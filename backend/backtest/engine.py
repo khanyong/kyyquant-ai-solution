@@ -516,11 +516,66 @@ class BacktestEngine:
             last_price = price_data[code]['close'].iloc[-1] if code in price_data else pos['avg_price']
             final_value += pos['quantity'] * last_price
 
+        # 위험조정 성과지표 계산 (샤프, 소르티노, 트레이너)
+        sharpe_ratio = None
+        sortino_ratio = None
+        treynor_ratio = None
+
+        if daily_values and len(daily_values) > 1:
+            # 일별 수익률 계산
+            daily_returns = []
+            for i in range(1, len(daily_values)):
+                prev_value = daily_values[i-1]['total_value']
+                curr_value = daily_values[i]['total_value']
+                if prev_value > 0:
+                    daily_return = (curr_value - prev_value) / prev_value
+                    daily_returns.append(daily_return)
+
+            if daily_returns and len(daily_returns) > 0:
+                avg_return = np.mean(daily_returns)
+                std_return = np.std(daily_returns, ddof=1)  # 표본 표준편차
+
+                # 무위험 이자율 (연 3% 가정, 일별로 환산)
+                risk_free_rate_daily = 0.03 / 252
+                excess_return = avg_return - risk_free_rate_daily
+
+                # 1. 샤프 비율: (평균 수익률 - 무위험 이자율) / 전체 변동성
+                if std_return > 0:
+                    sharpe_ratio = (excess_return / std_return) * np.sqrt(252)  # 연율화
+                else:
+                    sharpe_ratio = 0
+
+                # 2. 소르티노 비율: (평균 수익률 - 무위험 이자율) / 하방 변동성
+                # 하방 변동성: 손실(음수 수익률)만 고려
+                downside_returns = [r for r in daily_returns if r < risk_free_rate_daily]
+                if downside_returns:
+                    downside_std = np.std(downside_returns, ddof=1)
+                    if downside_std > 0:
+                        sortino_ratio = (excess_return / downside_std) * np.sqrt(252)  # 연율화
+                    else:
+                        sortino_ratio = sharpe_ratio  # 하방 변동성이 0이면 샤프 비율과 동일
+                else:
+                    # 손실이 없으면 무한대로 간주하지만, 실용적으로 높은 값 설정
+                    sortino_ratio = sharpe_ratio * 2 if sharpe_ratio else 0
+
+                # 3. 트레이너 비율: (평균 수익률 - 무위험 이자율) / 베타
+                # 베타 계산을 위해서는 시장 수익률이 필요 (KOSPI 지수 등)
+                # 현재는 시장 데이터가 없으므로 베타=1로 가정 (시장과 동일한 변동성)
+                # TODO: 향후 KOSPI 지수 데이터를 추가하여 실제 베타 계산
+                assumed_beta = 1.0  # 시장 베타 (향후 실제 계산 필요)
+                if assumed_beta != 0:
+                    treynor_ratio = (excess_return * 252) / assumed_beta  # 연율화
+                else:
+                    treynor_ratio = 0
+
         results = {
             'initial_capital': initial_capital,
             'final_capital': final_value,
             'total_return': final_value - initial_capital,
             'total_return_rate': ((final_value - initial_capital) / initial_capital * 100) if initial_capital > 0 else 0,
+            'sharpe_ratio': sharpe_ratio,
+            'sortino_ratio': sortino_ratio,
+            'treynor_ratio': treynor_ratio,
             'trades': trades,
             'positions': positions,
             'daily_values': daily_values
@@ -528,6 +583,8 @@ class BacktestEngine:
 
         print(f"[Engine] Backtest completed successfully")
         print(f"[Engine] Results: Total trades: {len(trades)}, Final capital: {final_value:,.0f}, Return: {results['total_return_rate']:.2f}%")
+        if sharpe_ratio is not None:
+            print(f"[Engine] Risk Metrics: Sharpe={sharpe_ratio:.2f}, Sortino={sortino_ratio:.2f}, Treynor={treynor_ratio:.2f}")
 
         return results
 
@@ -1318,6 +1375,9 @@ class BacktestEngine:
             'losing_trades': len(losing_trades),
             'max_drawdown': max_drawdown,
             'trades': trades,
+            'sharpe_ratio': results.get('sharpe_ratio'),
+            'sortino_ratio': results.get('sortino_ratio'),
+            'treynor_ratio': results.get('treynor_ratio'),
             'daily_values': daily_values,
             'status': 'completed'  # 완료 상태 추가
         }

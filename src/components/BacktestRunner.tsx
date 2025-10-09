@@ -929,6 +929,8 @@ const BacktestRunner: React.FC = () => {
           buy_count: buyTrades.length,
           sell_count: sellTrades.length,
           sharpe_ratio: backtestData.sharpe_ratio || 0,
+          sortino_ratio: backtestData.sortino_ratio || 0,
+          treynor_ratio: backtestData.treynor_ratio || 0,
           volatility: 0, // 변동성은 별도 계산 필요
           // trades 배열 포맷팅
           trades: allTrades.map((trade: any) => ({
