@@ -159,6 +159,9 @@ async def run_backtest(request: BacktestRequest):
                 'total_return_amount': result.get('total_return', 0),  # 절대값(원)
                 'average_win_rate': result.get('win_rate', 0),
                 'max_drawdown': result.get('max_drawdown', 0),
+                'sharpe_ratio': result.get('sharpe_ratio'),  # 샤프 비율
+                'sortino_ratio': result.get('sortino_ratio'),  # 소르티노 비율
+                'treynor_ratio': result.get('treynor_ratio'),  # 트레이너 비율
                 'total_trades': result.get('total_trades', 0),
                 'winning_trades': result.get('winning_trades', 0),
                 'losing_trades': result.get('losing_trades', 0),
@@ -182,6 +185,9 @@ async def run_backtest(request: BacktestRequest):
             'total_return_rate': result.get('total_return_rate'),  # 수익률(%)
             'win_rate': result.get('win_rate'),
             'max_drawdown': result.get('max_drawdown'),
+            'sharpe_ratio': result.get('sharpe_ratio'),
+            'sortino_ratio': result.get('sortino_ratio'),
+            'treynor_ratio': result.get('treynor_ratio'),
             'total_trades': result.get('total_trades'),
             'winning_trades': result.get('winning_trades'),
             'losing_trades': result.get('losing_trades'),

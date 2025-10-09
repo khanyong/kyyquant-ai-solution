@@ -82,7 +82,9 @@ CREATE TABLE IF NOT EXISTS backtest_results (
     final_capital DECIMAL(15, 2) NOT NULL,
     total_return_rate DECIMAL(10, 4) NOT NULL, -- 총 수익률 (%, percentage)
     max_drawdown DECIMAL(10, 4) NOT NULL,
-    sharpe_ratio DECIMAL(10, 4),
+    sharpe_ratio DECIMAL(10, 4), -- 샤프 비율
+    sortino_ratio DECIMAL(10, 4), -- 소르티노 비율
+    treynor_ratio DECIMAL(10, 4), -- 트레이너 비율
     win_rate DECIMAL(5, 2),
     total_trades INTEGER NOT NULL,
     profitable_trades INTEGER NOT NULL,

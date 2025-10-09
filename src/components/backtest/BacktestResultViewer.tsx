@@ -85,7 +85,9 @@ interface BacktestResult {
   losing_trades: number;
   buy_count?: number;  // 매수 횟수
   sell_count?: number;  // 매도 횟수
-  sharpe_ratio: number;
+  sharpe_ratio?: number;  // 샤프 비율
+  sortino_ratio?: number;  // 소르티노 비율
+  treynor_ratio?: number;  // 트레이너 비율
   volatility: number;
   trades: Trade[];
   daily_returns: DailyReturn[];
@@ -500,10 +502,46 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                   샤프 비율
                 </Typography>
                 <Typography variant="h4">
-                  {result.sharpe_ratio.toFixed(2)}
+                  {result.sharpe_ratio?.toFixed(2) || 'N/A'}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  총 거래: {result.total_trades}회
+                  위험 대비 수익
+                </Typography>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Stack spacing={1}>
+                <Typography color="textSecondary" variant="body2">
+                  소르티노 비율
+                </Typography>
+                <Typography variant="h4">
+                  {result.sortino_ratio?.toFixed(2) || 'N/A'}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  하방 위험 대비 수익
+                </Typography>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardContent>
+              <Stack spacing={1}>
+                <Typography color="textSecondary" variant="body2">
+                  트레이너 비율
+                </Typography>
+                <Typography variant="h4">
+                  {result.treynor_ratio?.toFixed(2) || 'N/A'}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  시장 위험 대비 수익
                 </Typography>
               </Stack>
             </CardContent>

@@ -102,6 +102,8 @@ export interface BacktestResult {
   total_return_rate: number // 총 수익률 (%, percentage)
   max_drawdown: number // 최대 낙폭
   sharpe_ratio?: number // 샤프 비율
+  sortino_ratio?: number // 소르티노 비율
+  treynor_ratio?: number // 트레이너 비율
   win_rate?: number // 승률
   total_trades: number // 총 거래 횟수
   profitable_trades: number // 수익 거래 횟수
