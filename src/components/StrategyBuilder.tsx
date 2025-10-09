@@ -92,8 +92,8 @@ interface Indicator {
 interface Condition {
   id: string
   type: 'buy' | 'sell'
-  indicator: string
-  operator: '>' | '<' | '=' | 'cross_above' | 'cross_below' | 
+  indicator?: string
+  operator: '>' | '<' | '=' | 'cross_above' | 'cross_below' |
     'cloud_above' | 'cloud_below' | 'cloud_break_up' | 'cloud_break_down' |
     'tenkan_kijun_cross_up' | 'tenkan_kijun_cross_down' | 'chikou_above' | 'chikou_below'
   value: number | string
@@ -1364,7 +1364,6 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     .flatMap(s => s.indicators.map(ind => ({
                       id: ind.id,
                       type: 'buy' as const,
-                      indicator: ind.indicatorId,
                       operator: ind.operator as any,
                       value: ind.value ?? '',
                       combineWith: ind.combineWith,
@@ -1380,7 +1379,6 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                       ...converted,
                       id: cond.id,
                       type: cond.type,
-                      indicator: cond.indicator,
                       value: cond.value,
                       combineWith: cond.combineWith,
                       bollingerLine: cond.bollingerLine,
@@ -1418,7 +1416,6 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                     .flatMap(s => s.indicators.map(ind => ({
                       id: ind.id,
                       type: 'sell' as const,
-                      indicator: ind.indicatorId,
                       operator: ind.operator as any,
                       value: ind.value ?? '',
                       combineWith: ind.combineWith,
@@ -1434,7 +1431,6 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                       ...converted,
                       id: cond.id,
                       type: cond.type,
-                      indicator: cond.indicator,
                       value: cond.value,
                       combineWith: cond.combineWith,
                       bollingerLine: cond.bollingerLine,
