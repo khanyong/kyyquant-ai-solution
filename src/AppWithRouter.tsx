@@ -54,6 +54,7 @@ import { useAppDispatch, useAppSelector } from './hooks/redux'
 import { authService } from './services/auth'
 import { loginSuccess, logout } from './store/authSlice'
 import { supabase } from './lib/supabase'
+import { useAuth } from './contexts/AuthContext'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -81,6 +82,7 @@ function TabPanel(props: TabPanelProps) {
 function MainApp() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const { user: authUser, role } = useAuth()
   const { isConnected, user } = useAppSelector(state => state.auth)
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [loginOpen, setLoginOpen] = useState(false)
@@ -118,95 +120,44 @@ function MainApp() {
     }
   }, [])
 
-  // Check admin status
+  // Check admin status from AuthContext role
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single()
-        
-        setIsAdmin(profile?.is_admin || false)
-      }
-    }
-    checkAdminStatus()
-  }, [user])
+    setIsAdmin(role === 'admin')
+  }, [role])
 
   useEffect(() => {
-    // checkServerStatus().then(status => {
-    //   setServerStatus(status ? 'online' : 'offline')
-    // })
     setServerStatus('online') // Supabase is always online
+  }, [])
 
-    // if (isConnected) {
-    //   connectWebSocket()
-    // } // Removed - using Supabase Realtime
-
-    // Supabase Auth 상태 모니터링
-    const { data: authListener } = authService.onAuthStateChange(async (user) => {
-      if (user) {
-        try {
-          const { profile } = await authService.getProfile(user.id)
-          
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: profile?.name || user.email || 'User',
-              accounts: [profile?.kiwoom_account || 'DEMO'],
-            },
+  // Sync AuthContext user state with Redux
+  useEffect(() => {
+    if (authUser) {
+      // User is logged in via AuthContext
+      authService.getProfile(authUser.id).then(({ profile }) => {
+        dispatch(loginSuccess({
+          user: {
+            id: authUser.id,
+            name: profile?.name || authUser.email || 'User',
             accounts: [profile?.kiwoom_account || 'DEMO'],
-          }))
-        } catch (error) {
-          console.warn('Profile fetch error:', error)
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: user.email || 'User',
-              accounts: ['DEMO'],
-            },
+          },
+          accounts: [profile?.kiwoom_account || 'DEMO'],
+        }))
+      }).catch(error => {
+        console.warn('Profile fetch error:', error)
+        dispatch(loginSuccess({
+          user: {
+            id: authUser.id,
+            name: authUser.email || 'User',
             accounts: ['DEMO'],
-          }))
-        }
-      } else {
-        dispatch(logout())
-      }
-    })
-
-    // 초기 세션 체크
-    authService.getCurrentUser().then(async (user) => {
-      if (user) {
-        try {
-          const { profile } = await authService.getProfile(user.id)
-          
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: profile?.name || user.email || 'User',
-              accounts: [profile?.kiwoom_account || 'DEMO'],
-            },
-            accounts: [profile?.kiwoom_account || 'DEMO'],
-          }))
-        } catch (error) {
-          console.warn('Initial profile fetch error:', error)
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: user.email || 'User',
-              accounts: ['DEMO'],
-            },
-            accounts: ['DEMO'],
-          }))
-        }
-      }
-    })
-
-    return () => {
-      authListener?.subscription.unsubscribe()
+          },
+          accounts: ['DEMO'],
+        }))
+      })
+    } else {
+      // User is logged out
+      dispatch(logout())
     }
-  }, [isConnected, dispatch])
+  }, [authUser, dispatch])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     if (isAdmin && newValue === 7) {
