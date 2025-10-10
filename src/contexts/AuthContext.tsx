@@ -64,30 +64,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    let mounted = true
+
     // 현재 세션 확인
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        const userRole = await fetchUserRole(session.user.id)
-        setRole(userRole)
-      } else {
-        setRole(null)
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+
+        if (error) {
+          console.error('Session error:', error)
+        }
+
+        if (mounted) {
+          setUser(session?.user ?? null)
+          if (session?.user) {
+            const userRole = await fetchUserRole(session.user.id)
+            setRole(userRole)
+          } else {
+            setRole(null)
+          }
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+        if (mounted) {
+          setUser(null)
+          setRole(null)
+          setLoading(false)
+        }
       }
-      setLoading(false)
-    })
+    }
+
+    initializeAuth()
 
     // 인증 상태 변경 구독
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        const userRole = await fetchUserRole(session.user.id)
-        setRole(userRole)
-      } else {
-        setRole(null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email)
+
+      if (mounted) {
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          const userRole = await fetchUserRole(session.user.id)
+          setRole(userRole)
+        } else {
+          setRole(null)
+        }
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {

@@ -70,44 +70,34 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
   }
 
   // 이메일 로그인
-  // 이메일 로그인
   const handleEmailLogin = async () => {
     setLoading(true)
     setError('')
 
     try {
-      const { user, error } = await authService.signInWithEmail(email, password)
+      // AuthContext의 signIn 사용 (authService가 아님)
+      await authService.signInWithEmail(email, password)
+        .then(({ user, error }) => {
+          if (error) throw error
+          if (user) {
+            // AuthContext가 자동으로 상태 업데이트하므로 Redux만 동기화
+            authService.getProfile(user.id).then(({ profile }) => {
+              dispatch(loginSuccess({
+                user: {
+                  id: user.id,
+                  name: profile?.name || user.email || 'User',
+                  accounts: [profile?.kiwoom_account || 'DEMO'],
+                },
+                accounts: [profile?.kiwoom_account || 'DEMO'],
+              }))
+            }).catch(err => {
+              console.warn('Profile fetch error:', err)
+            })
 
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-        return
-      }
-
-      if (user) {
-        // 프로필 정보 가져오기
-        const { profile, error: profileError } = await authService.getProfile(user.id)
-
-        if (profileError) {
-          console.warn('Profile fetch error:', profileError)
-        }
-
-        dispatch(loginSuccess({
-          user: {
-            id: user.id,
-            name: profile?.name || user.email || 'User',
-            accounts: [profile?.kiwoom_account || 'DEMO'],
-          },
-          accounts: [profile?.kiwoom_account || 'DEMO'],
-        }))
-
-        // 로그인 성공 시 다이얼로그 닫기
-        setLoading(false)
-        onClose()
-      } else {
-        setError('로그인에 실패했습니다.')
-        setLoading(false)
-      }
+            setLoading(false)
+            onClose()
+          }
+        })
     } catch (err: any) {
       console.error('Login error:', err)
       setError('로그인 실패: ' + err.message)
