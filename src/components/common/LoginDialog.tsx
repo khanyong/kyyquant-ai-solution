@@ -182,12 +182,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Typography variant="h5" fontWeight="bold">
-          KyyQuant AI Solution
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          AI 기반 알고리즘 트레이딩 플랫폼
-        </Typography>
+        <Box>
+          <Typography variant="h5" fontWeight="bold">
+            KyyQuant AI Solution
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            AI 기반 알고리즘 트레이딩 플랫폼
+          </Typography>
+        </Box>
       </DialogTitle>
       
       <DialogContent>
@@ -212,176 +214,190 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
         {/* 로그인 탭 */}
         <TabPanel value={tabValue} index={0}>
-          <Stack spacing={2}>
-            <TextField
-              fullWidth
-              label="이메일"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              autoComplete="email"
-            />
+          <Box
+            component="form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleEmailLogin()
+            }}
+          >
+            <Stack spacing={2}>
+              <TextField
+                fullWidth
+                label="이메일"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                autoComplete="email"
+              />
 
-            <TextField
-              fullWidth
-              label="비밀번호"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              autoComplete="current-password"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
+              <TextField
+                fullWidth
+                label="비밀번호"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="current-password"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={handleEmailLogin}
-              disabled={loading || !email || !password}
-              startIcon={loading ? <CircularProgress size={20} /> : <Email />}
-            >
-              이메일로 로그인
-            </Button>
-
-            <Divider>또는</Divider>
-
-            <Stack direction="row" spacing={2}>
               <Button
                 fullWidth
-                variant="outlined"
-                onClick={handleKakaoLogin}
-                disabled={loading}
-                startIcon={<ChatBubble />}
-                sx={{ 
-                  backgroundColor: '#FEE500',
-                  color: '#000000',
-                  '&:hover': {
-                    backgroundColor: '#FFEB3B'
-                  }
-                }}
+                variant="contained"
+                type="submit"
+                disabled={loading || !email || !password}
+                startIcon={loading ? <CircularProgress size={20} /> : <Email />}
               >
-                카카오
+                이메일로 로그인
               </Button>
-              
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={handleLinkedInLogin}
-                disabled={loading}
-                startIcon={<LinkedIn />}
-                sx={{ 
-                  backgroundColor: '#0077B5',
-                  color: '#FFFFFF',
-                  borderColor: '#0077B5',
-                  '&:hover': {
-                    backgroundColor: '#006097',
-                    borderColor: '#006097'
-                  }
-                }}
-              >
-                LinkedIn
-              </Button>
+              <Divider sx={{ mt: 1 }}>또는</Divider>
+
+              <Stack direction="row" spacing={2}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleKakaoLogin}
+                  disabled={loading}
+                  startIcon={<ChatBubble />}
+                  sx={{
+                    backgroundColor: '#FEE500',
+                    color: '#000000',
+                    '&:hover': {
+                      backgroundColor: '#FFEB3B'
+                    }
+                  }}
+                >
+                  카카오
+                </Button>
+
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleLinkedInLogin}
+                  disabled={loading}
+                  startIcon={<LinkedIn />}
+                  sx={{
+                    backgroundColor: '#0077B5',
+                    color: '#FFFFFF',
+                    borderColor: '#0077B5',
+                    '&:hover': {
+                      backgroundColor: '#006097',
+                      borderColor: '#006097'
+                    }
+                  }}
+                >
+                  LinkedIn
+                </Button>
+              </Stack>
             </Stack>
-
-          </Stack>
+          </Box>
         </TabPanel>
 
         {/* 회원가입 탭 */}
         <TabPanel value={tabValue} index={1}>
-          <Stack spacing={2}>
-            <TextField
-              fullWidth
-              label="이름"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={loading}
-              autoComplete="name"
-            />
+          <Box
+            component="form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleEmailSignUp()
+            }}
+          >
+            <Stack spacing={2}>
+              <TextField
+                fullWidth
+                label="이름"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={loading}
+                autoComplete="name"
+              />
 
-            <TextField
-              fullWidth
-              label="이메일"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              autoComplete="email"
-            />
+              <TextField
+                fullWidth
+                label="이메일"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                autoComplete="email"
+              />
 
-            <TextField
-              fullWidth
-              label="키움증권 ID"
-              value={kiwoomId}
-              onChange={(e) => setKiwoomId(e.target.value)}
-              disabled={loading}
-              helperText="키움증권 계좌 ID를 입력하세요"
-              required
-            />
+              <TextField
+                fullWidth
+                label="키움증권 ID"
+                value={kiwoomId}
+                onChange={(e) => setKiwoomId(e.target.value)}
+                disabled={loading}
+                helperText="키움증권 계좌 ID를 입력하세요"
+                required
+              />
 
-            <TextField
-              fullWidth
-              label="비밀번호"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              autoComplete="new-password"
-              helperText="최소 6자 이상"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
+              <TextField
+                fullWidth
+                label="비밀번호"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="new-password"
+                helperText="최소 6자 이상"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-            <TextField
-              fullWidth
-              label="비밀번호 확인"
-              type={showPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={loading}
-              autoComplete="new-password"
-              error={confirmPassword !== '' && password !== confirmPassword}
-              helperText={confirmPassword !== '' && password !== confirmPassword ? '비밀번호가 일치하지 않습니다' : ''}
-            />
+              <TextField
+                fullWidth
+                label="비밀번호 확인"
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="new-password"
+                error={confirmPassword !== '' && password !== confirmPassword}
+                helperText={confirmPassword !== '' && password !== confirmPassword ? '비밀번호가 일치하지 않습니다' : ''}
+              />
 
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={handleEmailSignUp}
-              disabled={loading || !email || !password || !confirmPassword}
-              startIcon={loading ? <CircularProgress size={20} /> : <PersonAdd />}
-            >
-              회원가입
-            </Button>
-
-            <Typography variant="body2" color="text.secondary" align="center">
-              이미 계정이 있으신가요?{' '}
-              <Button size="small" onClick={() => setTabValue(0)}>
-                로그인
+              <Button
+                fullWidth
+                variant="contained"
+                type="submit"
+                disabled={loading || !email || !password || !confirmPassword}
+                startIcon={loading ? <CircularProgress size={20} /> : <PersonAdd />}
+              >
+                회원가입
               </Button>
-            </Typography>
-          </Stack>
+
+              <Typography variant="body2" color="text.secondary" align="center">
+                이미 계정이 있으신가요?{' '}
+                <Button size="small" onClick={() => setTabValue(0)}>
+                  로그인
+                </Button>
+              </Typography>
+            </Stack>
+          </Box>
         </TabPanel>
       </DialogContent>
 

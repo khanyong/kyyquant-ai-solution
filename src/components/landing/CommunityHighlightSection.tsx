@@ -232,15 +232,17 @@ const CommunityHighlightSection: React.FC<CommunityHighlightSectionProps> = ({ o
                       )}
                     </Box>
                     <Box sx={{ flexGrow: 1 }}>
-                      <Typography
-                        variant="h4"
-                        sx={{
-                          fontWeight: 900,
-                          color: stat.color,
-                          mb: 0.5
-                        }}
-                      >
-                        {stat.value.toLocaleString()}
+                      <Box sx={{ mb: 0.5 }}>
+                        <Typography
+                          component="span"
+                          variant="h4"
+                          sx={{
+                            fontWeight: 900,
+                            color: stat.color
+                          }}
+                        >
+                          {stat.value.toLocaleString()}
+                        </Typography>
                         <Typography
                           component="span"
                           variant="h6"
@@ -248,7 +250,7 @@ const CommunityHighlightSection: React.FC<CommunityHighlightSectionProps> = ({ o
                         >
                           {stat.suffix}
                         </Typography>
-                      </Typography>
+                      </Box>
                       <Typography
                         variant="body2"
                         sx={{ color: alpha('#FFFFFF', 0.7) }}
