@@ -4,6 +4,7 @@ import { Provider } from 'react-redux'
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
 import App from './AppWithRouter'
 import { store } from './store'
+import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
 
 const darkTheme = createTheme({
@@ -28,10 +29,12 @@ const darkTheme = createTheme({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>
-      <ThemeProvider theme={darkTheme}>
-        <CssBaseline />
-        <App />
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider theme={darkTheme}>
+          <CssBaseline />
+          <App />
+        </ThemeProvider>
+      </AuthProvider>
     </Provider>
   </React.StrictMode>,
 )

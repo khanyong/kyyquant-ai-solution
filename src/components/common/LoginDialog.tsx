@@ -70,13 +70,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
   }
 
   // 이메일 로그인
+  // 이메일 로그인
   const handleEmailLogin = async () => {
     setLoading(true)
     setError('')
 
     try {
       const { user, error } = await authService.signInWithEmail(email, password)
-      
+
       if (error) {
         setError(error.message)
         setLoading(false)
@@ -85,8 +86,12 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
       if (user) {
         // 프로필 정보 가져오기
-        const { profile } = await authService.getProfile(user.id)
-        
+        const { profile, error: profileError } = await authService.getProfile(user.id)
+
+        if (profileError) {
+          console.warn('Profile fetch error:', profileError)
+        }
+
         dispatch(loginSuccess({
           user: {
             id: user.id,
@@ -95,16 +100,21 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
           },
           accounts: [profile?.kiwoom_account || 'DEMO'],
         }))
-        
+
         // 로그인 성공 시 다이얼로그 닫기
         setLoading(false)
         onClose()
+      } else {
+        setError('로그인에 실패했습니다.')
+        setLoading(false)
       }
     } catch (err: any) {
+      console.error('Login error:', err)
       setError('로그인 실패: ' + err.message)
       setLoading(false)
     }
   }
+
 
   // 이메일 회원가입
   const handleEmailSignUp = async () => {

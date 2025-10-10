@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Box,
   Card,
@@ -24,6 +25,10 @@ import {
   Tooltip,
   TablePagination,
   useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Assessment,
@@ -36,6 +41,7 @@ import {
   Refresh,
   ArrowUpward,
   ArrowDownward,
+  Lock,
 } from '@mui/icons-material';
 import { Chart } from 'react-chartjs-2';
 import {
@@ -164,6 +170,8 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
   onRefresh 
 }) => {
   const theme = useTheme();
+  const { hasRole } = useAuth();
+  const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [result, setResult] = useState<BacktestResult | null>(propResult || null);
   const [loading, setLoading] = useState(false);
@@ -610,7 +618,14 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                     <TableCell>날짜</TableCell>
                     <TableCell>종목</TableCell>
                     <TableCell align="center">구분</TableCell>
-                    <TableCell>매매 이유</TableCell>
+                    <TableCell>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <span>매매 이유</span>
+                        {!hasRole(['premium', 'admin']) && (
+                          <Lock sx={{ fontSize: 16, color: 'warning.main' }} />
+                        )}
+                      </Stack>
+                    </TableCell>
                     <TableCell align="right">수량</TableCell>
                     <TableCell align="right">단가</TableCell>
                     <TableCell align="right">금액</TableCell>
@@ -640,24 +655,35 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                         />
                       </TableCell>
                       <TableCell>
-                        <Stack spacing={0.5}>
-                          <Typography variant="caption" sx={{ maxWidth: 200, display: 'block' }}>
-                            {trade.reason || trade.signal_reason || '-'}
-                          </Typography>
-                          {trade.signal_details?.type && (
-                            <Chip
-                              label={trade.signal_details.type === 'target_profit' ? '목표달성' :
-                                     trade.signal_details.type === 'stop_loss' ? '손절' :
-                                     trade.signal_details.type === 'signal' ? '신호' :
-                                     trade.signal_details.type === 'backtest_end' ? '청산' :
-                                     trade.signal_details.type}
-                              size="small"
-                              variant="outlined"
-                              color={trade.signal_details.type === 'target_profit' ? 'success' :
-                                     trade.signal_details.type === 'stop_loss' ? 'error' : 'default'}
-                            />
-                          )}
-                        </Stack>
+                        {hasRole(['premium', 'admin']) ? (
+                          <Stack spacing={0.5}>
+                            <Typography variant="caption" sx={{ maxWidth: 200, display: 'block' }}>
+                              {trade.reason || trade.signal_reason || '-'}
+                            </Typography>
+                            {trade.signal_details?.type && (
+                              <Chip
+                                label={trade.signal_details.type === 'target_profit' ? '목표달성' :
+                                       trade.signal_details.type === 'stop_loss' ? '손절' :
+                                       trade.signal_details.type === 'signal' ? '신호' :
+                                       trade.signal_details.type === 'backtest_end' ? '청산' :
+                                       trade.signal_details.type}
+                                size="small"
+                                variant="outlined"
+                                color={trade.signal_details.type === 'target_profit' ? 'success' :
+                                       trade.signal_details.type === 'stop_loss' ? 'error' : 'default'}
+                              />
+                            )}
+                          </Stack>
+                        ) : (
+                          <Chip
+                            icon={<Lock />}
+                            label="프리미엄 전용"
+                            size="small"
+                            color="warning"
+                            onClick={() => setPremiumDialogOpen(true)}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        )}
                       </TableCell>
                       <TableCell align="right">{(trade.shares || trade.quantity || 0).toLocaleString()}</TableCell>
                       <TableCell align="right">{(trade.price || 0).toLocaleString()}원</TableCell>
@@ -952,8 +978,15 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
         )}
         <Button
           variant="contained"
-          startIcon={<Download />}
+          startIcon={hasRole(['premium', 'admin']) ? <Download /> : <Lock />}
+          color={hasRole(['premium', 'admin']) ? 'primary' : 'warning'}
           onClick={() => {
+            // Premium 권한 확인
+            if (!hasRole(['premium', 'admin'])) {
+              setPremiumDialogOpen(true);
+              return;
+            }
+            
             // CSV 다운로드 로직 (UTF-8 BOM 추가, 모든 지표 포함)
 
             // 1. 모든 거래에서 사용된 지표 목록 수집
@@ -1017,6 +1050,30 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
           결과 다운로드
         </Button>
       </Box>
+
+      {/* Premium 업그레이드 다이얼로그 */}
+      <Dialog open={premiumDialogOpen} onClose={() => setPremiumDialogOpen(false)}>
+        <DialogTitle>프리미엄 기능</DialogTitle>
+        <DialogContent>
+          <Typography>
+            백테스트 결과 다운로드는 프리미엄 회원 전용 기능입니다.
+          </Typography>
+          <Typography sx={{ mt: 2 }} variant="body2" color="text.secondary">
+            프리미엄 회원이 되면 다음과 같은 혜택을 받으실 수 있습니다:
+          </Typography>
+          <ul>
+            <li>백테스트 결과 CSV 다운로드</li>
+            <li>전략 분석 도구 사용</li>
+            <li>고급 기술 지표 활용</li>
+          </ul>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPremiumDialogOpen(false)}>닫기</Button>
+          <Button variant="contained" color="primary" onClick={() => setPremiumDialogOpen(false)}>
+            프리미엄 업그레이드
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 
-export type UserRole = 'free' | 'premium' | 'admin'
+export type UserRole = 'user' | 'trial' | 'standard' | 'premium' | 'admin'
 
 interface AuthContextType {
   user: User | null
@@ -30,10 +30,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) {
       console.error('Error fetching user role:', error)
-      return 'free'
+      return 'user'
     }
 
-    return (data?.role as UserRole) || 'free'
+    return (data?.role as UserRole) || 'user'
   }
 
   const hasRole = (requiredRole: UserRole | UserRole[]): boolean => {
@@ -47,10 +47,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return requiredRole.includes(role)
     }
 
-    // premium은 free 콘텐츠도 접근 가능
-    if (role === 'premium' && requiredRole === 'free') return true
+    // 역할 계층 구조: admin > premium > standard > trial > user
+    const roleHierarchy: Record<UserRole, number> = {
+      'user': 1,
+      'trial': 2,
+      'standard': 3,
+      'premium': 4,
+      'admin': 5
+    }
 
-    return role === requiredRole
+    const currentLevel = roleHierarchy[role] || 0
+    const requiredLevel = roleHierarchy[requiredRole as UserRole] || 0
+
+    // 현재 역할이 요구되는 역할보다 높거나 같으면 접근 가능
+    return currentLevel >= requiredLevel
   }
 
   useEffect(() => {
