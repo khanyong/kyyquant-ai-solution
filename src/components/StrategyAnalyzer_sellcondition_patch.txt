@@ -1,0 +1,94 @@
+// StrategyAnalyzer.tsx 522-533라인을 다음 코드로 교체하세요:
+
+) : (
+  <Box>
+    {/* 지표 기반 매도 조건이 없어도, 목표수익률/손절이 있으면 표시 */}
+    {(selectedStrategy?.targetProfit || selectedStrategy?.stopLoss) ? (
+      <Box>
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          지표 기반 매도 조건은 없지만, 다음 리스크 관리 설정으로 매도가 진행됩니다:
+        </Typography>
+
+        {/* 목표수익률 */}
+        {selectedStrategy?.targetProfit && (
+          <Box sx={{ mb: 2 }}>
+            {selectedStrategy.targetProfit.mode === 'simple' && selectedStrategy.targetProfit.simple?.enabled && (
+              <Box sx={{ mb: 1 }}>
+                <Chip
+                  label="목표수익률"
+                  size="small"
+                  sx={{ mr: 1, bgcolor: 'success.dark' }}
+                />
+                <Typography variant="body2" component="span">
+                  수익률이 {selectedStrategy.targetProfit.simple.value}% 도달 시 매도
+                </Typography>
+              </Box>
+            )}
+
+            {selectedStrategy.targetProfit.mode === 'staged' && selectedStrategy.targetProfit.staged?.enabled && (
+              <Box>
+                <Chip
+                  label="단계별 목표수익률"
+                  size="small"
+                  sx={{ mr: 1, bgcolor: 'success.dark' }}
+                />
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  단계별 매도:
+                </Typography>
+                {selectedStrategy.targetProfit.staged.stages?.map((stage: any, idx: number) => (
+                  <Box key={idx} sx={{ ml: 2, mb: 0.5 }}>
+                    <Typography variant="caption" display="block">
+                      • {stage.stage}단계: {stage.targetProfit}% 도달 시 {stage.exitRatio}% 매도
+                      {stage.dynamicStopLoss && ' (동적 손절 활성화)'}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {/* 손절 */}
+        {selectedStrategy?.stopLoss?.enabled && (
+          <Box sx={{ mb: 1 }}>
+            <Chip
+              label="손절"
+              size="small"
+              sx={{ mr: 1, bgcolor: 'error.dark' }}
+            />
+            <Typography variant="body2" component="span">
+              손실이 {Math.abs(selectedStrategy.stopLoss.value)}% 도달 시 매도
+            </Typography>
+            {selectedStrategy.stopLoss.breakEven?.enabled && (
+              <Typography variant="caption" display="block" sx={{ ml: 6 }}>
+                (본전 손절: {selectedStrategy.stopLoss.breakEven.threshold}% 이상 수익 시 활성화)
+              </Typography>
+            )}
+            {selectedStrategy.stopLoss.trailingStop?.enabled && (
+              <Typography variant="caption" display="block" sx={{ ml: 6 }}>
+                (트레일링 손절: 최고점 대비 {selectedStrategy.stopLoss.trailingStop.distance}% 하락 시)
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          <Typography variant="caption">
+            <strong>해석:</strong> 수익률 기반 자동 매도 전략 (지표 조건 없음)
+          </Typography>
+        </Alert>
+      </Box>
+    ) : (
+      <Box>
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          매도 조건이 설정되지 않았습니다.
+        </Typography>
+        <Alert severity="info">
+          <Typography variant="caption">
+            전략 빌더에서 매도 조건 또는 목표수익률/손절을 추가해주세요.
+          </Typography>
+        </Alert>
+      </Box>
+    )}
+  </Box>
+)}

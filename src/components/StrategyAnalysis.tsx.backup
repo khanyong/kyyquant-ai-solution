@@ -105,8 +105,7 @@ const StrategyAnalysis: React.FC<StrategyAnalysisProps> = ({ strategy: initialSt
     signals: true,
     performance: true,
     conditions: false,
-    trades: false,
-    strategyDetail: true  // 전략 상세 섹션 추가
+    trades: false
   })
 
   // 사용 가능한 종목 목록
@@ -131,7 +130,7 @@ const StrategyAnalysis: React.FC<StrategyAnalysisProps> = ({ strategy: initialSt
   const loadSavedStrategies = async () => {
     try {
       const { supabase } = await import('../lib/supabase')
-      const { data, error} = await supabase
+      const { data, error } = await supabase
         .from('strategies')
         .select('*')
         .order('created_at', { ascending: false })
@@ -170,9 +169,6 @@ const StrategyAnalysis: React.FC<StrategyAnalysisProps> = ({ strategy: initialSt
             indicators: selectedStrategy?.indicators || [],
             buyConditions: selectedStrategy?.buyConditions || [],
             sellConditions: selectedStrategy?.sellConditions || [],
-            targetProfit: selectedStrategy?.targetProfit,
-            stopLoss: selectedStrategy?.stopLoss,
-            position_size: selectedStrategy?.position_size,
             ...investmentConfig
           },
           stock_codes: selectedStocks, // 다중 종목 지원
@@ -413,20 +409,14 @@ const StrategyAnalysis: React.FC<StrategyAnalysisProps> = ({ strategy: initialSt
         </Alert>
       )}
 
-      {/* 전략 요약 - 확장된 버전 */}
+      {/* 전략 요약 */}
       {selectedStrategy && (
         <Card sx={{ mb: 3 }}>
           <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6">
-                현재 전략: {selectedStrategy?.name || '이름 없음'}
-              </Typography>
-              <IconButton size="small" onClick={() => toggleSection('strategyDetail')}>
-                {expandedSections.strategyDetail ? <ExpandLess /> : <ExpandMore />}
-              </IconButton>
-            </Stack>
-
-            <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              현재 전략: {selectedStrategy?.name || '이름 없음'}
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
               <Chip
                 icon={<ShowChart />}
                 label={`지표 ${selectedStrategy?.indicators?.length || 0}개`}
@@ -445,163 +435,6 @@ const StrategyAnalysis: React.FC<StrategyAnalysisProps> = ({ strategy: initialSt
                 color="error"
               />
             </Stack>
-
-            <Collapse in={expandedSections.strategyDetail}>
-              <Divider sx={{ my: 2 }} />
-
-              {/* 지표 상세 */}
-              {selectedStrategy?.indicators && selectedStrategy.indicators.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    사용 지표
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    {selectedStrategy.indicators.map((indicator: any, idx: number) => (
-                      <Chip
-                        key={idx}
-                        label={`${indicator.name || indicator.base_indicator} (${JSON.stringify(indicator.params || {})})`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-
-              {/* 매수조건 상세 */}
-              {selectedStrategy?.buyConditions && selectedStrategy.buyConditions.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom color="success.main">
-                    매수 조건
-                  </Typography>
-                  <Stack spacing={0.5}>
-                    {selectedStrategy.buyConditions.map((condition: any, idx: number) => (
-                      <Typography key={idx} variant="body2" sx={{ pl: 2 }}>
-                        • {condition.indicator || condition.left} {condition.operator} {condition.value || condition.compareTo || condition.right}
-                        {condition.combineWith && idx < selectedStrategy.buyConditions.length - 1 && (
-                          <Chip label={condition.combineWith} size="small" sx={{ ml: 1 }} />
-                        )}
-                      </Typography>
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-
-              {/* 매도조건 상세 */}
-              {selectedStrategy?.sellConditions && selectedStrategy.sellConditions.length > 0 && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom color="error.main">
-                    매도 조건
-                  </Typography>
-                  <Stack spacing={0.5}>
-                    {selectedStrategy.sellConditions.map((condition: any, idx: number) => (
-                      <Typography key={idx} variant="body2" sx={{ pl: 2 }}>
-                        • {condition.indicator || condition.left} {condition.operator} {condition.value || condition.compareTo || condition.right}
-                        {condition.combineWith && idx < selectedStrategy.sellConditions.length - 1 && (
-                          <Chip label={condition.combineWith} size="small" sx={{ ml: 1 }} />
-                        )}
-                      </Typography>
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-
-              {/* 목표수익률 및 손절 설정 */}
-              {(selectedStrategy?.targetProfit || selectedStrategy?.stopLoss) && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    리스크 관리
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {/* 목표수익률 */}
-                    {selectedStrategy?.targetProfit && (
-                      <Grid item xs={12} md={6}>
-                        <Paper variant="outlined" sx={{ p: 1.5 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            목표수익률
-                          </Typography>
-                          {selectedStrategy.targetProfit.mode === 'simple' && selectedStrategy.targetProfit.simple?.enabled && (
-                            <Typography variant="body2">
-                              • 단순: {selectedStrategy.targetProfit.simple.value}%
-                            </Typography>
-                          )}
-                          {selectedStrategy.targetProfit.mode === 'staged' && selectedStrategy.targetProfit.staged?.enabled && (
-                            <Box>
-                              <Typography variant="body2" gutterBottom>• 단계별:</Typography>
-                              {selectedStrategy.targetProfit.staged.stages?.map((stage: any, idx: number) => (
-                                <Typography key={idx} variant="caption" display="block" sx={{ pl: 2 }}>
-                                  {stage.stage}단계: {stage.targetProfit}% (매도비율: {stage.exitRatio}%)
-                                  {stage.dynamicStopLoss && ' [동적손절]'}
-                                </Typography>
-                              ))}
-                            </Box>
-                          )}
-                        </Paper>
-                      </Grid>
-                    )}
-
-                    {/* 손절 설정 */}
-                    {selectedStrategy?.stopLoss && selectedStrategy.stopLoss.enabled && (
-                      <Grid item xs={12} md={6}>
-                        <Paper variant="outlined" sx={{ p: 1.5 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            손절 설정
-                          </Typography>
-                          <Typography variant="body2">
-                            • 손절: {Math.abs(selectedStrategy.stopLoss.value)}%
-                          </Typography>
-                          {selectedStrategy.stopLoss.breakEven?.enabled && (
-                            <Typography variant="body2">
-                              • 본전 손절: {selectedStrategy.stopLoss.breakEven.threshold}% 도달 시 활성화
-                            </Typography>
-                          )}
-                          {selectedStrategy.stopLoss.trailingStop?.enabled && (
-                            <Typography variant="body2">
-                              • 트레일링 손절: {selectedStrategy.stopLoss.trailingStop.distance}%
-                            </Typography>
-                          )}
-                        </Paper>
-                      </Grid>
-                    )}
-                  </Grid>
-                </Box>
-              )}
-
-              {/* 투자 설정 */}
-              {(selectedStrategy?.position_size || investmentConfig) && (
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>
-                    투자 설정
-                  </Typography>
-                  <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                    {selectedStrategy?.position_size && (
-                      <Chip
-                        icon={<Percent />}
-                        label={`포지션 크기: ${(selectedStrategy.position_size * 100).toFixed(0)}%`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                    {(selectedStrategy?.commission !== undefined || investmentConfig?.commission !== undefined) && (
-                      <Chip
-                        icon={<AttachMoney />}
-                        label={`수수료: ${((selectedStrategy?.commission || investmentConfig?.commission || 0.00015) * 100).toFixed(3)}%`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                    {(selectedStrategy?.slippage !== undefined || investmentConfig?.slippage !== undefined) && (
-                      <Chip
-                        icon={<Speed />}
-                        label={`슬리피지: ${((selectedStrategy?.slippage || investmentConfig?.slippage || 0.001) * 100).toFixed(2)}%`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                  </Stack>
-                </Box>
-              )}
-            </Collapse>
           </CardContent>
         </Card>
       )}

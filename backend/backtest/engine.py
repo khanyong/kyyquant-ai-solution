@@ -545,17 +545,16 @@ class BacktestEngine:
                 else:
                     sharpe_ratio = 0
 
-                # 2. 소르티노 비율: (평균 수익률 - 무위험 이자율) / 하방 변동성
-                # 하방 변동성: 손실(음수 수익률)만 고려
-                downside_returns = [r for r in daily_returns if r < risk_free_rate_daily]
-                if downside_returns:
-                    downside_std = np.std(downside_returns, ddof=1)
-                    if downside_std > 0:
-                        sortino_ratio = (excess_return / downside_std) * np.sqrt(252)  # 연율화
-                    else:
-                        sortino_ratio = sharpe_ratio  # 하방 변동성이 0이면 샤프 비율과 동일
+                # 2. 소르티노 비율: (평균 수익률 - 무위험 이자율) / 하방 편차
+                # 하방 편차: 목표수익률(무위험이자율) 미달 부분만의 표준편차
+                downside_deviations = [min(r - risk_free_rate_daily, 0) for r in daily_returns]
+                downside_variance = np.mean([d**2 for d in downside_deviations])
+
+                if downside_variance > 0:
+                    downside_std = np.sqrt(downside_variance)
+                    sortino_ratio = (excess_return / downside_std) * np.sqrt(252)  # 연율화
                 else:
-                    # 손실이 없으면 무한대로 간주하지만, 실용적으로 높은 값 설정
+                    # 하방 편차가 0이면 손실이 전혀 없음 (매우 우수한 성과)
                     sortino_ratio = sharpe_ratio * 2 if sharpe_ratio else 0
 
                 # 3. 트레이너 비율: (평균 수익률 - 무위험 이자율) / 베타
@@ -1197,23 +1196,29 @@ class BacktestEngine:
                         position['highest_stage_reached'] = stage_num
                         highest_stage = stage_num
 
-                # 최고 도달 단계에 따라 손절선 조정
+                # 최고 도달 단계에 따라 손절선 조정 (각 단계의 dynamicStopLoss 옵션 체크)
                 if highest_stage > 0 and stop_loss and stop_loss.get('enabled', False):
-                    # 손절→본전: 1단계 도달 시
+                    # 손절→본전: 1단계 도달 시 (1단계 dynamicStopLoss 옵션이 ON일 때만)
                     if highest_stage == 1:
-                        dynamic_stop_loss = 0  # 본전
-                    # 손절→1단계가: 2단계 도달 시
-                    elif highest_stage == 2:
-                        # 1단계 목표 수익률로 손절선 이동
                         stage_1 = next((s for s in stages if s.get('stage') == 1), None)
                         if stage_1 and stage_1.get('dynamicStopLoss', False):
-                            dynamic_stop_loss = stage_1.get('targetProfit', 0)
-                    # 손절→2단계가: 3단계 도달 시
-                    elif highest_stage >= 3:
-                        # 2단계 목표 수익률로 손절선 이동
+                            dynamic_stop_loss = 0  # 본전
+                    # 손절→1단계가: 2단계 도달 시 (2단계 dynamicStopLoss 옵션이 ON일 때만)
+                    elif highest_stage == 2:
+                        # 1단계 목표 수익률로 손절선 이동
                         stage_2 = next((s for s in stages if s.get('stage') == 2), None)
                         if stage_2 and stage_2.get('dynamicStopLoss', False):
-                            dynamic_stop_loss = stage_2.get('targetProfit', 0)
+                            stage_1 = next((s for s in stages if s.get('stage') == 1), None)
+                            if stage_1:
+                                dynamic_stop_loss = stage_1.get('targetProfit', 0)
+                    # 손절→2단계가: 3단계 도달 시 (3단계 dynamicStopLoss 옵션이 ON일 때만)
+                    elif highest_stage >= 3:
+                        # 2단계 목표 수익률로 손절선 이동
+                        stage_3 = next((s for s in stages if s.get('stage') == highest_stage), None)
+                        if stage_3 and stage_3.get('dynamicStopLoss', False):
+                            stage_2 = next((s for s in stages if s.get('stage') == 2), None)
+                            if stage_2:
+                                dynamic_stop_loss = stage_2.get('targetProfit', 0)
 
         # 1. 손절 체크 (우선순위 높음)
         if stop_loss and stop_loss.get('enabled', False):
