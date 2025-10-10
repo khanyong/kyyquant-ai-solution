@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import {
   Box,
   Paper,
@@ -246,6 +247,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onNavigateHome }) => {
+  const { hasRole } = useAuth()
   const [currentTab, setCurrentTab] = useState(0)
   const [currentFlowType, setCurrentFlowType] = useState<InvestmentFlowType>(InvestmentFlowType.FILTER_FIRST)
   const [useStageBasedStrategy, setUseStageBasedStrategy] = useState(true) // 단계별 전략 사용 여부
@@ -1870,10 +1872,24 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
 
       {/* 전략 분석 탭 */}
       <TabPanel value={currentTab} index={1}>
-        <StrategyAnalyzer
+        {!hasRole(['premium', 'admin']) ? (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Assessment sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+            <Typography variant="h5" gutterBottom>
+              프리미엄 기능
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              전략 분석 기능은 프리미엄 회원 전용 기능입니다.
+            </Typography>
+            <Button variant="contained" color="primary" size="large">
+              프리미엄 업그레이드
+            </Button>
+          </Paper>
+        ) : (
+          <StrategyAnalyzer
           strategy={strategy}
           investmentConfig={{}}
-        />
+        />)
       </TabPanel>
 
       {/* 투자 흐름 관리 탭 */}
