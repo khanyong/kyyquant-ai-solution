@@ -76,31 +76,44 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
     try {
       // AuthContext의 signIn 사용 (authService가 아님)
-      await authService.signInWithEmail(email, password)
-        .then(({ user, error }) => {
-          if (error) throw error
-          if (user) {
-            // AuthContext가 자동으로 상태 업데이트하므로 Redux만 동기화
-            authService.getProfile(user.id).then(({ profile }) => {
-              dispatch(loginSuccess({
-                user: {
-                  id: user.id,
-                  name: profile?.name || user.email || 'User',
-                  accounts: [profile?.kiwoom_account || 'DEMO'],
-                },
-                accounts: [profile?.kiwoom_account || 'DEMO'],
-              }))
-            }).catch(err => {
-              console.warn('Profile fetch error:', err)
-            })
+      const { user, error } = await authService.signInWithEmail(email, password)
 
-            setLoading(false)
-            onClose()
-          }
-        })
+      if (error) {
+        throw error
+      }
+
+      if (user) {
+        // AuthContext가 자동으로 상태 업데이트하므로 Redux만 동기화
+        try {
+          const { profile } = await authService.getProfile(user.id)
+          dispatch(loginSuccess({
+            user: {
+              id: user.id,
+              name: profile?.name || user.email || 'User',
+              accounts: [profile?.kiwoom_account || 'DEMO'],
+            },
+            accounts: [profile?.kiwoom_account || 'DEMO'],
+          }))
+        } catch (err) {
+          console.warn('Profile fetch error:', err)
+        }
+
+        setLoading(false)
+        onClose()
+      }
     } catch (err: any) {
       console.error('Login error:', err)
-      setError('로그인 실패: ' + err.message)
+
+      // 세션 오류인 경우 localStorage 클리어
+      if (err.message?.includes('session') || err.message?.includes('token')) {
+        console.log('Clearing corrupted session data...')
+        localStorage.removeItem('kyyquant-auth-token')
+        localStorage.removeItem('supabase.auth.token')
+        setError('세션이 만료되었습니다. 다시 로그인해주세요.')
+      } else {
+        setError('로그인 실패: ' + err.message)
+      }
+
       setLoading(false)
     }
   }

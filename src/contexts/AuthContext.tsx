@@ -73,6 +73,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
           console.error('Session error:', error)
+          // 세션 오류 시 localStorage 정리
+          if (error.message?.includes('session') || error.message?.includes('token') || error.message?.includes('expired')) {
+            console.log('Clearing expired session...')
+            localStorage.removeItem('kyyquant-auth-token')
+            localStorage.removeItem('supabase.auth.token')
+            // 세션 정리 후 재시도
+            await supabase.auth.signOut()
+          }
         }
 
         if (mounted) {
@@ -85,8 +93,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           setLoading(false)
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Auth initialization error:', error)
+        // 초기화 실패 시 세션 클리어
+        try {
+          console.log('Clearing corrupted auth data...')
+          localStorage.removeItem('kyyquant-auth-token')
+          localStorage.removeItem('supabase.auth.token')
+          await supabase.auth.signOut()
+        } catch (clearError) {
+          console.error('Failed to clear auth data:', clearError)
+        }
+
         if (mounted) {
           setUser(null)
           setRole(null)
