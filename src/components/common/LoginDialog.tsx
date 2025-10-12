@@ -96,10 +96,23 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
           }))
         } catch (err) {
           console.warn('Profile fetch error:', err)
+          // 프로필 조회 실패해도 기본값으로 로그인
+          dispatch(loginSuccess({
+            user: {
+              id: user.id,
+              name: user.email || 'User',
+              accounts: ['DEMO'],
+            },
+            accounts: ['DEMO'],
+          }))
         }
 
         setLoading(false)
-        onClose()
+
+        // Redux 상태 업데이트 완료 후 다이얼로그 닫기
+        setTimeout(() => {
+          onClose()
+        }, 100)
       }
     } catch (err: any) {
       console.error('Login error:', err)
