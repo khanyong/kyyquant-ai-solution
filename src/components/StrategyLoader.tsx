@@ -189,7 +189,7 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
   const calculateStrategyStats = async (strategy: any): Promise<StrategyStats> => {
     console.log('📊 Calculating stats for strategy:', strategy.name)
 
-    // 백테스트 결과 조회
+    // 백테스트 결과 조회 (최신 1개)
     const { data: backtestData, error: backtestError } = await supabase
       .from('backtest_results')
       .select('*')
@@ -204,17 +204,17 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
 
     console.log('📈 Backtest data:', backtestData)
 
-    // 전략 실행 기록 조회 (올바른 테이블명 사용)
-    const { data: executionData, count, error: execError } = await supabase
-      .from('strategy_execution_logs')
-      .select('*', { count: 'exact' })
+    // 백테스트 실행 횟수 조회 (전체 백테스트 결과 개수)
+    const { count: backtestCount, error: countError } = await supabase
+      .from('backtest_results')
+      .select('*', { count: 'exact', head: true })
       .eq('strategy_id', strategy.id)
 
-    if (execError && execError.code !== 'PGRST116') {
-      console.warn('⚠️ Execution fetch error:', execError)
+    if (countError && countError.code !== 'PGRST116') {
+      console.warn('⚠️ Backtest count error:', countError)
     }
 
-    console.log('🔄 Execution count:', count)
+    console.log('🔄 Backtest execution count:', backtestCount)
 
     // 매수 조건 추출 (여러 경로 확인)
     let buyConditions: any[] = []
@@ -302,14 +302,14 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
       }
     }
 
-    console.log('📊 Final stats:', { executionCount: count, averageReturn, winRate, includedStocks })
+    console.log('📊 Final stats:', { executionCount: backtestCount, averageReturn, winRate, includedStocks })
 
     return {
-      executionCount: count || 0,
+      executionCount: backtestCount || 0,
       averageReturn: averageReturn,
       winRate: winRate,
       includedStocks: includedStocks,
-      lastExecuted: executionData?.[0]?.created_at || null,
+      lastExecuted: backtestData?.created_at || null,
       backtestResults: backtestData ? {
         totalReturn: backtestData.total_return_rate || backtestData.total_return || 0,
         sharpeRatio: backtestData.sharpe_ratio || 0,
