@@ -109,66 +109,84 @@ function App() {
 
     // Supabase Auth 상태 모니터링
     const { data: authListener } = authService.onAuthStateChange(async (user) => {
+      console.log('🎯 App: Auth state changed, user:', user?.email)
+
       if (user) {
-        try {
-          // 프로필 정보 가져오기
-          const { profile } = await authService.getProfile(user.id)
-          
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: profile?.name || user.email || 'User',
-              accounts: [profile?.kiwoom_account || 'DEMO'],
-              role: profile?.role
-            },
-            accounts: [profile?.kiwoom_account || 'DEMO'],
-          }))
-        } catch (error) {
-          console.warn('Profile fetch error:', error)
-          // 프로필이 없어도 기본 정보로 로그인
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: user.email || 'User',
-              accounts: ['DEMO'],
-              role: 'user'
-            },
+        // 즉시 로그인 처리 (프로필은 백그라운드에서)
+        dispatch(loginSuccess({
+          user: {
+            id: user.id,
+            name: user.email || 'User',
             accounts: ['DEMO'],
-          }))
-        }
+            role: 'user'
+          },
+          accounts: ['DEMO'],
+        }))
+
+        console.log('✅ App: Redux updated with basic user info')
+
+        // 백그라운드에서 프로필 로드
+        authService.getProfile(user.id)
+          .then(({ profile }) => {
+            if (profile) {
+              console.log('📝 App: Profile loaded, updating Redux')
+              dispatch(loginSuccess({
+                user: {
+                  id: user.id,
+                  name: profile.name || user.email || 'User',
+                  accounts: [profile.kiwoom_account || 'DEMO'],
+                  role: profile.role
+                },
+                accounts: [profile.kiwoom_account || 'DEMO'],
+              }))
+            }
+          })
+          .catch(error => {
+            console.warn('⚠️ App: Profile fetch error (non-blocking):', error)
+          })
       } else {
+        console.log('🚪 App: User signed out')
         dispatch(logout())
       }
     })
 
     // 초기 세션 체크
     authService.getCurrentUser().then(async (user) => {
+      console.log('🔍 App: Checking initial session, user:', user?.email)
+
       if (user) {
-        try {
-          const { profile } = await authService.getProfile(user.id)
-          
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: profile?.name || user.email || 'User',
-              accounts: [profile?.kiwoom_account || 'DEMO'],
-              role: profile?.role
-            },
-            accounts: [profile?.kiwoom_account || 'DEMO'],
-          }))
-        } catch (error) {
-          console.warn('Initial profile fetch error:', error)
-          // 프로필이 없어도 기본 정보로 로그인
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: user.email || 'User',
-              accounts: ['DEMO'],
-              role: 'user'
-            },
+        // 즉시 로그인 처리
+        dispatch(loginSuccess({
+          user: {
+            id: user.id,
+            name: user.email || 'User',
             accounts: ['DEMO'],
-          }))
-        }
+            role: 'user'
+          },
+          accounts: ['DEMO'],
+        }))
+
+        console.log('✅ App: Initial session restored')
+
+        // 백그라운드에서 프로필 로드
+        authService.getProfile(user.id)
+          .then(({ profile }) => {
+            if (profile) {
+              console.log('📝 App: Initial profile loaded')
+              dispatch(loginSuccess({
+                user: {
+                  id: user.id,
+                  name: profile.name || user.email || 'User',
+                  accounts: [profile.kiwoom_account || 'DEMO'],
+                  role: profile.role
+                },
+                accounts: [profile.kiwoom_account || 'DEMO'],
+              }))
+            }
+          })
+          .catch(error => {
+            console.warn('⚠️ App: Initial profile fetch error (non-blocking):', error)
+          })
       }
     })
 
