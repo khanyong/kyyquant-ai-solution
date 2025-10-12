@@ -65,44 +65,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    let isInitializing = false
 
     // 현재 세션 확인
     const initializeAuth = async () => {
+      if (isInitializing) {
+        console.log('⚠️ AuthContext: Already initializing, skipping...')
+        return
+      }
+
+      isInitializing = true
+
       try {
+        console.log('🔐 AuthContext: Initializing auth...')
+
         const { data: { session }, error } = await supabase.auth.getSession()
 
         if (error) {
-          console.error('Session error:', error)
+          console.error('❌ AuthContext: Session error:', error)
           // 세션 오류 시 localStorage 정리
           if (error.message?.includes('session') || error.message?.includes('token') || error.message?.includes('expired')) {
-            console.log('Clearing expired session...')
+            console.log('🧹 AuthContext: Clearing expired session...')
             localStorage.removeItem('kyyquant-auth-token')
             localStorage.removeItem('supabase.auth.token')
             // 세션 정리 후 재시도
-            await supabase.auth.signOut()
+            await supabase.auth.signOut({ scope: 'local' })
           }
         }
 
         if (mounted) {
           setUser(session?.user ?? null)
           if (session?.user) {
+            console.log('✅ AuthContext: Session found for', session.user.email)
             const userRole = await fetchUserRole(session.user.id)
             setRole(userRole)
           } else {
+            console.log('ℹ️ AuthContext: No session found')
             setRole(null)
           }
           setLoading(false)
         }
       } catch (error: any) {
-        console.error('Auth initialization error:', error)
+        console.error('❌ AuthContext: Auth initialization error:', error)
         // 초기화 실패 시 세션 클리어
         try {
-          console.log('Clearing corrupted auth data...')
+          console.log('🧹 AuthContext: Clearing corrupted auth data...')
           localStorage.removeItem('kyyquant-auth-token')
           localStorage.removeItem('supabase.auth.token')
-          await supabase.auth.signOut()
+          await supabase.auth.signOut({ scope: 'local' })
         } catch (clearError) {
-          console.error('Failed to clear auth data:', clearError)
+          console.error('❌ AuthContext: Failed to clear auth data:', clearError)
         }
 
         if (mounted) {
@@ -110,6 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRole(null)
           setLoading(false)
         }
+      } finally {
+        isInitializing = false
       }
     }
 
@@ -117,7 +131,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 인증 상태 변경 구독
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email)
+      console.log('🔄 AuthContext: Auth state changed:', event, session?.user?.email)
+
+      // INITIAL_SESSION은 무시 (initializeAuth에서 처리)
+      if (event === 'INITIAL_SESSION') {
+        console.log('ℹ️ AuthContext: Skipping INITIAL_SESSION event')
+        return
+      }
 
       if (mounted) {
         setUser(session?.user ?? null)

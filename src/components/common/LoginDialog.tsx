@@ -71,6 +71,12 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
   // 이메일 로그인
   const handleEmailLogin = async () => {
+    // 중복 요청 방지
+    if (loading) {
+      console.log('⚠️ Login already in progress, skipping...')
+      return
+    }
+
     setLoading(true)
     setError('')
 

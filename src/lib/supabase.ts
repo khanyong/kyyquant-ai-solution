@@ -14,6 +14,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     storage: window.localStorage,
     storageKey: 'kyyquant-auth-token',
+    flowType: 'pkce', // PKCE flow로 보안 강화
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'kyyquant-web-app'
+    }
+  },
+  db: {
+    schema: 'public'
+  },
+  // 재시도 로직
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 })
 

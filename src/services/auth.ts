@@ -99,10 +99,20 @@ export const authService = {
     try {
       console.log('🔑 authService: Attempting sign in...')
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // 15초 타임아웃으로 signInWithPassword 호출
+      const signInPromise = supabase.auth.signInWithPassword({
         email,
         password
       })
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Sign in timeout - 서버 응답이 없습니다. 다시 시도해주세요.')), 15000)
+      )
+
+      const { data, error } = await Promise.race([
+        signInPromise,
+        timeoutPromise
+      ])
 
       console.log('🔑 authService: Sign in response:', { user: !!data.user, error: !!error })
 
