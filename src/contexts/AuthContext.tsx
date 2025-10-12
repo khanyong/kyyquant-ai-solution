@@ -22,18 +22,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const fetchUserRole = async (userId: string): Promise<UserRole> => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single()
+    try {
+      // 5초 타임아웃
+      const rolePromise = supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single()
 
-    if (error) {
-      console.error('Error fetching user role:', error)
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Role fetch timeout')), 5000)
+      )
+
+      const { data, error } = await Promise.race([
+        rolePromise,
+        timeoutPromise
+      ]) as any
+
+      if (error) {
+        console.error('⚠️ AuthContext: Error fetching user role:', error)
+        return 'user'
+      }
+
+      return (data?.role as UserRole) || 'user'
+    } catch (error) {
+      console.error('⚠️ AuthContext: Role fetch failed:', error)
       return 'user'
     }
-
-    return (data?.role as UserRole) || 'user'
   }
 
   const hasRole = (requiredRole: UserRole | UserRole[]): boolean => {

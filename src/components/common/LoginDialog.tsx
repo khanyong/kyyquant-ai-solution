@@ -52,6 +52,7 @@ function TabPanel(props: TabPanelProps) {
 
 const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
   const dispatch = useAppDispatch()
+  const { isConnected } = useAppSelector(state => state.auth)
   const [tabValue, setTabValue] = useState(0) // 0: 로그인, 1: 회원가입
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -62,6 +63,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+
+  // 이미 로그인되어 있으면 다이얼로그 닫기
+  React.useEffect(() => {
+    if (open && isConnected) {
+      console.log('✅ Already logged in, closing dialog')
+      onClose()
+    }
+  }, [open, isConnected, onClose])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
