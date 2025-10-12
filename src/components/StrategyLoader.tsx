@@ -239,61 +239,103 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
   }
 
   const handleStrategySelect = (strategy: SavedStrategy) => {
-    console.log('Strategy selected:', strategy)
+    console.log('=== Strategy selected ===')
+    console.log('Raw strategy:', strategy)
+    console.log('strategy_data:', strategy.strategy_data)
+    console.log('config:', strategy.config)
+    console.log('entry_conditions:', strategy.entry_conditions)
+    console.log('exit_conditions:', strategy.exit_conditions)
 
-    // config 객체에서 실제 전략 데이터 추출 (StrategyAnalyzer와 동일한 방식)
-    if (strategy?.config) {
-      console.log('🔍 Strategy has config object:', strategy.config)
-      const extractedStrategy = {
+    let extractedStrategy: any = { ...strategy }
+
+    // 1순위: strategy_data에서 직접 추출
+    if (strategy.strategy_data) {
+      console.log('📦 Using strategy_data')
+      const sd = strategy.strategy_data
+
+      extractedStrategy = {
         ...strategy,
-        buyConditions: strategy.config.buyConditions || strategy.entry_conditions?.buy || [],
-        sellConditions: strategy.config.sellConditions || strategy.exit_conditions?.sell || [],
-        indicators: strategy.config.indicators || strategy.indicators?.list || [],
-        riskManagement: strategy.risk_management || {
-          stopLoss: strategy.config.stopLoss,
-          takeProfit: strategy.config.takeProfit,
-          trailingStop: strategy.config.trailingStop,
-          trailingStopPercent: strategy.config.trailingStopPercent,
-          positionSize: strategy.config.positionSize,
-          maxPositions: strategy.config.maxPositions
+        buyConditions: sd.buyConditions || sd.entry_conditions?.buy || [],
+        sellConditions: sd.sellConditions || sd.exit_conditions?.sell || [],
+        indicators: sd.indicators || [],
+        riskManagement: sd.riskManagement || {
+          stopLoss: sd.stopLoss,
+          takeProfit: sd.takeProfit,
+          trailingStop: sd.trailingStop,
+          trailingStopPercent: sd.trailingStopPercent,
+          positionSize: sd.positionSize,
+          maxPositions: sd.maxPositions
         }
       }
-      console.log('✨ Extracted strategy:', {
-        name: extractedStrategy.name,
-        buyConditionsCount: extractedStrategy.buyConditions?.length,
-        sellConditionsCount: extractedStrategy.sellConditions?.length,
-        buyConditions: extractedStrategy.buyConditions,
-        sellConditions: extractedStrategy.sellConditions,
-        buyConditionsSample: extractedStrategy.buyConditions?.[0],
-        sellConditionsSample: extractedStrategy.sellConditions?.[0]
-      })
-      setSelectedStrategy(extractedStrategy)
-    } else if (strategy?.parameters) {
-      console.log('🔍 Strategy has parameters object (legacy):', strategy.parameters)
-      // 구버전 호환성 유지
-      const extractedStrategy = {
-        ...strategy,
-        buyConditions: strategy.parameters.buyConditions || [],
-        sellConditions: strategy.parameters.sellConditions || [],
-        indicators: strategy.parameters.indicators || [],
-        riskManagement: {
-          stopLoss: strategy.parameters.stopLoss,
-          takeProfit: strategy.parameters.takeProfit,
-          trailingStop: strategy.parameters.trailingStop,
-          trailingStopPercent: strategy.parameters.trailingStopPercent
-        }
-      }
-      console.log('✨ Extracted strategy (legacy):', extractedStrategy)
-      setSelectedStrategy(extractedStrategy)
-    } else {
-      console.log('⚠️ Strategy has no config or parameters, using as-is')
-      console.log('📄 Strategy structure:', {
-        keys: Object.keys(strategy || {}),
-        buyConditions: strategy?.buyConditions,
-        sellConditions: strategy?.sellConditions
-      })
-      setSelectedStrategy(strategy)
     }
+
+    // 2순위: config 객체에서 추출
+    if (strategy.config) {
+      console.log('⚙️ Checking config object')
+      const cfg = strategy.config
+
+      extractedStrategy = {
+        ...extractedStrategy,
+        buyConditions: extractedStrategy.buyConditions?.length > 0
+          ? extractedStrategy.buyConditions
+          : (cfg.buyConditions || strategy.entry_conditions?.buy || []),
+        sellConditions: extractedStrategy.sellConditions?.length > 0
+          ? extractedStrategy.sellConditions
+          : (cfg.sellConditions || strategy.exit_conditions?.sell || []),
+        indicators: extractedStrategy.indicators?.length > 0
+          ? extractedStrategy.indicators
+          : (cfg.indicators || strategy.indicators?.list || []),
+        riskManagement: extractedStrategy.riskManagement || strategy.risk_management || {
+          stopLoss: cfg.stopLoss,
+          takeProfit: cfg.takeProfit,
+          trailingStop: cfg.trailingStop,
+          trailingStopPercent: cfg.trailingStopPercent,
+          positionSize: cfg.positionSize,
+          maxPositions: cfg.maxPositions
+        }
+      }
+    }
+
+    // 3순위: parameters (레거시)
+    if (strategy.parameters && (!extractedStrategy.buyConditions?.length && !extractedStrategy.sellConditions?.length)) {
+      console.log('🗂️ Using parameters (legacy)')
+      const params = strategy.parameters
+
+      extractedStrategy = {
+        ...extractedStrategy,
+        buyConditions: params.buyConditions || [],
+        sellConditions: params.sellConditions || [],
+        indicators: params.indicators || [],
+        riskManagement: {
+          stopLoss: params.stopLoss,
+          takeProfit: params.takeProfit,
+          trailingStop: params.trailingStop,
+          trailingStopPercent: params.trailingStopPercent
+        }
+      }
+    }
+
+    // 4순위: 최상위 레벨 필드 (entry_conditions, exit_conditions)
+    if (!extractedStrategy.buyConditions?.length && strategy.entry_conditions?.buy) {
+      console.log('📋 Using entry_conditions.buy')
+      extractedStrategy.buyConditions = strategy.entry_conditions.buy
+    }
+
+    if (!extractedStrategy.sellConditions?.length && strategy.exit_conditions?.sell) {
+      console.log('📋 Using exit_conditions.sell')
+      extractedStrategy.sellConditions = strategy.exit_conditions.sell
+    }
+
+    console.log('✨ Final extracted strategy:', {
+      name: extractedStrategy.name,
+      buyConditionsCount: extractedStrategy.buyConditions?.length,
+      sellConditionsCount: extractedStrategy.sellConditions?.length,
+      buyConditions: extractedStrategy.buyConditions,
+      sellConditions: extractedStrategy.sellConditions,
+      riskManagement: extractedStrategy.riskManagement
+    })
+
+    setSelectedStrategy(extractedStrategy)
   }
 
   const handleLoad = () => {
