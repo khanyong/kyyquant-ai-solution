@@ -26,7 +26,7 @@ import {
   LinkedIn,
   ChatBubble
 } from '@mui/icons-material'
-import { useAppDispatch } from '../../hooks/redux'
+import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { loginSuccess } from '../../store/authSlice'
 import { authService } from '../../services/auth'
 
