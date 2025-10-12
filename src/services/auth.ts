@@ -97,45 +97,72 @@ export const authService = {
   // 이메일로 로그인
   async signInWithEmail(email: string, password: string) {
     try {
+      console.log('🔑 authService: Attempting sign in...')
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
 
-      if (error) throw error
+      console.log('🔑 authService: Sign in response:', { user: !!data.user, error: !!error })
 
-      // 사용자 승인 상태 확인 (옵션 - 프로필이 없으면 스킵)
+      if (error) {
+        console.error('🔑 authService: Sign in error:', error)
+        throw error
+      }
+
+      // 프로필 확인은 타임아웃 설정하여 blocking 방지
       if (data.user) {
-        const { data: profile, error: profileError } = await supabase
+        console.log('🔑 authService: User authenticated, checking profile...')
+
+        // 5초 타임아웃으로 프로필 조회
+        const profilePromise = supabase
           .from('profiles')
           .select('is_approved, approval_status, email_verified')
           .eq('id', data.user.id)
           .single()
 
-        if (profileError) {
-          console.warn('Profile not found or fetch error:', profileError)
-          // 프로필이 없어도 로그인은 허용 (데모 모드나 초기 설정용)
-        } else if (profile) {
-          // 이메일 미인증 (프로필이 있는 경우만 체크)
-          if (profile.email_verified === false && !data.user.email_confirmed_at) {
-            throw new Error('이메일 인증이 필요합니다. 이메일을 확인해주세요.')
-          }
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+        )
 
-          // 관리자 승인 대기 (프로필이 있는 경우만 체크)
-          if (profile.approval_status === 'pending') {
-            console.warn('User is pending approval')
-            // 일단 로그인은 허용하되, 기능 제한은 프론트엔드에서 처리
-          }
+        try {
+          const { data: profile, error: profileError } = await Promise.race([
+            profilePromise,
+            timeoutPromise
+          ]) as any
 
-          // 승인 거부됨
-          if (profile.approval_status === 'rejected') {
-            throw new Error('가입이 거부되었습니다. 관리자에게 문의하세요.')
+          if (profileError) {
+            console.warn('🔑 authService: Profile not found or fetch error:', profileError)
+            // 프로필이 없어도 로그인은 허용
+          } else if (profile) {
+            console.log('🔑 authService: Profile loaded:', profile)
+
+            // 이메일 미인증 체크
+            if (profile.email_verified === false && !data.user.email_confirmed_at) {
+              throw new Error('이메일 인증이 필요합니다. 이메일을 확인해주세요.')
+            }
+
+            // 승인 거부 체크
+            if (profile.approval_status === 'rejected') {
+              throw new Error('가입이 거부되었습니다. 관리자에게 문의하세요.')
+            }
+
+            // 승인 대기는 경고만 (로그인 허용)
+            if (profile.approval_status === 'pending') {
+              console.warn('🔑 authService: User is pending approval')
+            }
           }
+        } catch (profileError: any) {
+          console.warn('🔑 authService: Profile check failed (non-blocking):', profileError.message)
+          // 프로필 체크 실패해도 로그인은 계속
         }
       }
 
+      console.log('🔑 authService: Sign in successful')
       return { user: data.user, error: null }
     } catch (error) {
+      console.error('🔑 authService: Sign in failed:', error)
       return { user: null, error: error as Error }
     }
   },
