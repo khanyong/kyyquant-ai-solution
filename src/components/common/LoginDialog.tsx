@@ -75,51 +75,62 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
     setError('')
 
     try {
+      console.log('🔐 Starting login process...')
+
       // AuthContext의 signIn 사용 (authService가 아님)
       const { user, error } = await authService.signInWithEmail(email, password)
+
+      console.log('📥 Login response:', { user: !!user, error: !!error })
 
       if (error) {
         throw error
       }
 
       if (user) {
-        // AuthContext가 자동으로 상태 업데이트하므로 Redux만 동기화
-        try {
-          const { profile } = await authService.getProfile(user.id)
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: profile?.name || user.email || 'User',
-              accounts: [profile?.kiwoom_account || 'DEMO'],
-            },
-            accounts: [profile?.kiwoom_account || 'DEMO'],
-          }))
-        } catch (err) {
-          console.warn('Profile fetch error:', err)
-          // 프로필 조회 실패해도 기본값으로 로그인
-          dispatch(loginSuccess({
-            user: {
-              id: user.id,
-              name: user.email || 'User',
-              accounts: ['DEMO'],
-            },
+        console.log('✅ User authenticated:', user.id)
+
+        // 프로필 조회는 백그라운드에서 처리하고 즉시 로그인 완료
+        dispatch(loginSuccess({
+          user: {
+            id: user.id,
+            name: user.email || 'User',
             accounts: ['DEMO'],
-          }))
-        }
+          },
+          accounts: ['DEMO'],
+        }))
+
+        console.log('✅ Redux state updated')
 
         setLoading(false)
 
-        // Redux 상태 업데이트 완료 후 다이얼로그 닫기
-        setTimeout(() => {
-          onClose()
-        }, 100)
+        // 다이얼로그 닫기
+        onClose()
+
+        // 백그라운드에서 프로필 조회
+        authService.getProfile(user.id)
+          .then(({ profile }) => {
+            if (profile) {
+              console.log('📝 Profile loaded:', profile)
+              dispatch(loginSuccess({
+                user: {
+                  id: user.id,
+                  name: profile.name || user.email || 'User',
+                  accounts: [profile.kiwoom_account || 'DEMO'],
+                },
+                accounts: [profile.kiwoom_account || 'DEMO'],
+              }))
+            }
+          })
+          .catch(err => {
+            console.warn('Profile fetch error (non-blocking):', err)
+          })
       }
     } catch (err: any) {
-      console.error('Login error:', err)
+      console.error('❌ Login error:', err)
 
       // 세션 오류인 경우 localStorage 클리어
       if (err.message?.includes('session') || err.message?.includes('token')) {
-        console.log('Clearing corrupted session data...')
+        console.log('🧹 Clearing corrupted session data...')
         localStorage.removeItem('kyyquant-auth-token')
         localStorage.removeItem('supabase.auth.token')
         setError('세션이 만료되었습니다. 다시 로그인해주세요.')
