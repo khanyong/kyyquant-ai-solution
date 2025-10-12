@@ -20,10 +20,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
+  const [roleCache, setRoleCache] = useState<Record<string, { role: UserRole; timestamp: number }>>({})
 
-  const fetchUserRole = async (userId: string): Promise<UserRole> => {
+  const fetchUserRole = async (userId: string, useCache = true): Promise<UserRole> => {
     try {
-      // 5초 타임아웃
+      // 캐시 확인 (5분 유효)
+      if (useCache && roleCache[userId]) {
+        const cached = roleCache[userId]
+        const age = Date.now() - cached.timestamp
+        if (age < 5 * 60 * 1000) { // 5분
+          console.log('✅ AuthContext: Using cached role:', cached.role)
+          return cached.role
+        }
+      }
+
+      console.log('🔍 AuthContext: Fetching role from database...')
+
+      // 10초 타임아웃 (5초에서 증가)
       const rolePromise = supabase
         .from('profiles')
         .select('role')
@@ -31,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Role fetch timeout')), 5000)
+        setTimeout(() => reject(new Error('Role fetch timeout')), 10000)
       )
 
       const { data, error } = await Promise.race([
@@ -41,12 +54,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('⚠️ AuthContext: Error fetching user role:', error)
+        // 에러 시 캐시된 값 사용 (있으면)
+        if (roleCache[userId]) {
+          console.log('🔄 AuthContext: Using stale cache due to error')
+          return roleCache[userId].role
+        }
         return 'user'
       }
 
-      return (data?.role as UserRole) || 'user'
+      const fetchedRole = (data?.role as UserRole) || 'user'
+      console.log('✅ AuthContext: Fetched role:', fetchedRole)
+
+      // 캐시 업데이트
+      setRoleCache(prev => ({
+        ...prev,
+        [userId]: { role: fetchedRole, timestamp: Date.now() }
+      }))
+
+      return fetchedRole
     } catch (error) {
       console.error('⚠️ AuthContext: Role fetch failed:', error)
+      // 타임아웃 시 캐시된 값 사용
+      if (roleCache[userId]) {
+        console.log('🔄 AuthContext: Using stale cache due to timeout')
+        return roleCache[userId].role
+      }
       return 'user'
     }
   }

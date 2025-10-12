@@ -112,37 +112,48 @@ function App() {
       console.log('🎯 App: Auth state changed, user:', user?.email)
 
       if (user) {
-        // 즉시 로그인 처리 (프로필은 백그라운드에서)
-        dispatch(loginSuccess({
-          user: {
-            id: user.id,
-            name: user.email || 'User',
-            accounts: ['DEMO'],
-            role: 'user'
-          },
-          accounts: ['DEMO'],
-        }))
+        console.log('✅ App: User authenticated, fetching profile immediately')
 
-        console.log('✅ App: Redux updated with basic user info')
-
-        // 백그라운드에서 프로필 로드
+        // 프로필을 먼저 가져온 후 로그인 처리 (role 정보 포함)
         authService.getProfile(user.id)
           .then(({ profile }) => {
             if (profile) {
-              console.log('📝 App: Profile loaded, updating Redux')
+              console.log('📝 App: Profile loaded with role:', profile.role)
               dispatch(loginSuccess({
                 user: {
                   id: user.id,
                   name: profile.name || user.email || 'User',
                   accounts: [profile.kiwoom_account || 'DEMO'],
-                  role: profile.role
+                  role: profile.role || 'user'
                 },
                 accounts: [profile.kiwoom_account || 'DEMO'],
+              }))
+            } else {
+              // 프로필이 없으면 기본값으로
+              console.log('⚠️ App: No profile, using defaults')
+              dispatch(loginSuccess({
+                user: {
+                  id: user.id,
+                  name: user.email || 'User',
+                  accounts: ['DEMO'],
+                  role: 'user'
+                },
+                accounts: ['DEMO'],
               }))
             }
           })
           .catch(error => {
-            console.warn('⚠️ App: Profile fetch error (non-blocking):', error)
+            console.warn('⚠️ App: Profile fetch error, using defaults:', error)
+            // 에러 시에도 로그인은 허용 (기본 role)
+            dispatch(loginSuccess({
+              user: {
+                id: user.id,
+                name: user.email || 'User',
+                accounts: ['DEMO'],
+                role: 'user'
+              },
+              accounts: ['DEMO'],
+            }))
           })
       } else {
         console.log('🚪 App: User signed out')
@@ -155,37 +166,44 @@ function App() {
       console.log('🔍 App: Checking initial session, user:', user?.email)
 
       if (user) {
-        // 즉시 로그인 처리
-        dispatch(loginSuccess({
-          user: {
-            id: user.id,
-            name: user.email || 'User',
-            accounts: ['DEMO'],
-            role: 'user'
-          },
-          accounts: ['DEMO'],
-        }))
-
-        console.log('✅ App: Initial session restored')
-
-        // 백그라운드에서 프로필 로드
+        // 프로필을 먼저 가져온 후 Redux 업데이트
         authService.getProfile(user.id)
           .then(({ profile }) => {
             if (profile) {
-              console.log('📝 App: Initial profile loaded')
+              console.log('✅ App: Initial session restored with role:', profile.role)
               dispatch(loginSuccess({
                 user: {
                   id: user.id,
                   name: profile.name || user.email || 'User',
                   accounts: [profile.kiwoom_account || 'DEMO'],
-                  role: profile.role
+                  role: profile.role || 'user'
                 },
                 accounts: [profile.kiwoom_account || 'DEMO'],
+              }))
+            } else {
+              console.log('⚠️ App: No profile for initial session')
+              dispatch(loginSuccess({
+                user: {
+                  id: user.id,
+                  name: user.email || 'User',
+                  accounts: ['DEMO'],
+                  role: 'user'
+                },
+                accounts: ['DEMO'],
               }))
             }
           })
           .catch(error => {
-            console.warn('⚠️ App: Initial profile fetch error (non-blocking):', error)
+            console.warn('⚠️ App: Initial profile fetch error:', error)
+            dispatch(loginSuccess({
+              user: {
+                id: user.id,
+                name: user.email || 'User',
+                accounts: ['DEMO'],
+                role: 'user'
+              },
+              accounts: ['DEMO'],
+            }))
           })
       }
     })
