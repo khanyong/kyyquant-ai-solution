@@ -93,7 +93,12 @@ interface SavedStrategy {
   exit_conditions?: any
   risk_management?: any
   config?: any
+  parameters?: any
   isFavorite?: boolean
+  // Extracted fields (populated after processing)
+  buyConditions?: any[]
+  sellConditions?: any[]
+  riskManagement?: any
 }
 
 interface StrategyLoaderProps {
