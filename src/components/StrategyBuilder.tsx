@@ -979,6 +979,9 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       }, 500)
     }
 
+    // config 객체도 확인 (StrategyLoader에서 추출된 데이터)
+    const config = strategyData.config || savedStrategy.config || {}
+
     // 실제 저장된 데이터 구조에 맞게 파싱
     // 지표 데이터 파싱 (indicators.list 또는 indicators 배열)
     let indicators = []
@@ -988,25 +991,35 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       } else if (strategyData.indicators.list && Array.isArray(strategyData.indicators.list)) {
         indicators = strategyData.indicators.list
       }
+    } else if (config.indicators && Array.isArray(config.indicators)) {
+      indicators = config.indicators
     }
 
-    // 매수 조건 파싱 (entry_conditions.buy 또는 buyConditions)
+    // 매수 조건 파싱 (여러 경로 확인)
     let buyConditions = []
-    if (strategyData.entry_conditions && strategyData.entry_conditions.buy) {
-      buyConditions = strategyData.entry_conditions.buy
-    } else if (strategyData.buyConditions) {
+    if (strategyData.buyConditions && Array.isArray(strategyData.buyConditions)) {
       buyConditions = strategyData.buyConditions
+    } else if (strategyData.entry_conditions?.buy) {
+      buyConditions = strategyData.entry_conditions.buy
+    } else if (config.buyConditions && Array.isArray(config.buyConditions)) {
+      buyConditions = config.buyConditions
+    } else if (savedStrategy.buyConditions && Array.isArray(savedStrategy.buyConditions)) {
+      buyConditions = savedStrategy.buyConditions
     }
 
-    // 매도 조건 파싱 (exit_conditions.sell 또는 sellConditions)
+    // 매도 조건 파싱 (여러 경로 확인)
     let sellConditions = []
-    if (strategyData.exit_conditions && strategyData.exit_conditions.sell) {
-      sellConditions = strategyData.exit_conditions.sell
-    } else if (strategyData.sellConditions) {
+    if (strategyData.sellConditions && Array.isArray(strategyData.sellConditions)) {
       sellConditions = strategyData.sellConditions
+    } else if (strategyData.exit_conditions?.sell) {
+      sellConditions = strategyData.exit_conditions.sell
+    } else if (config.sellConditions && Array.isArray(config.sellConditions)) {
+      sellConditions = config.sellConditions
+    } else if (savedStrategy.sellConditions && Array.isArray(savedStrategy.sellConditions)) {
+      sellConditions = savedStrategy.sellConditions
     }
 
-    // 리스크 관리 파싱
+    // 리스크 관리 파싱 (여러 경로 확인)
     let riskManagement = {
       stopLoss: -5,
       takeProfit: 10,
@@ -1016,10 +1029,50 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       maxPositions: 10
     }
 
-    if (strategyData.risk_management) {
-      riskManagement = { ...riskManagement, ...strategyData.risk_management }
-    } else if (strategyData.riskManagement) {
+    if (strategyData.riskManagement && typeof strategyData.riskManagement === 'object') {
       riskManagement = { ...riskManagement, ...strategyData.riskManagement }
+    } else if (strategyData.risk_management && typeof strategyData.risk_management === 'object') {
+      riskManagement = { ...riskManagement, ...strategyData.risk_management }
+    } else if (config.riskManagement && typeof config.riskManagement === 'object') {
+      riskManagement = { ...riskManagement, ...config.riskManagement }
+    } else if (savedStrategy.riskManagement && typeof savedStrategy.riskManagement === 'object') {
+      riskManagement = { ...riskManagement, ...savedStrategy.riskManagement }
+    }
+
+    // targetProfit과 stopLoss (전체 객체 구조 유지)
+    // config.targetProfit 객체를 우선적으로 사용 (staged, simple 정보 포함)
+    let targetProfit = config.targetProfit
+      || strategyData.targetProfit
+      || savedStrategy.targetProfit
+
+    // targetProfit이 없거나 숫자인 경우, config.takeProfit 또는 riskManagement.takeProfit 사용
+    if (!targetProfit || typeof targetProfit === 'number') {
+      const numericValue = targetProfit || config.takeProfit || riskManagement.takeProfit
+      if (typeof numericValue === 'number') {
+        // 숫자를 객체 형식으로 변환
+        targetProfit = {
+          mode: 'simple',
+          simple: { enabled: true, value: numericValue, combineWith: 'OR' },
+          staged: { enabled: false, combineWith: 'OR', stages: [] }
+        }
+      }
+    }
+
+    // stopLoss 객체를 우선적으로 사용
+    let stopLoss = config.stopLoss
+      || strategyData.stopLoss
+      || savedStrategy.stopLoss
+
+    // stopLoss가 없거나 숫자인 경우, config.stopLossOld 또는 riskManagement.stopLoss 사용
+    if (!stopLoss || typeof stopLoss === 'number') {
+      const numericValue = stopLoss || config.stopLossOld || riskManagement.stopLoss
+      if (typeof numericValue === 'number') {
+        // 숫자를 객체 형식으로 변환
+        stopLoss = {
+          value: Math.abs(numericValue),
+          enabled: true
+        }
+      }
     }
 
     // 전략 데이터 구조 확인 및 설정
@@ -1030,22 +1083,28 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
       indicators: indicators,
       buyConditions: buyConditions,
       sellConditions: sellConditions,
-      targetProfit: strategyData.targetProfit || strategyData.config?.targetProfit,
-      stopLoss: strategyData.stopLoss || strategyData.config?.stopLoss,
+      targetProfit: targetProfit,
+      stopLoss: stopLoss,
       riskManagement: riskManagement
     }
 
-    console.log('Parsed strategy data:')
-    console.log('- Original:', strategyData)
-    console.log('- Formatted:', formattedStrategy)
-    console.log('- Indicators count:', indicators.length)
-    console.log('- Buy conditions count:', buyConditions.length)
-    console.log('- Sell conditions count:', sellConditions.length)
+    console.log('✅ Parsed strategy data:')
+    console.log('📦 Original savedStrategy:', savedStrategy)
+    console.log('📦 strategyData:', strategyData)
+    console.log('📦 config object:', config)
+    console.log('📦 config.buyStageStrategy:', config.buyStageStrategy)
+    console.log('📦 config.sellStageStrategy:', config.sellStageStrategy)
+    console.log('📦 config.useStageBasedStrategy:', config.useStageBasedStrategy)
+    console.log('✨ Formatted strategy:', formattedStrategy)
+    console.log('📊 Indicators count:', indicators.length, indicators)
+    console.log('🔵 Buy conditions count:', buyConditions.length, buyConditions)
+    console.log('🔴 Sell conditions count:', sellConditions.length, sellConditions)
+    console.log('⚙️ Risk management:', riskManagement)
+    console.log('🎯 Target profit:', targetProfit, 'Stop loss:', stopLoss)
 
     setStrategy(formattedStrategy)
 
-    // config에서 단계별 전략 정보 복원
-    const config = strategyData.config || {}
+    // config에서 단계별 전략 정보 복원 (config는 이미 위에서 선언됨)
     if (config.useStageBasedStrategy !== undefined) {
       setUseStageBasedStrategy(config.useStageBasedStrategy)
 

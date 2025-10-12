@@ -124,8 +124,28 @@ const StageBasedStrategy: React.FC<StageBasedStrategyProps> = ({
   // initialStrategy가 제공될 때 state 업데이트
   useEffect(() => {
     if (initialStrategy) {
-      // stage1, stage2, stage3 형식을 stages 배열로 변환
+      console.log('🔵 StageBasedStrategy received initialStrategy:', initialStrategy)
+
+      // 새로운 형식: stages 배열이 있는 경우
+      if (initialStrategy.stages && Array.isArray(initialStrategy.stages)) {
+        console.log('✅ Using new format (stages array)')
+        setStrategy({
+          type: initialStrategy.type || type,
+          stages: initialStrategy.stages.map((stage: any) => ({
+            stage: stage.stage,
+            enabled: stage.enabled ?? false,
+            indicators: stage.indicators || [],
+            passAllRequired: stage.passAllRequired ?? true,
+            positionPercent: stage.positionPercent || 30
+          })),
+          usedIndicators: new Set()
+        })
+        return
+      }
+
+      // 레거시 형식: stage1, stage2, stage3 형식을 stages 배열로 변환
       if (initialStrategy.stage1 || initialStrategy.stage2 || initialStrategy.stage3) {
+        console.log('⚠️ Using legacy format (stage1, stage2, stage3)')
         const newStages: Stage[] = []
         
         if (initialStrategy.stage1) {
