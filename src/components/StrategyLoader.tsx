@@ -187,8 +187,10 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
   }
 
   const calculateStrategyStats = async (strategy: any): Promise<StrategyStats> => {
+    console.log('📊 Calculating stats for strategy:', strategy.name)
+
     // 백테스트 결과 조회
-    const { data: backtestData } = await supabase
+    const { data: backtestData, error: backtestError } = await supabase
       .from('backtest_results')
       .select('*')
       .eq('strategy_id', strategy.id)
@@ -196,33 +198,111 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
       .limit(1)
       .single()
 
-    // 전략 실행 기록 조회
-    const { data: executionData, count } = await supabase
-      .from('strategy_executions')
+    if (backtestError && backtestError.code !== 'PGRST116') {
+      console.warn('⚠️ Backtest fetch error:', backtestError)
+    }
+
+    console.log('📈 Backtest data:', backtestData)
+
+    // 전략 실행 기록 조회 (올바른 테이블명 사용)
+    const { data: executionData, count, error: execError } = await supabase
+      .from('strategy_execution_logs')
       .select('*', { count: 'exact' })
       .eq('strategy_id', strategy.id)
 
+    if (execError && execError.code !== 'PGRST116') {
+      console.warn('⚠️ Execution fetch error:', execError)
+    }
+
+    console.log('🔄 Execution count:', count)
+
+    // 매수 조건 추출 (여러 경로 확인)
+    let buyConditions: any[] = []
+
+    if (strategy.strategy_data?.buyConditions) {
+      buyConditions = strategy.strategy_data.buyConditions
+    } else if (strategy.strategy_data?.entry_conditions?.buy) {
+      buyConditions = strategy.strategy_data.entry_conditions.buy
+    } else if (strategy.config?.buyConditions) {
+      buyConditions = strategy.config.buyConditions
+    } else if (strategy.entry_conditions?.buy) {
+      buyConditions = strategy.entry_conditions.buy
+    } else if (strategy.parameters?.buyConditions) {
+      buyConditions = strategy.parameters.buyConditions
+    }
+
+    console.log('🎯 Buy conditions found:', buyConditions?.length)
+
     // 포함된 종목 수 계산
     let includedStocks = 0
-    if (strategy.strategy_data?.buyConditions) {
+    if (buyConditions && buyConditions.length > 0) {
       const stockSymbols = new Set()
-      strategy.strategy_data.buyConditions.forEach((condition: any) => {
+      buyConditions.forEach((condition: any) => {
         if (condition.stocks) {
           condition.stocks.forEach((stock: string) => stockSymbols.add(stock))
+        }
+        // 다른 형태의 종목 데이터도 확인
+        if (condition.stock) {
+          stockSymbols.add(condition.stock)
+        }
+        if (condition.symbol) {
+          stockSymbols.add(condition.symbol)
         }
       })
       includedStocks = stockSymbols.size
     }
 
+    console.log('📊 Included stocks:', includedStocks)
+
     // 승률 및 평균 수익률 계산
     let winRate = 0
     let averageReturn = 0
-    if (backtestData?.results) {
-      const trades = backtestData.results.trades || []
-      const wins = trades.filter((t: any) => t.return > 0).length
-      winRate = trades.length > 0 ? (wins / trades.length) * 100 : 0
-      averageReturn = trades.reduce((sum: number, t: any) => sum + t.return, 0) / (trades.length || 1)
+
+    if (backtestData) {
+      // 여러 형태의 백테스트 결과 구조 지원
+      let trades: any[] = []
+
+      // 우선순위: trade_details > results.trades > trades > results
+      if (backtestData.trade_details && Array.isArray(backtestData.trade_details)) {
+        trades = backtestData.trade_details
+        console.log('📋 Using trade_details')
+      } else if (backtestData.results?.trades) {
+        trades = backtestData.results.trades
+        console.log('📋 Using results.trades')
+      } else if (backtestData.trades) {
+        trades = backtestData.trades
+        console.log('📋 Using trades')
+      } else if (Array.isArray(backtestData.results)) {
+        trades = backtestData.results
+        console.log('📋 Using results array')
+      }
+
+      console.log('💹 Trades found:', trades.length)
+
+      if (trades.length > 0) {
+        const wins = trades.filter((t: any) => {
+          const returnValue = t.profit_loss || t.profit_rate || t.return || t.profit || t.return_rate || 0
+          return returnValue > 0
+        }).length
+
+        winRate = (wins / trades.length) * 100
+
+        const totalReturn = trades.reduce((sum: number, t: any) => {
+          const returnValue = t.profit_rate || t.profit_loss || t.return || t.profit || t.return_rate || 0
+          return sum + returnValue
+        }, 0)
+
+        averageReturn = totalReturn / trades.length
+      }
+
+      // 종목 수도 results_data에서 가져오기
+      if (!includedStocks && backtestData.results_data?.stock_codes) {
+        includedStocks = backtestData.results_data.stock_codes.length
+        console.log('📊 Included stocks from results_data:', includedStocks)
+      }
     }
+
+    console.log('📊 Final stats:', { executionCount: count, averageReturn, winRate, includedStocks })
 
     return {
       executionCount: count || 0,
@@ -231,9 +311,9 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
       includedStocks: includedStocks,
       lastExecuted: executionData?.[0]?.created_at || null,
       backtestResults: backtestData ? {
-        totalReturn: backtestData.total_return_rate || 0,
+        totalReturn: backtestData.total_return_rate || backtestData.total_return || 0,
         sharpeRatio: backtestData.sharpe_ratio || 0,
-        maxDrawdown: backtestData.max_drawdown || 0
+        maxDrawdown: backtestData.max_drawdown || backtestData.mdd || 0
       } : undefined
     }
   }
@@ -429,8 +509,10 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
   // 전략 조건 조합 특성 요약
   const getStrategyConditionSummary = (strategy: SavedStrategy) => {
     const conditions: string[] = []
-    const strategyData = strategy.strategy_data
-    
+
+    // strategy_data 또는 config에서 데이터 가져오기
+    const strategyData = strategy.strategy_data || strategy.config
+
     if (!strategyData) return '조건 없음'
     
     // 지표 매핑
