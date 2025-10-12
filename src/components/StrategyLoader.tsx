@@ -235,39 +235,77 @@ const StrategyLoader: React.FC<StrategyLoaderProps> = ({
 
   const handleStrategySelect = (strategy: SavedStrategy) => {
     console.log('Strategy selected:', strategy)
-    setSelectedStrategy(strategy)
+
+    // config 객체에서 실제 전략 데이터 추출 (StrategyAnalyzer와 동일한 방식)
+    if (strategy?.config) {
+      console.log('🔍 Strategy has config object:', strategy.config)
+      const extractedStrategy = {
+        ...strategy,
+        buyConditions: strategy.config.buyConditions || strategy.entry_conditions?.buy || [],
+        sellConditions: strategy.config.sellConditions || strategy.exit_conditions?.sell || [],
+        indicators: strategy.config.indicators || strategy.indicators?.list || [],
+        riskManagement: strategy.risk_management || {
+          stopLoss: strategy.config.stopLoss,
+          takeProfit: strategy.config.takeProfit,
+          trailingStop: strategy.config.trailingStop,
+          trailingStopPercent: strategy.config.trailingStopPercent,
+          positionSize: strategy.config.positionSize,
+          maxPositions: strategy.config.maxPositions
+        }
+      }
+      console.log('✨ Extracted strategy:', {
+        name: extractedStrategy.name,
+        buyConditionsCount: extractedStrategy.buyConditions?.length,
+        sellConditionsCount: extractedStrategy.sellConditions?.length,
+        buyConditions: extractedStrategy.buyConditions,
+        sellConditions: extractedStrategy.sellConditions,
+        buyConditionsSample: extractedStrategy.buyConditions?.[0],
+        sellConditionsSample: extractedStrategy.sellConditions?.[0]
+      })
+      setSelectedStrategy(extractedStrategy)
+    } else if (strategy?.parameters) {
+      console.log('🔍 Strategy has parameters object (legacy):', strategy.parameters)
+      // 구버전 호환성 유지
+      const extractedStrategy = {
+        ...strategy,
+        buyConditions: strategy.parameters.buyConditions || [],
+        sellConditions: strategy.parameters.sellConditions || [],
+        indicators: strategy.parameters.indicators || [],
+        riskManagement: {
+          stopLoss: strategy.parameters.stopLoss,
+          takeProfit: strategy.parameters.takeProfit,
+          trailingStop: strategy.parameters.trailingStop,
+          trailingStopPercent: strategy.parameters.trailingStopPercent
+        }
+      }
+      console.log('✨ Extracted strategy (legacy):', extractedStrategy)
+      setSelectedStrategy(extractedStrategy)
+    } else {
+      console.log('⚠️ Strategy has no config or parameters, using as-is')
+      console.log('📄 Strategy structure:', {
+        keys: Object.keys(strategy || {}),
+        buyConditions: strategy?.buyConditions,
+        sellConditions: strategy?.sellConditions
+      })
+      setSelectedStrategy(strategy)
+    }
   }
 
   const handleLoad = () => {
     console.log('handleLoad called, selectedStrategy:', selectedStrategy)
     console.log('onLoad function:', onLoad)
     console.log('onClose function:', onClose)
-    
+
     if (selectedStrategy) {
-      // strategy_data 필드 확인 및 대체 경로 처리
-      const strategyData = selectedStrategy.strategy_data || {
+      // handleStrategySelect에서 이미 데이터 추출되어 있으므로 그대로 사용
+      console.log('✨ Loading strategy data:', {
         name: selectedStrategy.name,
-        description: selectedStrategy.description,
-        indicators: selectedStrategy.indicators?.list || [],
-        buyConditions: selectedStrategy.entry_conditions?.buy || [],
-        sellConditions: selectedStrategy.exit_conditions?.sell || [],
-        riskManagement: selectedStrategy.risk_management || {
-          stopLoss: -5,
-          takeProfit: 10,
-          trailingStop: false,
-          trailingStopPercent: 3,
-          positionSize: 10,
-          maxPositions: 10
-        },
-        // config 필드에서 추가 정보 추출
-        useStageBasedStrategy: selectedStrategy.config?.useStageBasedStrategy || false,
-        buyStageStrategy: selectedStrategy.config?.buyStageStrategy || null,
-        sellStageStrategy: selectedStrategy.config?.sellStageStrategy || null,
-        investmentUniverse: selectedStrategy.config?.investmentUniverse || null
-      }
-      
-      console.log('Loading strategy data:', strategyData)
-      onLoad(strategyData)
+        buyConditionsCount: selectedStrategy.buyConditions?.length,
+        sellConditionsCount: selectedStrategy.sellConditions?.length,
+        riskManagement: selectedStrategy.riskManagement
+      })
+
+      onLoad(selectedStrategy)
       onClose()
     } else {
       console.warn('No strategy selected')
