@@ -376,7 +376,37 @@ function MainApp() {
                 </Grid>
                 
                 <Grid item xs={12}>
-                  <AutoTradingPanel />
+                  {role && (role === 'premium' || role === 'admin') ? (
+                    <AutoTradingPanel />
+                  ) : (
+                    <Paper sx={{ p: 3 }}>
+                      <Alert severity="warning" sx={{ mb: 2 }}>
+                        <Typography variant="h6" gutterBottom>
+                          🔒 프리미엄 회원 전용 기능
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 2 }}>
+                          자동매매 기능은 프리미엄 회원만 이용하실 수 있습니다.
+                        </Typography>
+                        <Typography variant="body2">
+                          • 24/7 자동 매매 실행<br/>
+                          • 실시간 신호 모니터링<br/>
+                          • 다중 전략 동시 운영<br/>
+                          • 투자유니버스 자동 필터링
+                        </Typography>
+                      </Alert>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          프리미엄 플랜으로 업그레이드하여 자동매매를 시작하세요
+                        </Typography>
+                        <Chip
+                          label="프리미엄 플랜 보기"
+                          color="primary"
+                          onClick={() => navigate('/pricing')}
+                          sx={{ mt: 2, cursor: 'pointer' }}
+                        />
+                      </Box>
+                    </Paper>
+                  )}
                 </Grid>
                 
                 <Grid item xs={12} md={6}>
