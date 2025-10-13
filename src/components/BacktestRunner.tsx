@@ -1097,10 +1097,42 @@ const BacktestRunner: React.FC = () => {
         results_data: {
           strategy_config: backtestResults.strategy_config || {},
           investment_config: {
+            // 기본 투자 설정
             initial_capital: config.initialCapital,
             commission: config.commission,
             slippage: config.slippage,
-            data_interval: config.dataInterval
+            data_interval: config.dataInterval,
+
+            // 투자 유니버스 정보
+            universe_type: currentFilterId
+              ? 'investment_filter'
+              : (config.stockCodes && config.stockCodes.length === 1)
+              ? 'single_stock'
+              : (config.stockCodes && config.stockCodes.length > 1)
+              ? 'multiple_stocks'
+              : 'unknown',
+
+            // 단일 종목인 경우
+            ...(config.stockCodes && config.stockCodes.length === 1 && {
+              stock_code: config.stockCodes[0],
+              stock_name: null // TODO: 종목명 조회하여 추가
+            }),
+
+            // 투자유니버스(필터)인 경우
+            ...(currentFilterId && {
+              filter_id: currentFilterId,
+              filter_name: currentFilters ?
+                (typeof currentFilters === 'object' && 'name' in currentFilters ? (currentFilters as any).name : null)
+                : null,
+              stock_count: config.stockCodes?.length || 0,
+              stocks: config.stockCodes || []
+            }),
+
+            // 다중 종목인 경우
+            ...(!currentFilterId && config.stockCodes && config.stockCodes.length > 1 && {
+              stock_count: config.stockCodes.length,
+              stocks: config.stockCodes
+            })
           },
           filter_config: currentFilters || {},
           filtering_mode: filteringMode,

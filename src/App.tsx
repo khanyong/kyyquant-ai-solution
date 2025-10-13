@@ -393,7 +393,7 @@ function App() {
                 
                 {/* 자동매매 전략 */}
                 <Grid item xs={12}>
-                  <AutoTradingPanel strategies={activeStrategies} />
+                  <AutoTradingPanel />
                 </Grid>
                 
                 {/* 주문 패널과 포트폴리오 */}

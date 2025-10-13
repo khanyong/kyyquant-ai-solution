@@ -64,10 +64,12 @@ export const getAccounts = async () => {
 
 // Portfolio APIs
 export const getBalance = async (accountNo: string): Promise<Portfolio[]> => {
-  const response = await api.post('/api/balance', {
-    account_no: accountNo,
+  const response = await api.get('/api/account/holdings', {
+    params: {
+      account_no: accountNo,
+    }
   })
-  return response.data.holdings
+  return response.data.holdings || response.data
 }
 
 // Stock APIs

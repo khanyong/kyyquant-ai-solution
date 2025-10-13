@@ -1,0 +1,438 @@
+{
+  "targetProfit": {
+    "value": 5,
+    "enabled": true
+  },
+  "stopLoss": {
+    "value": 15,
+    "enabled": true
+  },
+  "indicators": [
+    {
+      "name": "stochastic",
+      "type": "STOCHASTIC",
+      "params": {
+        "k": 14,
+        "d": 3
+      }
+    },
+    {
+      "name": "rsi",
+      "type": "RSI",
+      "params": {
+        "period": 14
+      }
+    },
+    {
+      "name": "ichimoku",
+      "type": "ICHIMOKU",
+      "params": {
+        "tenkan": 9,
+        "kijun": 26,
+        "senkou": 52,
+        "chikou": 26
+      }
+    },
+    {
+      "name": "cci",
+      "type": "CCI",
+      "params": {
+        "period": 20
+      }
+    }
+  ],
+  "maxPositions": 10,
+  "positionSize": 10,
+  "trailingStop": false,
+  "trailingStopPercent": 3,
+  "buyConditions": [
+    {
+      "id": "ind_1759767462960",
+      "type": "buy",
+      "indicator": "stochastic",
+      "left": "stochastic_k",
+      "operator": "<",
+      "right": 19,
+      "value": 19,
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1759767478760",
+      "type": "buy",
+      "indicator": "rsi",
+      "left": "rsi",
+      "operator": "<",
+      "right": 31,
+      "value": 31,
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1759767502257",
+      "type": "buy",
+      "indicator": "rsi",
+      "left": "rsi",
+      "operator": "<",
+      "right": 33,
+      "value": 33,
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1759767516497",
+      "type": "buy",
+      "indicator": "stochastic",
+      "left": "stochastic_k",
+      "operator": "<",
+      "right": 20,
+      "value": 20,
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1759767570729",
+      "type": "buy",
+      "indicator": "ichimoku",
+      "left": "close",
+      "operator": ">",
+      "right": "ichimoku_tenkan",
+      "value": "",
+      "combineWith": "AND"
+    }
+  ],
+  "strategy_type": "staged",
+  "sellConditions": [
+    {
+      "id": "ind_1759767603945",
+      "type": "sell",
+      "indicator": "rsi",
+      "left": "rsi",
+      "operator": ">",
+      "right": 70,
+      "value": 70,
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1759767625616",
+      "type": "sell",
+      "indicator": "stochastic",
+      "left": "stochastic_k",
+      "operator": ">",
+      "right": 85,
+      "value": 85,
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1759767714256",
+      "type": "sell",
+      "indicator": "rsi",
+      "left": "rsi",
+      "operator": ">",
+      "right": 70,
+      "value": 70,
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1759767730800",
+      "type": "sell",
+      "indicator": "stochastic",
+      "left": "stochastic_k",
+      "operator": ">",
+      "right": 85,
+      "value": 85,
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1759767740824",
+      "type": "sell",
+      "indicator": "cci",
+      "left": "cci",
+      "operator": ">",
+      "right": 70,
+      "value": 70,
+      "combineWith": "AND"
+    }
+  ],
+  "useStageBasedStrategy": true,
+  "buyStageStrategy": {
+    "type": "buy",
+    "stages": [
+      {
+        "stage": 1,
+        "enabled": true,
+        "positionPercent": 5,
+        "passAllRequired": true,
+        "conditions": [
+          {
+            "left": "stochastic_k",
+            "operator": "<",
+            "right": 19,
+            "combineWith": "AND"
+          }
+        ],
+        "indicators": [
+          {
+            "id": "ind_1759767462960",
+            "indicatorId": "stochastic",
+            "name": "스토캐스틱",
+            "operator": "<",
+            "value": 19,
+            "params": {
+              "k": 14,
+              "d": 3
+            },
+            "combineWith": "AND"
+          }
+        ]
+      },
+      {
+        "stage": 2,
+        "enabled": true,
+        "positionPercent": 10,
+        "passAllRequired": true,
+        "conditions": [
+          {
+            "left": "rsi",
+            "operator": "<",
+            "right": 31,
+            "combineWith": "AND"
+          }
+        ],
+        "indicators": [
+          {
+            "id": "ind_1759767478760",
+            "indicatorId": "rsi",
+            "name": "RSI",
+            "operator": "<",
+            "value": 31,
+            "params": {
+              "period": 14
+            },
+            "combineWith": "AND"
+          }
+        ]
+      },
+      {
+        "stage": 3,
+        "enabled": true,
+        "positionPercent": 30,
+        "passAllRequired": true,
+        "conditions": [
+          {
+            "left": "rsi",
+            "operator": "<",
+            "right": 33,
+            "combineWith": "AND"
+          },
+          {
+            "left": "stochastic_k",
+            "operator": "<",
+            "right": 20,
+            "combineWith": "AND"
+          },
+          {
+            "left": "close",
+            "operator": ">",
+            "right": "ichimoku_tenkan",
+            "combineWith": "AND"
+          }
+        ],
+        "indicators": [
+          {
+            "id": "ind_1759767502257",
+            "indicatorId": "rsi",
+            "name": "RSI",
+            "operator": "<",
+            "value": 33,
+            "params": {
+              "period": 14
+            },
+            "combineWith": "AND"
+          },
+          {
+            "id": "ind_1759767516497",
+            "indicatorId": "stochastic",
+            "name": "스토캐스틱",
+            "operator": "<",
+            "value": 20,
+            "params": {
+              "k": 14,
+              "d": 3
+            },
+            "combineWith": "AND"
+          },
+          {
+            "id": "ind_1759767570729",
+            "indicatorId": "ichimoku",
+            "name": "일목균형표",
+            "operator": ">",
+            "params": {
+              "tenkan": 9,
+              "kijun": 26,
+              "senkou": 52,
+              "chikou": 26
+            },
+            "combineWith": "AND"
+          }
+        ]
+      }
+    ]
+  },
+  "sellStageStrategy": {
+    "type": "sell",
+    "stages": [
+      {
+        "stage": 1,
+        "enabled": true,
+        "positionPercent": 30,
+        "passAllRequired": true,
+        "conditions": [
+          {
+            "left": "rsi",
+            "operator": ">",
+            "right": 70,
+            "combineWith": "AND"
+          }
+        ],
+        "indicators": [
+          {
+            "id": "ind_1759767603945",
+            "indicatorId": "rsi",
+            "name": "RSI",
+            "operator": ">",
+            "value": 70,
+            "params": {
+              "period": 14
+            },
+            "combineWith": "AND"
+          }
+        ]
+      },
+      {
+        "stage": 2,
+        "enabled": true,
+        "positionPercent": 40,
+        "passAllRequired": true,
+        "conditions": [
+          {
+            "left": "stochastic_k",
+            "operator": ">",
+            "right": 85,
+            "combineWith": "AND"
+          }
+        ],
+        "indicators": [
+          {
+            "id": "ind_1759767625616",
+            "indicatorId": "stochastic",
+            "name": "스토캐스틱",
+            "operator": ">",
+            "value": 85,
+            "params": {
+              "k": 14,
+              "d": 3
+            },
+            "combineWith": "AND"
+          }
+        ]
+      },
+      {
+        "stage": 3,
+        "enabled": true,
+        "positionPercent": 40,
+        "passAllRequired": true,
+        "conditions": [
+          {
+            "left": "rsi",
+            "operator": ">",
+            "right": 70,
+            "combineWith": "AND"
+          },
+          {
+            "left": "stochastic_k",
+            "operator": ">",
+            "right": 85,
+            "combineWith": "AND"
+          },
+          {
+            "left": "cci",
+            "operator": ">",
+            "right": 70,
+            "combineWith": "AND"
+          }
+        ],
+        "indicators": [
+          {
+            "id": "ind_1759767714256",
+            "indicatorId": "rsi",
+            "name": "RSI",
+            "operator": ">",
+            "value": 70,
+            "params": {
+              "period": 14
+            },
+            "combineWith": "AND"
+          },
+          {
+            "id": "ind_1759767730800",
+            "indicatorId": "stochastic",
+            "name": "스토캐스틱",
+            "operator": ">",
+            "value": 85,
+            "params": {
+              "k": 14,
+              "d": 3
+            },
+            "combineWith": "AND"
+          },
+          {
+            "id": "ind_1759767740824",
+            "indicatorId": "cci",
+            "name": "CCI",
+            "operator": ">",
+            "value": 70,
+            "params": {
+              "period": 20
+            },
+            "combineWith": "AND"
+          }
+        ]
+      }
+    ]
+  },
+  "investmentUniverse": {
+    "financialFilters": {
+      "filters": {
+        "sector": null,
+        "investor": null,
+        "financial": null,
+        "valuation": {
+          "currentPrice": [1000, 100000],
+          "marketCap": [500, 20000],
+          "volume": [100, 10000],
+          "foreignRatio": [10, 50],
+          "per": [15, 40],
+          "pbr": [0.5, 1.5],
+          "pcr": [0, 30],
+          "psr": [0, 5],
+          "peg": [0, 3],
+          "eps": [-1000, 10000],
+          "bps": [0, 100000],
+          "priceToHigh52w": [50, 100]
+        }
+      },
+      "timestamp": "2025-09-09T14:53:50.300Z",
+      "filterStats": {
+        "total": 3349,
+        "afterSector": 0,
+        "afterInvestor": 0,
+        "afterFinancial": 0,
+        "afterMarketCap": 131,
+        "final": 131
+      },
+      "appliedFilters": {
+        "sector": false,
+        "investor": false,
+        "financial": false,
+        "valuation": true
+      }
+    }
+  }
+}

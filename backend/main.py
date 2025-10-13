@@ -70,6 +70,20 @@ try:
 except ImportError as e:
     print(f"[ERROR] Failed to import strategy router: {e}")
 
+try:
+    from api.account import router as account_router
+    app.include_router(account_router, prefix="/api/account", tags=["account"])
+    print("[OK] Account router registered")
+except ImportError as e:
+    print(f"[ERROR] Failed to import account router: {e}")
+
+try:
+    from api.order import router as order_router
+    app.include_router(order_router, prefix="/api/order", tags=["order"])
+    print("[OK] Order router registered")
+except ImportError as e:
+    print(f"[ERROR] Failed to import order router: {e}")
+
 @app.get("/")
 async def root():
     """헬스체크 엔드포인트"""
@@ -81,6 +95,8 @@ async def root():
             "backtest": "/api/backtest",
             "market": "/api/market",
             "strategy": "/api/strategy",
+            "account": "/api/account",
+            "order": "/api/order",
             "docs": "/docs"
         }
     }

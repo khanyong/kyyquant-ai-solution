@@ -1,0 +1,339 @@
+{
+  "name": "시장 현재가 업데이트",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQwNzI4MjIsImV4cCI6MjA0OTY0ODgyMn0.4os7nTtheVZkSJy5P8vN2d-cLcP_XZ6nUBZPOmK-eZ8"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-env-vars",
+      "name": "환경변수 설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "dateTime": [
+            {
+              "value1": "={{DateTime.now().toFormat('HH:mm')}}",
+              "operation": "afterOrEqual",
+              "value2": "09:00"
+            },
+            {
+              "value1": "={{DateTime.now().toFormat('HH:mm')}}",
+              "operation": "beforeOrEqual",
+              "value2": "15:30"
+            }
+          ],
+          "number": [
+            {
+              "value1": "={{DateTime.now().weekday}}",
+              "operation": "smallerOrEqual",
+              "value2": 5
+            }
+          ]
+        }
+      },
+      "id": "market-hours-check",
+      "name": "장시간 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public",
+        "table": "kw_stock_master",
+        "limit": 50,
+        "options": {
+          "orderBy": {
+            "orderBy": [
+              {
+                "column": "market_cap",
+                "direction": "DESC"
+              }
+            ]
+          }
+        }
+      },
+      "id": "get-stock-list",
+      "name": "주요 종목 조회",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-stocks",
+      "name": "종목별 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://openapi.kiwoom.com/uapi/domestic-stock/v1/quotations/inquire-price",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "FID_COND_MRKT_DIV_CODE",
+              "value": "J"
+            },
+            {
+              "name": "FID_INPUT_ISCD",
+              "value": "={{$json.stock_code}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "appkey",
+              "value": "={{$('환경변수 설정').item.json.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$('환경변수 설정').item.json.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "FHKST01010100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "get-current-price",
+      "name": "키움 현재가 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 키움 API 응답 데이터 파싱\nconst apiResponse = $input.item.json;\nconst stockCode = $('종목별 처리').item.json.stock_code;\n\n// output1 데이터 추출\nconst output = apiResponse.output || {};\n\n// 가격 데이터 파싱\nconst currentPrice = parseInt(output.stck_prpr || 0);  // 현재가\nconst changePrice = parseInt(output.prdy_vrss || 0);   // 전일대비\nconst changeRate = parseFloat(output.prdy_ctrt || 0); // 등락률\nconst volume = parseInt(output.acml_vol || 0);        // 누적거래량\nconst high52w = parseInt(output.w52_hgpr || 0);       // 52주 최고가\nconst low52w = parseInt(output.w52_lwpr || 0);        // 52주 최저가\nconst marketCap = parseInt(output.hts_avls || 0);     // 시가총액\n\n// 반환할 데이터 구조\nreturn {\n  stock_code: stockCode,\n  current_price: currentPrice,\n  change_price: changePrice,\n  change_rate: changeRate,\n  volume: volume,\n  high_52w: high52w,\n  low_52w: low52w,\n  market_cap: marketCap,\n  updated_at: new Date().toISOString()\n};"
+      },
+      "id": "parse-price-data",
+      "name": "데이터 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('환경변수 설정').item.json.SUPABASE_URL}}/rest/v1/kw_price_current",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stock_code\": \"{{$json.stock_code}}\",\n  \"current_price\": {{$json.current_price}},\n  \"change_price\": {{$json.change_price}},\n  \"change_rate\": {{$json.change_rate}},\n  \"volume\": {{$json.volume}},\n  \"high_52w\": {{$json.high_52w}},\n  \"low_52w\": {{$json.low_52w}},\n  \"market_cap\": {{$json.market_cap}},\n  \"updated_at\": \"{{$json.updated_at}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('환경변수 설정').item.json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$('환경변수 설정').item.json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "upsert-to-supabase",
+      "name": "Supabase UPSERT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "amount": 0.2,
+        "unit": "seconds"
+      },
+      "id": "rate-limit-delay",
+      "name": "API 호출 제한",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1850, 300]
+    }
+  ],
+  "connections": {
+    "1분마다 실행": {
+      "main": [
+        [
+          {
+            "node": "환경변수 설정",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "환경변수 설정": {
+      "main": [
+        [
+          {
+            "node": "장시간 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장시간 체크": {
+      "main": [
+        [
+          {
+            "node": "주요 종목 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "주요 종목 조회": {
+      "main": [
+        [
+          {
+            "node": "종목별 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "종목별 처리": {
+      "main": [
+        [
+          {
+            "node": "키움 현재가 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 현재가 조회": {
+      "main": [
+        [
+          {
+            "node": "데이터 파싱",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터 파싱": {
+      "main": [
+        [
+          {
+            "node": "Supabase UPSERT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase UPSERT": {
+      "main": [
+        [
+          {
+            "node": "API 호출 제한",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API 호출 제한": {
+      "main": [
+        [
+          {
+            "node": "종목별 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "market-monitoring"
+    }
+  ],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {}
+}

@@ -85,9 +85,10 @@ const KiwoomTradingPanel: React.FC = () => {
       // Initialize Kiwoom API
       await kiwoomApi.initialize(userId, isTestMode)
       setInitialized(true)
-      
+
       // Load initial data
-      await loadAccountData()
+      // Note: Commented out to avoid CORS error - use backend API instead
+      // await loadAccountData()
     } catch (err: any) {
       console.error('Failed to initialize:', err)
       setError(err.message || '초기화 실패')

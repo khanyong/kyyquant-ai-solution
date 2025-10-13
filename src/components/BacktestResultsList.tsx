@@ -49,6 +49,7 @@ interface BacktestResult {
   status: 'pending' | 'running' | 'completed' | 'failed';
   start_date: string;
   end_date: string;
+  investment_config?: any; // 투자 설정 정보
 }
 
 const BacktestResultsList: React.FC = () => {
@@ -253,6 +254,7 @@ const BacktestResultsList: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell>전략명</TableCell>
+                <TableCell>투자유니버스</TableCell>
                 <TableCell>기간</TableCell>
                 <TableCell align="right">총 수익률</TableCell>
                 <TableCell align="right">최대 낙폭</TableCell>
@@ -271,6 +273,53 @@ const BacktestResultsList: React.FC = () => {
                     <Typography variant="body2" fontWeight="bold">
                       {result.strategy_name}
                     </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {result.investment_config ? (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Chip
+                          label={
+                            result.investment_config.universe_type === 'single_stock'
+                              ? '단일 종목'
+                              : result.investment_config.universe_type === 'investment_filter'
+                              ? '투자유니버스'
+                              : result.investment_config.universe_type === 'multiple_stocks'
+                              ? '복수 종목'
+                              : '알 수 없음'
+                          }
+                          size="small"
+                          color={
+                            result.investment_config.universe_type === 'single_stock'
+                              ? 'primary'
+                              : result.investment_config.universe_type === 'investment_filter'
+                              ? 'success'
+                              : result.investment_config.universe_type === 'multiple_stocks'
+                              ? 'info'
+                              : 'default'
+                          }
+                          variant="outlined"
+                        />
+                        {result.investment_config.universe_type === 'single_stock' && result.investment_config.stock_code && (
+                          <Typography variant="caption" color="text.secondary">
+                            {result.investment_config.stock_code}
+                          </Typography>
+                        )}
+                        {result.investment_config.universe_type === 'investment_filter' && result.investment_config.filter_name && (
+                          <Typography variant="caption" color="text.secondary">
+                            {result.investment_config.filter_name}
+                          </Typography>
+                        )}
+                        {result.investment_config.universe_type === 'multiple_stocks' && result.investment_config.stock_count && (
+                          <Typography variant="caption" color="text.secondary">
+                            {result.investment_config.stock_count}개
+                          </Typography>
+                        )}
+                      </Stack>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        -
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Typography variant="caption">

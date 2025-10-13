@@ -914,26 +914,173 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
                   {result.investment_config ? (
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>
-                        투자 유니버스:
-                      </Typography>
-                      <pre style={{ 
-                        fontSize: '0.8rem', 
-                        overflow: 'auto',
-                        backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                        color: theme.palette.text.primary,
-                        padding: 8,
-                        borderRadius: 4,
-                        border: `1px solid ${theme.palette.divider}`
-                      }}>
-                        {JSON.stringify(result.investment_config, null, 2)}
-                      </pre>
-                    </Box>
+                    <Stack spacing={2}>
+                      {/* 투자 유니버스 타입 */}
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                          투자 유니버스 유형
+                        </Typography>
+                        <Chip
+                          label={
+                            result.investment_config.universe_type === 'single_stock'
+                              ? '단일 종목'
+                              : result.investment_config.universe_type === 'investment_filter'
+                              ? '투자유니버스 (필터)'
+                              : result.investment_config.universe_type === 'multiple_stocks'
+                              ? '복수 종목 (수동 선택)'
+                              : result.investment_config.universe_type || '알 수 없음'
+                          }
+                          color={
+                            result.investment_config.universe_type === 'single_stock'
+                              ? 'primary'
+                              : result.investment_config.universe_type === 'investment_filter'
+                              ? 'success'
+                              : result.investment_config.universe_type === 'multiple_stocks'
+                              ? 'info'
+                              : 'default'
+                          }
+                          size="small"
+                        />
+                      </Box>
+
+                      {/* 단일 종목인 경우 */}
+                      {result.investment_config.universe_type === 'single_stock' && (
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            종목 정보
+                          </Typography>
+                          <Paper variant="outlined" sx={{ p: 1.5 }}>
+                            <Typography variant="body2">
+                              <strong>종목코드:</strong> {result.investment_config.stock_code || '-'}
+                            </Typography>
+                            {result.investment_config.stock_name && (
+                              <Typography variant="body2">
+                                <strong>종목명:</strong> {result.investment_config.stock_name}
+                              </Typography>
+                            )}
+                          </Paper>
+                        </Box>
+                      )}
+
+                      {/* 투자유니버스인 경우 */}
+                      {result.investment_config.universe_type === 'investment_filter' && (
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            투자유니버스 정보
+                          </Typography>
+                          <Paper variant="outlined" sx={{ p: 1.5 }}>
+                            {result.investment_config.filter_name && (
+                              <Typography variant="body2" gutterBottom>
+                                <strong>유니버스명:</strong> {result.investment_config.filter_name}
+                              </Typography>
+                            )}
+                            {result.investment_config.filter_id && (
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                ID: {result.investment_config.filter_id}
+                              </Typography>
+                            )}
+                            {result.investment_config.stock_count && (
+                              <Box sx={{ mt: 1 }}>
+                                <Chip
+                                  label={`${result.investment_config.stock_count}개 종목`}
+                                  size="small"
+                                  color="success"
+                                  variant="outlined"
+                                />
+                              </Box>
+                            )}
+                            {result.investment_config.stocks && Array.isArray(result.investment_config.stocks) && (
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  포함 종목 샘플:
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {result.investment_config.stocks.slice(0, 10).join(', ')}
+                                  {result.investment_config.stocks.length > 10 ? '...' : ''}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Paper>
+                        </Box>
+                      )}
+
+                      {/* 복수 종목 (수동 선택)인 경우 */}
+                      {result.investment_config.universe_type === 'multiple_stocks' && (
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            선택 종목 정보
+                          </Typography>
+                          <Paper variant="outlined" sx={{ p: 1.5 }}>
+                            {result.investment_config.stock_count && (
+                              <Box sx={{ mb: 1 }}>
+                                <Chip
+                                  label={`${result.investment_config.stock_count}개 종목 (수동 선택)`}
+                                  size="small"
+                                  color="info"
+                                  variant="outlined"
+                                />
+                              </Box>
+                            )}
+                            {result.investment_config.stocks && Array.isArray(result.investment_config.stocks) && (
+                              <Box>
+                                <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                                  선택된 종목:
+                                </Typography>
+                                <Typography variant="body2">
+                                  {result.investment_config.stocks.join(', ')}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Paper>
+                        </Box>
+                      )}
+
+                      {/* 초기 자본금 */}
+                      {result.investment_config.initial_capital && (
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            초기 자본금
+                          </Typography>
+                          <Typography variant="body1" fontWeight="medium">
+                            {result.investment_config.initial_capital.toLocaleString()}원
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* 기타 설정이 있는 경우 */}
+                      {Object.keys(result.investment_config).some(key =>
+                        !['universe_type', 'stock_code', 'stock_name', 'filter_name', 'filter_id', 'stock_count', 'stocks', 'initial_capital'].includes(key)
+                      ) && (
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            추가 설정
+                          </Typography>
+                          <Paper variant="outlined" sx={{ p: 1, bgcolor: 'grey.50' }}>
+                            <pre style={{
+                              fontSize: '0.75rem',
+                              overflow: 'auto',
+                              margin: 0,
+                              maxHeight: 150,
+                              color: '#000'
+                            }}>
+                              {JSON.stringify(
+                                Object.fromEntries(
+                                  Object.entries(result.investment_config).filter(([key]) =>
+                                    !['universe_type', 'stock_code', 'stock_name', 'filter_name', 'filter_id', 'stock_count', 'stocks', 'initial_capital'].includes(key)
+                                  )
+                                ),
+                                null,
+                                2
+                              )}
+                            </pre>
+                          </Paper>
+                        </Box>
+                      )}
+                    </Stack>
                   ) : (
-                    <Typography variant="body2" color="textSecondary">
+                    <Alert severity="info">
                       투자 설정 정보가 없습니다.
-                    </Typography>
+                    </Alert>
                   )}
                 </CardContent>
               </Card>
@@ -948,12 +1095,13 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                       필터링 설정
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
-                    <pre style={{ 
-                      fontSize: '0.8rem', 
+                    <pre style={{
+                      fontSize: '0.8rem',
                       overflow: 'auto',
                       backgroundColor: '#f5f5f5',
                       padding: 8,
-                      borderRadius: 4
+                      borderRadius: 4,
+                      color: '#000'
                     }}>
                       {JSON.stringify(result.filtering_config, null, 2)}
                     </pre>
