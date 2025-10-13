@@ -45,6 +45,9 @@ interface Strategy {
   name: string
   entry_conditions: any
   exit_conditions: any
+  config?: any
+  targetProfit?: any
+  stopLoss?: any
   auto_execute: boolean
   is_active: boolean
   created_at?: string
