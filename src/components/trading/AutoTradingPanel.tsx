@@ -115,7 +115,7 @@ const AutoTradingPanel: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('strategies')
-        .select('id, name, entry_conditions, exit_conditions, auto_execute, is_active, created_at')
+        .select('id, name, entry_conditions, exit_conditions, config, auto_execute, is_active, created_at')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -495,17 +495,86 @@ const AutoTradingPanel: React.FC = () => {
 
                   <Box>
                     <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-                      매도조건 ({selectedStrategy.exit_conditions?.sell?.length || 0}개):
+                      매도조건:
                     </Typography>
-                    {selectedStrategy.exit_conditions?.sell?.length > 0 ? (
-                      <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                        {selectedStrategy.exit_conditions.sell.map((cond: any, idx: number) => (
-                          <Typography key={idx} variant="body2" component="li" sx={{ mb: 0.5 }}>
-                            {cond.left} {cond.operator} {cond.right}
-                          </Typography>
-                        ))}
+
+                    {/* 지표 기반 매도 조건 */}
+                    {selectedStrategy.exit_conditions?.sell?.length > 0 && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                          지표 조건 ({selectedStrategy.exit_conditions.sell.length}개):
+                        </Typography>
+                        <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                          {selectedStrategy.exit_conditions.sell.map((cond: any, idx: number) => (
+                            <Typography key={idx} variant="body2" component="li" sx={{ mb: 0.5 }}>
+                              {cond.left} {cond.operator} {cond.right}
+                            </Typography>
+                          ))}
+                        </Box>
                       </Box>
-                    ) : (
+                    )}
+
+                    {/* 목표수익률 */}
+                    {(() => {
+                      const targetProfit = selectedStrategy.config?.targetProfit || selectedStrategy.targetProfit;
+                      return targetProfit && (
+                        <Box sx={{ mb: 2 }}>
+                          {targetProfit.mode === 'simple' && targetProfit.simple?.enabled && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Chip label="목표수익률" size="small" color="success" sx={{ height: 20 }} />
+                              <Typography variant="body2">
+                                수익률 {targetProfit.simple.value}% 도달 시 매도
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {targetProfit.mode === 'staged' && targetProfit.staged?.enabled && (
+                            <Box>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                <Chip label="단계별 목표수익률" size="small" color="success" sx={{ height: 20 }} />
+                              </Box>
+                              {targetProfit.staged.stages?.map((stage: any, idx: number) => (
+                                <Typography key={idx} variant="body2" sx={{ ml: 2, mb: 0.3 }}>
+                                  • {stage.stage}단계: {stage.targetProfit}% 도달 → {stage.exitRatio}% 매도
+                                </Typography>
+                              ))}
+                            </Box>
+                          )}
+                        </Box>
+                      );
+                    })()}
+
+                    {/* 손절라인 */}
+                    {(() => {
+                      const stopLoss = selectedStrategy.config?.stopLoss || selectedStrategy.stopLoss;
+                      return stopLoss?.enabled && (
+                        <Box sx={{ mb: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Chip label="손절" size="small" color="error" sx={{ height: 20 }} />
+                            <Typography variant="body2">
+                              손실 {Math.abs(stopLoss.value)}% 도달 시 매도
+                            </Typography>
+                          </Box>
+                          {stopLoss.breakEven?.enabled && (
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 2 }}>
+                              • 본전 손절: {stopLoss.breakEven.threshold}% 이상 수익 시 활성화
+                            </Typography>
+                          )}
+                          {stopLoss.trailingStop?.enabled && (
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 2 }}>
+                              • 트레일링 손절: 최고점 대비 {stopLoss.trailingStop.distance}% 하락 시
+                            </Typography>
+                          )}
+                        </Box>
+                      );
+                    })()}
+
+                    {/* 조건 없음 */}
+                    {!selectedStrategy.exit_conditions?.sell?.length &&
+                     !selectedStrategy.config?.targetProfit &&
+                     !selectedStrategy.targetProfit &&
+                     !selectedStrategy.config?.stopLoss &&
+                     !selectedStrategy.stopLoss && (
                       <Typography variant="body2" color="text.secondary">
                         수동 매도
                       </Typography>
