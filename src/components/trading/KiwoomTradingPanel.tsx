@@ -201,10 +201,38 @@ const KiwoomTradingPanel: React.FC = () => {
     return (
       <Card>
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <CircularProgress size={24} />
-            <Typography>키움 API 초기화 중...</Typography>
-          </Box>
+          {loading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <CircularProgress size={24} />
+              <Typography>키움 API 초기화 중...</Typography>
+            </Box>
+          ) : error ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                키움 API 초기화 실패
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                {error}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                키움증권 API 키를 먼저 등록해주세요. (설정 &gt; API 키 관리)
+              </Typography>
+            </Alert>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <CircularProgress size={24} />
+              <Typography>키움 API 초기화 중...</Typography>
+            </Box>
+          )}
+          {error && (
+            <Button
+              variant="outlined"
+              onClick={initializeApi}
+              sx={{ mt: 2 }}
+            >
+              다시 시도
+            </Button>
+          )}
         </CardContent>
       </Card>
     )
