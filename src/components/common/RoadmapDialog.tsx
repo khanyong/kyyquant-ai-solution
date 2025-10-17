@@ -1362,6 +1362,66 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 23,
+      title: 'n8n 워크플로우 통계 및 시장 모니터링',
+      status: 'done',
+      priority: 'high',
+      icon: <AutoGraph />,
+      period: '2025.10.17',
+      description: 'n8n 워크플로우 활동 통계 및 시장 데이터 실시간 모니터링 시스템 구축',
+      subtasks: [
+        {
+          title: '✅ n8n 워크플로우 통계 기능',
+          details: [
+            'SignalMonitor.tsx에 워크플로우 활동 통계 추가',
+            '1분/5분/1시간 신호 개수 실시간 표시',
+            '활성 전략 개수 모니터링',
+            '30초마다 통계 자동 업데이트',
+            'WorkflowStats 인터페이스 정의'
+          ]
+        },
+        {
+          title: '✅ 시장 데이터 모니터링',
+          details: [
+            'kw_price_current 테이블 생성 및 RLS 정책 설정',
+            '상승/하락/보합 종목 통계 표시',
+            '종목별 현재가, 등락률, 거래량 실시간 표시',
+            'n8n 워크플로우에서 시장 데이터 자동 저장',
+            'Supabase Realtime 구독으로 실시간 업데이트'
+          ]
+        },
+        {
+          title: '✅ n8n 워크플로우 개선',
+          details: [
+            'auto-trading-with-auto-order-v9-market-data.json 생성',
+            '시장 데이터 저장 노드 추가 (조건 체크 후 분기)',
+            '키움 API rate limit 대응 (배치 간격 3초)',
+            'Code 노드를 HTTP Request 노드로 변경',
+            'Prefer: resolution=merge-duplicates 헤더로 중복 처리'
+          ]
+        },
+        {
+          title: '✅ PortfolioPanel UI 개선',
+          details: [
+            '계좌 잔고 카드 레이아웃 개선',
+            '시각적 계층 구조 및 정보 배치 최적화',
+            '아이콘 및 색상 테마 적용',
+            '반응형 Grid 레이아웃 구현'
+          ]
+        },
+        {
+          title: '✅ 데이터베이스 스크립트',
+          details: [
+            'CHECK_KW_PRICE_CURRENT_RLS.sql - 테이블 확인',
+            'CREATE_KW_PRICE_CURRENT_TABLE.sql - 테이블 생성',
+            'kw_price_current RLS 정책 설정',
+            'anon 역할 INSERT/UPDATE 권한 부여',
+            'stock_code UNIQUE 제약 추가'
+          ]
+        }
+      ]
+    },
+    {
+      id: 24,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -1422,7 +1482,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 24,
+      id: 25,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -1483,7 +1543,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 25,
+      id: 26,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1544,7 +1604,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 26,
+      id: 27,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -1605,7 +1665,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 27,
+      id: 28,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1666,7 +1726,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 28,
+      id: 29,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
@@ -1731,7 +1791,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 81 // 2025-10-05 기준 진행률 (백테스트 수익률 계산 검증 및 수정 완료)
+  const progress = 82 // 2025-10-17 기준 진행률 (n8n 워크플로우 통계 및 시장 모니터링 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 
