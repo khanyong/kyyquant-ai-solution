@@ -1,5 +1,5 @@
 {
-  "name": "자동매매 모니터링",
+  "name": "자동매매 모니터링 v4",
   "nodes": [
     {
       "parameters": {
@@ -82,6 +82,29 @@
     },
     {
       "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$node['환경변수 설정'].json.KIWOOM_APP_KEY}}\",\n  \"secretkey\": \"{{$node['환경변수 설정'].json.KIWOOM_APP_SECRET}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        }
+      },
+      "id": "get-token-1",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
         "method": "GET",
         "url": "={{$node['환경변수 설정'].json.SUPABASE_URL}}/rest/v1/rpc/get_active_strategies_with_universe",
         "sendHeaders": true,
@@ -102,17 +125,17 @@
       "name": "자동매매 전략 조회",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [850, 300]
+      "position": [1050, 300]
     },
     {
       "parameters": {
-        "jsCode": "// 전략의 모든 투자유니버스에서 종목 코드 추출\nconst items = $input.all();\nconst results = [];\n\n// 환경변수 가져오기\nconst envVars = $('환경변수 설정').first().json;\n\nfor (const item of items) {\n  const strategy = item.json;\n  const stockCodes = [];\n  \n  // filtered_stocks는 jsonb 배열\n  if (strategy.filtered_stocks && Array.isArray(strategy.filtered_stocks)) {\n    strategy.filtered_stocks.forEach(code => {\n      if (code && typeof code === 'string') {\n        stockCodes.push(code);\n      }\n    });\n  }\n  \n  // 각 종목별로 아이템 생성 (환경변수도 포함)\n  stockCodes.forEach(stockCode => {\n    results.push({\n      json: {\n        strategy_id: strategy.strategy_id,\n        strategy_name: strategy.strategy_name,\n        entry_conditions: strategy.entry_conditions,\n        exit_conditions: strategy.exit_conditions,\n        stock_code: stockCode,\n        KIWOOM_APP_KEY: envVars.KIWOOM_APP_KEY,\n        KIWOOM_APP_SECRET: envVars.KIWOOM_APP_SECRET,\n        SUPABASE_URL: envVars.SUPABASE_URL,\n        SUPABASE_ANON_KEY: envVars.SUPABASE_ANON_KEY\n      }\n    });\n  });\n}\n\nreturn results;"
+        "jsCode": "// 전략과 토큰 정보를 결합하여 종목 코드 추출\nconst strategies = $input.all();\nconst tokenData = $('키움 토큰 발급').first().json;\nconst envVars = $('환경변수 설정').first().json;\n\nconst results = [];\n\nfor (const item of strategies) {\n  const strategy = item.json;\n  const stockCodes = [];\n  \n  // filtered_stocks는 jsonb 배열\n  if (strategy.filtered_stocks && Array.isArray(strategy.filtered_stocks)) {\n    strategy.filtered_stocks.forEach(code => {\n      if (code && typeof code === 'string') {\n        stockCodes.push(code);\n      }\n    });\n  }\n  \n  // 각 종목별로 아이템 생성 (환경변수 + 토큰 포함)\n  stockCodes.forEach(stockCode => {\n    results.push({\n      json: {\n        strategy_id: strategy.strategy_id,\n        strategy_name: strategy.strategy_name,\n        entry_conditions: strategy.entry_conditions,\n        exit_conditions: strategy.exit_conditions,\n        stock_code: stockCode,\n        access_token: tokenData.access_token,\n        KIWOOM_APP_KEY: envVars.KIWOOM_APP_KEY,\n        SUPABASE_URL: envVars.SUPABASE_URL,\n        SUPABASE_ANON_KEY: envVars.SUPABASE_ANON_KEY\n      }\n    });\n  });\n}\n\nreturn results;"
       },
       "id": "extract-stocks-1",
-      "name": "종목 코드 추출",
+      "name": "종목 코드 추출 및 토큰 병합",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 300]
+      "position": [1250, 300]
     },
     {
       "parameters": {
@@ -135,16 +158,16 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "content-type",
-              "value": "application/json; charset=utf-8"
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$json.access_token}}"
             },
             {
               "name": "appkey",
               "value": "={{$json.KIWOOM_APP_KEY}}"
-            },
-            {
-              "name": "appsecret",
-              "value": "={{$json.KIWOOM_APP_SECRET}}"
             },
             {
               "name": "tr_id",
@@ -155,13 +178,21 @@
               "value": "P"
             }
           ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1000
+            }
+          }
         }
       },
       "id": "get-price-1",
       "name": "키움 현재가 조회",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1650, 300]
+      "position": [1450, 300]
     },
     {
       "parameters": {
@@ -171,7 +202,7 @@
       "name": "조건 체크 및 신호 생성",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1850, 300]
+      "position": [1650, 300]
     },
     {
       "parameters": {
@@ -189,7 +220,7 @@
       "name": "신호 있음?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [2050, 300]
+      "position": [1850, 300]
     },
     {
       "parameters": {
@@ -220,7 +251,7 @@
       "name": "신호 저장",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [2250, 250]
+      "position": [2050, 250]
     }
   ],
   "connections": {
@@ -231,12 +262,15 @@
       "main": [[{"node": "장시간 체크", "type": "main", "index": 0}]]
     },
     "장시간 체크": {
+      "main": [[{"node": "키움 토큰 발급", "type": "main", "index": 0}]]
+    },
+    "키움 토큰 발급": {
       "main": [[{"node": "자동매매 전략 조회", "type": "main", "index": 0}]]
     },
     "자동매매 전략 조회": {
-      "main": [[{"node": "종목 코드 추출", "type": "main", "index": 0}]]
+      "main": [[{"node": "종목 코드 추출 및 토큰 병합", "type": "main", "index": 0}]]
     },
-    "종목 코드 추출": {
+    "종목 코드 추출 및 토큰 병합": {
       "main": [[{"node": "키움 현재가 조회", "type": "main", "index": 0}]]
     },
     "키움 현재가 조회": {

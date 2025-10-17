@@ -1,5 +1,5 @@
 {
-  "name": "자동매매 모니터링",
+  "name": "자동매매 모니터링 v2",
   "nodes": [
     {
       "parameters": {
@@ -116,6 +116,39 @@
     },
     {
       "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/tokenP",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$json.KIWOOM_APP_KEY}}\",\n  \"secretkey\": \"{{$json.KIWOOM_APP_SECRET}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        }
+      },
+      "id": "get-token-1",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 토큰 정보를 모든 종목 데이터에 병합\nconst tokenResponse = $input.first().json;\nconst access_token = tokenResponse.access_token;\n\n// 종목 코드 추출 노드의 결과를 가져옴\nconst stockItems = $('종목 코드 추출').all();\nconst results = [];\n\nfor (const item of stockItems) {\n  results.push({\n    json: {\n      ...item.json,\n      access_token: access_token\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "merge-token-1",
+      "name": "토큰 병합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
         "method": "GET",
         "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/quotations/inquire-price",
         "sendQuery": true,
@@ -135,16 +168,16 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "content-type",
-              "value": "application/json; charset=utf-8"
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$json.access_token}}"
             },
             {
               "name": "appkey",
               "value": "={{$json.KIWOOM_APP_KEY}}"
-            },
-            {
-              "name": "appsecret",
-              "value": "={{$json.KIWOOM_APP_SECRET}}"
             },
             {
               "name": "tr_id",
@@ -237,6 +270,12 @@
       "main": [[{"node": "종목 코드 추출", "type": "main", "index": 0}]]
     },
     "종목 코드 추출": {
+      "main": [[{"node": "키움 토큰 발급", "type": "main", "index": 0}]]
+    },
+    "키움 토큰 발급": {
+      "main": [[{"node": "토큰 병합", "type": "main", "index": 0}]]
+    },
+    "토큰 병합": {
       "main": [[{"node": "키움 현재가 조회", "type": "main", "index": 0}]]
     },
     "키움 현재가 조회": {
