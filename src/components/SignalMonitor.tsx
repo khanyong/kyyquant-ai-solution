@@ -70,6 +70,13 @@ interface MarketData {
   updated_at: string  // monitored_at → updated_at
 }
 
+interface WorkflowStats {
+  last1min: number
+  last5min: number
+  last1hour: number
+  activeStrategies: number
+}
+
 export default function SignalMonitor() {
   const [signals, setSignals] = useState<TradingSignal[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
@@ -81,11 +88,21 @@ export default function SignalMonitor() {
   const [loading, setLoading] = useState(true)
   const [marketLoading, setMarketLoading] = useState(true)
   const [lastMarketUpdate, setLastMarketUpdate] = useState<Date | null>(null)
+  const [workflowStats, setWorkflowStats] = useState<WorkflowStats>({
+    last1min: 0,
+    last5min: 0,
+    last1hour: 0,
+    activeStrategies: 0
+  })
 
   useEffect(() => {
     fetchSignals()
     fetchStrategies()
     fetchMarketData()
+    fetchWorkflowStats()
+
+    // 워크플로우 통계 30초마다 업데이트
+    const statsInterval = setInterval(fetchWorkflowStats, 30000)
 
     // Supabase Realtime 구독 - 매매 신호
     const signalChannel = supabase
@@ -131,6 +148,7 @@ export default function SignalMonitor() {
       .subscribe()
 
     return () => {
+      clearInterval(statsInterval)
       supabase.removeChannel(signalChannel)
       supabase.removeChannel(marketChannel)
     }
@@ -186,6 +204,46 @@ export default function SignalMonitor() {
       console.error('시장 데이터 로드 실패:', error)
     } finally {
       setMarketLoading(false)
+    }
+  }
+
+  const fetchWorkflowStats = async () => {
+    try {
+      const now = new Date()
+
+      // 1분 내 신호 개수
+      const { count: count1min } = await supabase
+        .from('trading_signals')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', new Date(now.getTime() - 60000).toISOString())
+
+      // 5분 내 신호 개수
+      const { count: count5min } = await supabase
+        .from('trading_signals')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', new Date(now.getTime() - 300000).toISOString())
+
+      // 1시간 내 신호 개수
+      const { count: count1hour } = await supabase
+        .from('trading_signals')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', new Date(now.getTime() - 3600000).toISOString())
+
+      // 활성 전략 개수 (auto_execute = true)
+      const { count: activeCount } = await supabase
+        .from('strategies')
+        .select('*', { count: 'exact', head: true })
+        .eq('auto_execute', true)
+        .eq('is_active', true)
+
+      setWorkflowStats({
+        last1min: count1min || 0,
+        last5min: count5min || 0,
+        last1hour: count1hour || 0,
+        activeStrategies: activeCount || 0
+      })
+    } catch (error) {
+      console.error('워크플로우 통계 로드 실패:', error)
     }
   }
 
@@ -260,6 +318,135 @@ export default function SignalMonitor() {
 
   return (
     <Box>
+      {/* n8n 워크플로우 활동 통계 */}
+      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+        <CardContent>
+          <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+            <Bolt sx={{ color: '#ffd700' }} />
+            <Typography variant="h5" color="white">
+              n8n 워크플로우 활동
+            </Typography>
+          </Stack>
+          <Typography variant="body2" color="rgba(255, 255, 255, 0.8)" mb={3}>
+            실시간 자동매매 워크플로우 모니터링 (30초마다 갱신)
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.05) 100%)',
+                  border: '2px solid rgba(76, 175, 80, 0.3)'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  최근 1분
+                </Typography>
+                <Typography variant="h3" color="success.main" fontWeight="bold">
+                  {workflowStats.last1min}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  개 신호
+                </Typography>
+                {workflowStats.last1min > 0 && (
+                  <Chip
+                    label="활성"
+                    size="small"
+                    color="success"
+                    sx={{ mt: 1 }}
+                    icon={<Bolt />}
+                  />
+                )}
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(33, 150, 243, 0.05) 100%)',
+                  border: '2px solid rgba(33, 150, 243, 0.3)'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  최근 5분
+                </Typography>
+                <Typography variant="h3" color="primary.main" fontWeight="bold">
+                  {workflowStats.last5min}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  개 신호
+                </Typography>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.2) 0%, rgba(255, 152, 0, 0.05) 100%)',
+                  border: '2px solid rgba(255, 152, 0, 0.3)'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  최근 1시간
+                </Typography>
+                <Typography variant="h3" color="warning.main" fontWeight="bold">
+                  {workflowStats.last1hour}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  개 신호
+                </Typography>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.2) 0%, rgba(156, 39, 176, 0.05) 100%)',
+                  border: '2px solid rgba(156, 39, 176, 0.3)'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  활성 전략
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#9c27b0' }} fontWeight="bold">
+                  {workflowStats.activeStrategies}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  개 실행 중
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* 워크플로우 상태 알림 */}
+          {workflowStats.last1min === 0 && workflowStats.activeStrategies > 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              ⚠️ 활성 전략이 있지만 최근 1분간 신호가 없습니다. n8n 워크플로우가 정상 동작하는지 확인하세요.
+            </Alert>
+          )}
+
+          {workflowStats.activeStrategies === 0 && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              💡 현재 활성화된 자동매매 전략이 없습니다. "자동매매" 탭에서 전략을 활성화하세요.
+            </Alert>
+          )}
+
+          {workflowStats.last1min > 0 && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              ✅ n8n 워크플로우가 정상 동작 중입니다. 최근 1분간 {workflowStats.last1min}개의 신호를 생성했습니다.
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
       {/* 시장 모니터링 섹션 */}
       <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
         <CardContent>

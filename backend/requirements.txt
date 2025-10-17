@@ -10,3 +10,4 @@ pandas==2.1.4
 numpy==1.24.3
 requests==2.31.0
 pykrx==1.0.45
+websockets==12.0
