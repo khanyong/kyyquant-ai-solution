@@ -79,7 +79,7 @@ export default function N8nWorkflowMonitor() {
     }
   }
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string): React.ReactElement | undefined => {
     switch (status) {
       case 'success':
         return <CheckCircle fontSize="small" />
@@ -90,7 +90,7 @@ export default function N8nWorkflowMonitor() {
       case 'waiting':
         return <Schedule fontSize="small" />
       default:
-        return null
+        return undefined
     }
   }
 
