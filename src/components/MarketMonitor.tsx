@@ -17,7 +17,8 @@ import {
   LinearProgress,
   Alert,
   Stack,
-  Grid
+  Grid,
+  Divider
 } from '@mui/material'
 import {
   TrendingUp,
@@ -27,6 +28,7 @@ import {
   Timeline
 } from '@mui/icons-material'
 import { supabase } from '../lib/supabase'
+import N8nWorkflowMonitor from './N8nWorkflowMonitor'
 
 interface MarketData {
   id: string
@@ -144,6 +146,14 @@ export default function MarketMonitor() {
 
   return (
     <Box>
+      {/* n8n 워크플로우 모니터링 */}
+      <Box mb={3}>
+        <N8nWorkflowMonitor />
+      </Box>
+
+      <Divider sx={{ my: 3 }} />
+
+      {/* 시장 데이터 모니터링 */}
       <Card>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
@@ -282,15 +292,6 @@ export default function MarketMonitor() {
           )}
         </CardContent>
       </Card>
-
-      {/* n8n 상태 안내 */}
-      <Alert severity="info" sx={{ mt: 2 }}>
-        <Typography variant="body2">
-          💡 <strong>n8n 워크플로우 상태:</strong>
-          {' '}1분마다 자동으로 시장 데이터를 수집하여 실시간 반영됩니다.
-          {' '}워크플로우가 실행 중이지 않으면 데이터가 업데이트되지 않습니다.
-        </Typography>
-      </Alert>
     </Box>
   )
 }

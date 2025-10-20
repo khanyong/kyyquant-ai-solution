@@ -15,6 +15,8 @@ services:
       - N8N_PROTOCOL=https
       - WEBHOOK_URL=https://workflow.bll-pro.com
       - N8N_ENCRYPTION_KEY=your_encryption_key
+      # CORS 설정 (프론트엔드에서 API 호출 허용)
+      - N8N_CORS_ORIGIN=http://localhost:3000,http://localhost:5173
       
       # Supabase 환경변수
       - SUPABASE_URL=https://hznkyaomtrpzcayayayh.supabase.co

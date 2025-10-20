@@ -1791,7 +1791,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 82 // 2025-10-17 기준 진행률 (n8n 워크플로우 통계 및 시장 모니터링 완료)
+  const progress = 83 // 2025-10-20 기준 진행률 (n8n 워크플로우 모니터링 시스템 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 

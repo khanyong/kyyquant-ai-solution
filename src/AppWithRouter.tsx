@@ -37,6 +37,7 @@ import OrderPanel from './components/trading/OrderPanel'
 import PortfolioPanel from './components/trading/PortfolioPanel'
 import MarketOverview from './components/trading/MarketOverview'
 import KiwoomTradingPanel from './components/trading/KiwoomTradingPanel'
+import MarketMonitor from './components/MarketMonitor'
 import Community from './components/community/Community'
 import Settings from './pages/Settings'
 import TradingSettings from './pages/TradingSettings'
@@ -368,13 +369,17 @@ function MainApp() {
             <TabPanel value={currentTab} index={5}>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
+                  <MarketMonitor />
+                </Grid>
+
+                <Grid item xs={12}>
                   <MarketOverview />
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   <KiwoomTradingPanel />
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   {role && (role === 'premium' || role === 'admin') ? (
                     <AutoTradingPanel />
