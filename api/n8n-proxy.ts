@@ -16,11 +16,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const n8nUrl = process.env.VITE_N8N_URL || 'https://workflow.bll-pro.com'
   const apiKey = process.env.VITE_N8N_API_KEY || ''
 
+  console.log('[n8n-proxy] Environment check:', {
+    hasN8nUrl: !!n8nUrl,
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey.length,
+    n8nUrl: n8nUrl
+  })
+
   // API 키 확인
   if (!apiKey) {
+    console.error('[n8n-proxy] VITE_N8N_API_KEY is not set')
     return res.status(500).json({
       error: 'Configuration error',
-      message: 'VITE_N8N_API_KEY is not set in environment variables'
+      message: 'VITE_N8N_API_KEY is not set in environment variables',
+      hint: 'Please add VITE_N8N_API_KEY to Vercel environment variables'
     })
   }
 
@@ -43,14 +52,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // n8n 서버가 응답하지만 에러인 경우
       const errorText = await response.text()
+      console.error(`[n8n-proxy] Error response:`, errorText)
+
       return res.status(response.status).json({
         error: 'n8n API error',
         message: `${response.status} ${response.statusText}`,
-        details: errorText
+        details: errorText,
+        targetUrl: targetUrl
       })
     }
 
     const data = await response.json()
+    console.log(`[n8n-proxy] Success:`, { status: response.status, dataKeys: Object.keys(data) })
     res.status(response.status).json(data)
   } catch (error) {
     console.error('[n8n-proxy] Proxy failed:', error)
@@ -58,7 +71,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(500).json({
       error: 'Proxy failed',
       message: error instanceof Error ? error.message : 'Unknown error',
-      details: 'Failed to connect to n8n server. Check if n8n is running and accessible.'
+      details: 'Failed to connect to n8n server. Check if n8n is running and accessible.',
+      stack: error instanceof Error ? error.stack : undefined
     })
   }
 }
