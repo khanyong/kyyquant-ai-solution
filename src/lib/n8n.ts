@@ -96,13 +96,22 @@ class N8nClient {
   }
 
   private async fetch(endpoint: string, options?: RequestInit) {
-    const url = `${this.baseUrl}/api/v1${endpoint}`
+    // 프로덕션 환경에서는 Vercel 프록시 사용 (CORS 우회)
+    const isProduction = import.meta.env.PROD
+    const url = isProduction
+      ? `/api/n8n-proxy?path=${encodeURIComponent(endpoint.replace('/api/v1/', ''))}&method=${options?.method || 'GET'}`
+      : `${this.baseUrl}/api/v1${endpoint}`
 
-    const headers: Record<string, string> = {
-      'X-N8N-API-KEY': this.apiKey,
-      'Content-Type': 'application/json',
-      ...(options?.headers as Record<string, string>),
-    }
+    const headers: Record<string, string> = isProduction
+      ? {
+          'Content-Type': 'application/json',
+          ...(options?.headers as Record<string, string>),
+        }
+      : {
+          'X-N8N-API-KEY': this.apiKey,
+          'Content-Type': 'application/json',
+          ...(options?.headers as Record<string, string>),
+        }
 
     const response = await fetch(url, {
       ...options,
