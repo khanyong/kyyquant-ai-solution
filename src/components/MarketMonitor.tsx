@@ -55,13 +55,13 @@ export default function MarketMonitor() {
 
     // Supabase Realtime 구독 - 새 데이터 실시간 반영
     const channel = supabase
-      .channel('market_monitoring')
+      .channel('kw_price_current')
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
-          table: 'market_monitoring'
+          table: 'kw_price_current'
         },
         (payload) => {
           console.log('📊 New market data:', payload.new)
