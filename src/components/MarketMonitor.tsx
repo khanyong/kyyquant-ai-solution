@@ -95,15 +95,15 @@ export default function MarketMonitor() {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
 
       const { data, error } = await supabase
-        .from('market_monitoring')
+        .from('kw_price_current')
         .select('*')
         .gte('monitored_at', oneHourAgo)
         .order('monitored_at', { ascending: false })
 
       if (error) {
-        // 테이블이 없는 경우 조용히 무시 (market_monitoring 테이블은 선택적)
+        // 테이블이 없는 경우 조용히 무시 (kw_price_current 테이블은 선택적)
         if (error.code === 'PGRST205') {
-          console.warn('market_monitoring 테이블이 없습니다. 시장 모니터링 기능이 비활성화됩니다.')
+          console.warn('kw_price_current 테이블이 없습니다. 시장 모니터링 기능이 비활성화됩니다.')
           setMarketData([])
           return
         }
