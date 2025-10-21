@@ -31,17 +31,18 @@ import { supabase } from '../lib/supabase'
 import N8nWorkflowMonitor from './N8nWorkflowMonitor'
 
 interface MarketData {
-  id: string
   stock_code: string
-  stock_name: string
   current_price: number
-  change_amount: number
+  change_price: number
   change_rate: number
   volume: number
-  high: number
-  low: number
-  monitored_at: string
-  source: string
+  trading_value: number
+  high_52w: number
+  low_52w: number
+  market_cap: number
+  shares_outstanding: number
+  foreign_ratio: number
+  updated_at: string
 }
 
 export default function MarketMonitor() {
@@ -91,14 +92,11 @@ export default function MarketMonitor() {
     try {
       setLoading(true)
 
-      // 최근 1시간 이내 데이터만 조회 (종목별 최신 데이터)
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-
+      // 모든 데이터 조회 (kw_price_current는 종목별 최신 가격만 저장)
       const { data, error } = await supabase
         .from('kw_price_current')
         .select('*')
-        .gte('monitored_at', oneHourAgo)
-        .order('monitored_at', { ascending: false })
+        .order('updated_at', { ascending: false })
 
       if (error) {
         // 테이블이 없는 경우 조용히 무시 (kw_price_current 테이블은 선택적)
@@ -110,15 +108,7 @@ export default function MarketMonitor() {
         throw error
       }
 
-      // 종목별 최신 데이터만 추출
-      const latestByStock = new Map<string, MarketData>()
-      data?.forEach((item) => {
-        if (!latestByStock.has(item.stock_code)) {
-          latestByStock.set(item.stock_code, item)
-        }
-      })
-
-      setMarketData(Array.from(latestByStock.values()))
+      setMarketData(data || [])
       setLastUpdate(new Date())
     } catch (error) {
       console.error('시장 데이터 로드 실패:', error)
@@ -235,24 +225,23 @@ export default function MarketMonitor() {
                   <TableHead>
                     <TableRow>
                       <TableCell>종목코드</TableCell>
-                      <TableCell>종목명</TableCell>
                       <TableCell align="right">현재가</TableCell>
+                      <TableCell align="right">등락가</TableCell>
                       <TableCell align="right">등락률</TableCell>
                       <TableCell align="right">거래량</TableCell>
-                      <TableCell align="right">고가</TableCell>
-                      <TableCell align="right">저가</TableCell>
+                      <TableCell align="right">52주 고가</TableCell>
+                      <TableCell align="right">52주 저가</TableCell>
                       <TableCell align="center">업데이트</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {marketData.map((item) => (
-                      <TableRow key={item.id} hover>
+                      <TableRow key={item.stock_code} hover>
                         <TableCell>
                           <Typography variant="body2" fontWeight="medium">
                             {item.stock_code}
                           </Typography>
                         </TableCell>
-                        <TableCell>{item.stock_name}</TableCell>
                         <TableCell align="right">
                           <Typography
                             variant="body2"
@@ -260,6 +249,15 @@ export default function MarketMonitor() {
                             color={getPriceColor(item.change_rate)}
                           >
                             {formatPrice(item.current_price)}원
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography
+                            variant="body2"
+                            color={getPriceColor(item.change_rate)}
+                          >
+                            {item.change_price > 0 ? '+' : ''}
+                            {formatPrice(Math.abs(item.change_price))}원
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
@@ -279,14 +277,14 @@ export default function MarketMonitor() {
                           {formatVolume(item.volume)}
                         </TableCell>
                         <TableCell align="right" sx={{ color: 'error.main' }}>
-                          {formatPrice(item.high)}
+                          {formatPrice(item.high_52w)}
                         </TableCell>
                         <TableCell align="right" sx={{ color: 'primary.main' }}>
-                          {formatPrice(item.low)}
+                          {formatPrice(item.low_52w)}
                         </TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={new Date(item.monitored_at).toLocaleTimeString()}
+                            label={new Date(item.updated_at).toLocaleTimeString()}
                             size="small"
                             variant="outlined"
                           />
