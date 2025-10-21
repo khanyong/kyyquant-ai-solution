@@ -32,7 +32,9 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const targetUrl = `${n8nUrl}/api/v1/${path}`
+    // path 앞의 슬래시 제거 (이중 슬래시 방지)
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path
+    const targetUrl = `${n8nUrl}/api/v1/${cleanPath}`
 
     console.log(`[n8n-proxy] Proxying ${method} ${targetUrl}`)
 
