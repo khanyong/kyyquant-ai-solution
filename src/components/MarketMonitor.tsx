@@ -100,7 +100,15 @@ export default function MarketMonitor() {
         .gte('monitored_at', oneHourAgo)
         .order('monitored_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        // 테이블이 없는 경우 조용히 무시 (market_monitoring 테이블은 선택적)
+        if (error.code === 'PGRST205') {
+          console.warn('market_monitoring 테이블이 없습니다. 시장 모니터링 기능이 비활성화됩니다.')
+          setMarketData([])
+          return
+        }
+        throw error
+      }
 
       // 종목별 최신 데이터만 추출
       const latestByStock = new Map<string, MarketData>()
