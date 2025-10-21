@@ -50,6 +50,8 @@ interface Strategy {
   stopLoss?: any
   auto_execute: boolean
   is_active: boolean
+  allocated_capital?: number
+  allocated_percent?: number
   created_at?: string
 }
 
@@ -69,6 +71,8 @@ interface ActiveAutoTrading {
     filter_name: string
   }[]
   signalCount?: number
+  allocated_capital?: number
+  allocated_percent?: number
 }
 
 const ITEMS_PER_PAGE = 10
@@ -81,6 +85,10 @@ const AutoTradingPanel: React.FC = () => {
 
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>('')
   const [selectedFilterIds, setSelectedFilterIds] = useState<string[]>([])
+
+  // 자금 할당 state
+  const [allocatedCapital, setAllocatedCapital] = useState<number>(0)
+  const [allocatedPercent, setAllocatedPercent] = useState<number>(0)
 
   // Search and filter state
   const [strategySearch, setStrategySearch] = useState('')
@@ -118,7 +126,7 @@ const AutoTradingPanel: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('strategies')
-        .select('id, name, entry_conditions, exit_conditions, config, auto_execute, is_active, created_at')
+        .select('id, name, entry_conditions, exit_conditions, config, auto_execute, is_active, allocated_capital, allocated_percent, created_at')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -161,6 +169,8 @@ const AutoTradingPanel: React.FC = () => {
           acc[item.strategy_id] = {
             strategy_id: item.strategy_id,
             strategy_name: item.strategy_name,
+            allocated_capital: item.allocated_capital || 0,
+            allocated_percent: item.allocated_percent || 0,
             universes: []
           }
         }
@@ -221,13 +231,15 @@ const AutoTradingPanel: React.FC = () => {
     try {
       setLoading(true)
 
-      // 1. 전략 auto_execute 활성화
+      // 1. 전략 auto_execute 활성화 및 자금 할당 저장
       const { error: strategyError } = await supabase
         .from('strategies')
         .update({
           auto_execute: true,
           auto_trade_enabled: true,
-          is_active: true
+          is_active: true,
+          allocated_capital: allocatedCapital || 0,
+          allocated_percent: allocatedPercent || 0
         })
         .eq('id', selectedStrategyId)
 
@@ -589,6 +601,48 @@ const AutoTradingPanel: React.FC = () => {
                       생성일: {new Date(selectedStrategy.created_at).toLocaleDateString()}
                     </Typography>
                   )}
+
+                  <Divider />
+
+                  {/* 자금 할당 입력 */}
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                      💰 자금 할당 (선택사항)
+                    </Typography>
+                    <Stack spacing={2}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="할당 자금 (원)"
+                        type="number"
+                        value={allocatedCapital}
+                        onChange={(e) => setAllocatedCapital(Number(e.target.value))}
+                        helperText="이 전략에 할당할 정확한 금액"
+                        InputProps={{
+                          endAdornment: <Typography variant="caption">원</Typography>
+                        }}
+                      />
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="할당 비율 (%)"
+                        type="number"
+                        value={allocatedPercent}
+                        onChange={(e) => setAllocatedPercent(Number(e.target.value))}
+                        helperText="계좌 잔고 대비 비율 (0-100)"
+                        InputProps={{
+                          endAdornment: <Typography variant="caption">%</Typography>
+                        }}
+                        inputProps={{
+                          min: 0,
+                          max: 100
+                        }}
+                      />
+                      <Alert severity="info" sx={{ fontSize: '0.75rem' }}>
+                        할당 자금 또는 비율 중 하나만 입력하세요. 비율 사용을 권장합니다.
+                      </Alert>
+                    </Stack>
+                  </Box>
                 </Stack>
               </Paper>
             ) : (
@@ -792,6 +846,7 @@ const AutoTradingPanel: React.FC = () => {
               <TableRow>
                 <TableCell>전략명</TableCell>
                 <TableCell>투자유니버스</TableCell>
+                <TableCell align="center">할당 자금</TableCell>
                 <TableCell align="center">24시간 신호</TableCell>
                 <TableCell align="center">상태</TableCell>
                 <TableCell align="center">관리</TableCell>
@@ -816,6 +871,39 @@ const AutoTradingPanel: React.FC = () => {
                         />
                       ))}
                     </Stack>
+                  </TableCell>
+                  <TableCell align="center">
+                    {item.allocated_capital && item.allocated_capital > 0 ? (
+                      <Stack spacing={0.5} alignItems="center">
+                        <Chip
+                          label={`${item.allocated_capital.toLocaleString()}원`}
+                          size="small"
+                          color="primary"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          고정 금액
+                        </Typography>
+                      </Stack>
+                    ) : item.allocated_percent && item.allocated_percent > 0 ? (
+                      <Stack spacing={0.5} alignItems="center">
+                        <Chip
+                          label={`${item.allocated_percent}%`}
+                          size="small"
+                          color="success"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          잔고 비율
+                        </Typography>
+                      </Stack>
+                    ) : (
+                      <Chip
+                        label="미설정"
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
                   </TableCell>
                   <TableCell align="center">
                     <Chip

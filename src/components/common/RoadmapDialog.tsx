@@ -1422,6 +1422,108 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 24,
+      title: '자동매매 시스템 고도화 및 자금 검증',
+      status: 'done',
+      priority: 'high',
+      icon: <TrendingUp />,
+      period: '2025.10.20 - 2025.10.21',
+      description: '자금 할당 검증 시스템 및 n8n 워크플로우 통합',
+      subtasks: [
+        {
+          title: '✅ 자금 할당 검증 시스템',
+          details: [
+            'add_strategy_capital_tracking.sql 마이그레이션 작성',
+            'strategy_capital_status VIEW 생성',
+            'check_strategy_capital RPC 함수 구현',
+            'track_strategy_capital_change 트리거 구현',
+            'positions 테이블 스키마 불일치 수정'
+          ]
+        },
+        {
+          title: '✅ RPC 함수 개선',
+          details: [
+            'get_active_strategies_with_universe 함수 수정',
+            'allocated_capital, allocated_percent 필드 추가',
+            'AutoTradingPanel에서 할당 자금 표시',
+            'SignalMonitor에서 전략별 자금 정보 표시',
+            'UI에서 실시간 자금 할당 현황 확인 가능'
+          ]
+        },
+        {
+          title: '✅ n8n 워크플로우 v10/v11 개발',
+          details: [
+            'auto-trading-with-capital-validation-v10.json 생성',
+            'auto-trading-with-capital-validation-v11-with-market-index.json 생성',
+            '자금 검증 + 시장 지수 업데이트 통합',
+            '배치 간격 3초 → 6초로 조정 (rate limit 대응)',
+            '실행 타임아웃 1800초 (30분) 설정'
+          ]
+        },
+        {
+          title: '✅ 시장 지수 데이터 수집',
+          details: [
+            'KOSPI/KOSDAQ 지수 조회 노드 추가',
+            'market_index 테이블 자동 업데이트',
+            'MarketOverview 컴포넌트 Supabase 연동',
+            '60초마다 자동 갱신',
+            '실시간 API 대신 DB 쿼리로 성능 개선'
+          ]
+        },
+        {
+          title: '✅ n8n 워크플로우 디버깅',
+          details: [
+            'Paired item data 에러 수정 (.item → .first())',
+            'Authorization 헤더 형식 수정 (= 접두사 추가)',
+            'Query parameter 처리 개선',
+            'Kiwoom API 500 에러 트러블슈팅',
+            '환경변수 설정 노드 참조 수정'
+          ]
+        }
+      ]
+    },
+    {
+      id: 25,
+      title: '랜딩 페이지 UI 개선',
+      status: 'done',
+      priority: 'medium',
+      icon: <Dashboard />,
+      period: '2025.10.21',
+      description: '랜딩 페이지 배경 애니메이션 및 레이아웃 개선',
+      subtasks: [
+        {
+          title: '✅ Canvas 애니메이션 배경 수정',
+          details: [
+            'HeroSection Canvas 높이를 viewport 전체로 확장',
+            'Canvas 크기 계산 로직 개선',
+            'Particle 애니메이션 전체 화면 커버',
+            'resize 이벤트 핸들러 최적화',
+            'pointerEvents: none으로 클릭 이벤트 통과'
+          ]
+        },
+        {
+          title: '✅ 가로 스크롤 제거',
+          details: [
+            'index.css에 overflow-x: hidden 추가',
+            'html, body에 width: 100% 설정',
+            'LandingPage Box에 maxWidth: 100vw 추가',
+            'App.tsx 최상위 Box에 overflow 설정',
+            '모든 섹션에서 가로 스크롤 완전 제거'
+          ]
+        },
+        {
+          title: '✅ 빌드 테스트 및 검증',
+          details: [
+            'npm run build 성공 (44.40초)',
+            'TypeScript 컴파일 에러 없음',
+            'Vite 프로덕션 빌드 완료',
+            '번들 크기: 1,698.07 kB (gzip: 510.08 kB)',
+            '배포 준비 완료'
+          ]
+        }
+      ]
+    },
+    {
+      id: 26,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -1482,7 +1584,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 25,
+      id: 27,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -1543,7 +1645,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 26,
+      id: 28,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1604,7 +1706,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 27,
+      id: 29,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -1665,7 +1767,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 28,
+      id: 30,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1726,7 +1828,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 29,
+      id: 31,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
@@ -1791,7 +1893,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 83 // 2025-10-20 기준 진행률 (n8n 워크플로우 모니터링 시스템 완료)
+  const progress = 86 // 2025-10-21 기준 진행률 (자동매매 고도화 및 랜딩 페이지 개선 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 

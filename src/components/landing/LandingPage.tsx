@@ -19,7 +19,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
     <Box
       sx={{
         width: '100%',
-        overflowX: 'hidden'
+        maxWidth: '100vw',
+        overflowX: 'hidden',
+        position: 'relative'
       }}
     >
       {/* Hero Section */}

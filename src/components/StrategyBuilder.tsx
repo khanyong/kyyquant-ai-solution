@@ -162,6 +162,9 @@ interface Strategy {
     maxDrawdown?: number
     consecutiveLosses?: number
   }
+  // 자금 할당
+  allocated_capital?: number  // 전략에 할당된 자금 (원)
+  allocated_percent?: number  // 전체 계좌 잔고 대비 할당 비율 (%)
   // 추가된 고급 기능
   timeframe?: '1분' | '5분' | '15분' | '30분' | '60분' | '일봉' | '주봉' | '월봉'
   splitTrading?: {
@@ -850,6 +853,8 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
         auto_trade_enabled: false,
         is_public: isPublic,  // 전략 공유 설정
         position_size: strategy.riskManagement.positionSize || 10,
+        allocated_capital: strategy.allocated_capital || 0,  // 할당 자금
+        allocated_percent: strategy.allocated_percent || 0,  // 할당 비율
         user_id: user?.id  // 현재 사용자 ID (필수)
       }
       
@@ -1798,8 +1803,66 @@ const StrategyBuilderUpdated: React.FC<StrategyBuilderProps> = ({ onExecute, onN
                   />
                 )}
               </Grid>
+
+              {/* 자금 할당 */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                  💰 전략별 자금 할당
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="할당 자금 (원)"
+                  type="number"
+                  value={strategy.allocated_capital || 0}
+                  onChange={(e) => setStrategy({
+                    ...strategy,
+                    allocated_capital: Number(e.target.value)
+                  })}
+                  helperText="이 전략에 할당할 자금을 입력하세요"
+                  InputProps={{
+                    endAdornment: '원'
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="할당 비율 (%)"
+                  type="number"
+                  value={strategy.allocated_percent || 0}
+                  onChange={(e) => setStrategy({
+                    ...strategy,
+                    allocated_percent: Number(e.target.value)
+                  })}
+                  helperText="전체 계좌 잔고 대비 비율 (0-100)"
+                  InputProps={{
+                    endAdornment: '%'
+                  }}
+                  inputProps={{
+                    min: 0,
+                    max: 100,
+                    step: 1
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    <strong>자금 할당 방식:</strong><br />
+                    • 할당 자금: 정확한 금액 지정 (예: 3,000,000원)<br />
+                    • 할당 비율: 계좌 잔고의 일정 비율 (예: 30%)<br />
+                    • 포지션 크기는 할당된 자금 내에서 계산됩니다
+                  </Typography>
+                </Alert>
+              </Grid>
             </Grid>
-            
+
             <Divider sx={{ my: 2 }} />
             
             {/* 고급 옵션 */}

@@ -219,7 +219,15 @@ function App() {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100vh',
+      width: '100%',
+      maxWidth: '100vw',
+      overflowX: 'hidden',
+      bgcolor: 'background.default'
+    }}>
       {!isConnected ? (
         // Landing Page - Full Screen
         <LandingPage onLoginClick={() => setLoginOpen(true)} />

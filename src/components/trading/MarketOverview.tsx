@@ -11,6 +11,7 @@ import {
 import { TrendingUp, TrendingDown } from '@mui/icons-material'
 import { useAppDispatch } from '../../hooks/redux'
 import { updateMarketIndices } from '../../store/marketSlice'
+import { supabase } from '../../lib/supabase'
 
 interface MarketData {
   kospi: { value: number; change: number; changeRate: number }
@@ -22,11 +23,60 @@ interface MarketData {
 const MarketOverview: React.FC = () => {
   const dispatch = useAppDispatch()
   const [marketData, setMarketData] = useState<MarketData>({
-    kospi: { value: 2500, change: 15.2, changeRate: 0.61 },
-    kosdaq: { value: 850, change: -5.3, changeRate: -0.62 },
-    usd: { value: 1320, change: 5 },
-    loading: false
+    kospi: { value: 0, change: 0, changeRate: 0 },
+    kosdaq: { value: 0, change: 0, changeRate: 0 },
+    usd: { value: 0, change: 0 },
+    loading: true
   })
+
+  // 시장 지수 데이터 로드
+  const loadMarketIndices = async () => {
+    try {
+      setMarketData(prev => ({ ...prev, loading: true }))
+
+      const { data, error } = await supabase
+        .from('market_index')
+        .select('index_code, current_value, change_value, change_rate')
+        .in('index_code', ['KOSPI', 'KOSDAQ', 'USD_KRW'])
+        .order('timestamp', { ascending: false })
+        .limit(3)
+
+      if (error) throw error
+
+      const kospiData = data?.find(d => d.index_code === 'KOSPI')
+      const kosdaqData = data?.find(d => d.index_code === 'KOSDAQ')
+      const usdData = data?.find(d => d.index_code === 'USD_KRW')
+
+      setMarketData({
+        kospi: {
+          value: parseFloat(kospiData?.current_value || '0'),
+          change: parseFloat(kospiData?.change_value || '0'),
+          changeRate: parseFloat(kospiData?.change_rate || '0')
+        },
+        kosdaq: {
+          value: parseFloat(kosdaqData?.current_value || '0'),
+          change: parseFloat(kosdaqData?.change_value || '0'),
+          changeRate: parseFloat(kosdaqData?.change_rate || '0')
+        },
+        usd: {
+          value: parseFloat(usdData?.current_value || '0'),
+          change: parseFloat(usdData?.change_value || '0')
+        },
+        loading: false
+      })
+    } catch (error) {
+      console.error('시장 지수 로드 실패:', error)
+      setMarketData(prev => ({ ...prev, loading: false }))
+    }
+  }
+
+  useEffect(() => {
+    loadMarketIndices()
+
+    // 1분마다 자동 갱신
+    const interval = setInterval(loadMarketIndices, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     // Update Redux store

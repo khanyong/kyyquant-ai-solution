@@ -32,6 +32,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
     canvas.height = window.innerHeight * dpr
     ctx.scale(dpr, dpr)
 
+    canvas.style.width = `${window.innerWidth}px`
+    canvas.style.height = `${window.innerHeight}px`
+
     // Particle system
     class Particle {
       x: number
@@ -113,6 +116,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
       canvas.width = window.innerWidth * dpr
       canvas.height = window.innerHeight * dpr
       ctx.scale(dpr, dpr)
+
+      canvas.style.width = `${window.innerWidth}px`
+      canvas.style.height = `${window.innerHeight}px`
     }
 
     window.addEventListener('resize', handleResize)
@@ -141,9 +147,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
           position: 'absolute',
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: 0
+          width: '100vw',
+          height: '100vh',
+          zIndex: 0,
+          pointerEvents: 'none'
         }}
       />
 

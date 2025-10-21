@@ -1,0 +1,164 @@
+{
+  "name": "시장 지수 업데이트 추가 노드",
+  "description": "기존 워크플로우에 추가할 시장 지수(KOSPI/KOSDAQ) 업데이트 노드들",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/quotations/inquire-index-price",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "Bearer {{$('키움 토큰 발급').item.json.access_token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$('환경변수 설정').item.json.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$('환경변수 설정').item.json.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "FHKUP03500100"
+            }
+          ]
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fid_cond_mrkt_div_code",
+              "value": "U"
+            },
+            {
+              "name": "fid_input_iscd",
+              "value": "0001"
+            }
+          ]
+        }
+      },
+      "id": "get-kospi-index",
+      "name": "KOSPI 지수 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 600]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/quotations/inquire-index-price",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "Bearer {{$('키움 토큰 발급').item.json.access_token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$('환경변수 설정').item.json.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$('환경변수 설정').item.json.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "FHKUP03500100"
+            }
+          ]
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fid_cond_mrkt_div_code",
+              "value": "U"
+            },
+            {
+              "name": "fid_input_iscd",
+              "value": "1001"
+            }
+          ]
+        }
+      },
+      "id": "get-kosdaq-index",
+      "name": "KOSDAQ 지수 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const kospiData = $('KOSPI 지수 조회').first().json.output || {};\nconst kosdaqData = $('KOSDAQ 지수 조회').first().json.output || {};\nconst envVars = $('환경변수 설정').first().json;\n\n// KOSPI 데이터 파싱\nconst kospi = {\n  index_code: 'KOSPI',\n  index_name: 'KOSPI 지수',\n  current_value: parseFloat(kospiData.bstp_nmix_prpr || 0),\n  change_value: parseFloat(kospiData.bstp_nmix_prdy_vrss || 0),\n  change_rate: parseFloat(kospiData.prdy_vrss_sign === '2' ? kospiData.prdy_ctrt : `-${kospiData.prdy_ctrt}` || 0),\n  trading_volume: parseInt(kospiData.acml_vol || 0)\n};\n\n// KOSDAQ 데이터 파싱\nconst kosdaq = {\n  index_code: 'KOSDAQ',\n  index_name: 'KOSDAQ 지수',\n  current_value: parseFloat(kosdaqData.bstp_nmix_prpr || 0),\n  change_value: parseFloat(kosdaqData.bstp_nmix_prdy_vrss || 0),\n  change_rate: parseFloat(kosdaqData.prdy_vrss_sign === '2' ? kosdaqData.prdy_ctrt : `-${kosdaqData.prdy_ctrt}` || 0),\n  trading_volume: parseInt(kosdaqData.acml_vol || 0)\n};\n\nreturn [\n  {\n    json: {\n      ...kospi,\n      SUPABASE_URL: envVars.SUPABASE_URL,\n      SUPABASE_ANON_KEY: envVars.SUPABASE_ANON_KEY\n    }\n  },\n  {\n    json: {\n      ...kosdaq,\n      SUPABASE_URL: envVars.SUPABASE_URL,\n      SUPABASE_ANON_KEY: envVars.SUPABASE_ANON_KEY\n    }\n  }\n];"
+      },
+      "id": "parse-index-data",
+      "name": "지수 데이터 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2050, 650]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/market_index",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"index_code\": \"{{$json.index_code}}\",\n  \"index_name\": \"{{$json.index_name}}\",\n  \"current_value\": {{$json.current_value}},\n  \"change_value\": {{$json.change_value}},\n  \"change_rate\": {{$json.change_rate}},\n  \"trading_volume\": {{$json.trading_volume}}\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        }
+      },
+      "id": "save-market-index",
+      "name": "시장 지수 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2250, 650]
+    }
+  ],
+  "connections": {
+    "KOSPI 지수 조회": {
+      "main": [[{"node": "지수 데이터 파싱", "type": "main", "index": 0}]]
+    },
+    "KOSDAQ 지수 조회": {
+      "main": [[{"node": "지수 데이터 파싱", "type": "main", "index": 0}]]
+    },
+    "지수 데이터 파싱": {
+      "main": [[{"node": "시장 지수 저장", "type": "main", "index": 0}]]
+    }
+  },
+  "notes": [
+    {
+      "content": "이 노드들을 기존 워크플로우의 '조건 체크 및 신호 생성' 노드 이후에 병렬로 연결하세요.\n\n연결 방법:\n'조건 체크 및 신호 생성' 노드 → 'KOSPI 지수 조회' 및 'KOSDAQ 지수 조회' 동시 실행",
+      "position": [1850, 500]
+    }
+  ]
+}

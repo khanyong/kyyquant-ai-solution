@@ -7,7 +7,9 @@ RETURNS TABLE (
     exit_conditions jsonb,
     filter_id uuid,
     filter_name text,
-    filtered_stocks jsonb
+    filtered_stocks jsonb,
+    allocated_capital numeric,
+    allocated_percent numeric
 )
 LANGUAGE sql
 SECURITY DEFINER
@@ -19,7 +21,9 @@ AS $$
         s.exit_conditions,
         kif.id as filter_id,
         kif.name as filter_name,
-        kif.filtered_stocks
+        kif.filtered_stocks,
+        s.allocated_capital,
+        s.allocated_percent
     FROM strategies s
     INNER JOIN strategy_universes su ON s.id = su.strategy_id
     INNER JOIN kw_investment_filters kif ON su.investment_filter_id = kif.id

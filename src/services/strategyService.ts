@@ -28,6 +28,8 @@ export interface Strategy {
   }
   position_size: number
   max_positions: number
+  allocated_capital?: number  // 전략에 할당된 자금 (원)
+  allocated_percent?: number  // 전체 계좌 잔고 대비 할당 비율 (%)
   target_stocks: string[]
   execution_time?: {
     start: string

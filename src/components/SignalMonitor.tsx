@@ -56,6 +56,8 @@ interface TradingSignal {
 interface Strategy {
   id: string
   name: string
+  allocated_capital?: number
+  allocated_percent?: number
 }
 
 interface MarketData {
@@ -443,6 +445,42 @@ export default function SignalMonitor() {
             <Alert severity="success" sx={{ mt: 2 }}>
               ✅ n8n 워크플로우가 정상 동작 중입니다. 최근 1분간 {workflowStats.last1min}개의 신호를 생성했습니다.
             </Alert>
+          )}
+
+          {/* 전략별 자금 할당 현황 */}
+          {strategies.length > 0 && strategies.some(s => s.allocated_capital || s.allocated_percent) && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" color="white" gutterBottom sx={{ fontWeight: 'bold' }}>
+                💰 전략별 자금 할당
+              </Typography>
+              <Grid container spacing={2}>
+                {strategies.filter(s => s.allocated_capital || s.allocated_percent).map((strategy) => (
+                  <Grid item xs={12} md={6} key={strategy.id}>
+                    <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.1)' }}>
+                      <Typography variant="body2" color="white" fontWeight="bold">
+                        {strategy.name}
+                      </Typography>
+                      <Stack direction="row" spacing={2} mt={1}>
+                        {strategy.allocated_capital && (
+                          <Chip
+                            label={`${strategy.allocated_capital.toLocaleString()}원`}
+                            size="small"
+                            sx={{ bgcolor: 'rgba(76, 175, 80, 0.3)', color: 'white' }}
+                          />
+                        )}
+                        {strategy.allocated_percent && (
+                          <Chip
+                            label={`${strategy.allocated_percent}%`}
+                            size="small"
+                            sx={{ bgcolor: 'rgba(33, 150, 243, 0.3)', color: 'white' }}
+                          />
+                        )}
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
           )}
         </CardContent>
       </Card>
