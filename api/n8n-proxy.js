@@ -1,6 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   // CORS 헤더 추가
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
@@ -39,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`[n8n-proxy] Proxying ${method} ${targetUrl}`)
 
     const response = await fetch(targetUrl, {
-      method: method as string,
+      method: method,
       headers: {
         'X-N8N-API-KEY': apiKey,
         'Content-Type': 'application/json',
