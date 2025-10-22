@@ -32,6 +32,7 @@ import N8nWorkflowMonitor from './N8nWorkflowMonitor'
 
 interface MarketData {
   stock_code: string
+  stock_name?: string // JOIN으로 가져온 종목명
   current_price: number
   change_price: number
   change_rate: number
@@ -50,6 +51,7 @@ export default function MarketMonitor() {
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [showAllStocks, setShowAllStocks] = useState(false)
 
   useEffect(() => {
     fetchMarketData()
@@ -64,19 +66,33 @@ export default function MarketMonitor() {
           schema: 'public',
           table: 'kw_price_current'
         },
-        (payload) => {
+        async (payload) => {
           console.log('📊 New market data:', payload.new)
+
+          // 종목명을 가져오기 위해 kw_stock_master 조회
+          const newData = payload.new as MarketData
+          const { data: stockData } = await supabase
+            .from('kw_stock_master')
+            .select('stock_name')
+            .eq('stock_code', newData.stock_code)
+            .single()
+
+          const updatedData = {
+            ...newData,
+            stock_name: stockData?.stock_name || newData.stock_code
+          }
+
           setMarketData((prev) => {
             // 같은 종목코드가 있으면 업데이트, 없으면 추가
             const exists = prev.findIndex(
-              (item) => item.stock_code === (payload.new as MarketData).stock_code
+              (item) => item.stock_code === updatedData.stock_code
             )
             if (exists >= 0) {
               const updated = [...prev]
-              updated[exists] = payload.new as MarketData
+              updated[exists] = updatedData
               return updated
             }
-            return [payload.new as MarketData, ...prev]
+            return [updatedData, ...prev]
           })
           setLastUpdate(new Date())
         }
@@ -92,23 +108,49 @@ export default function MarketMonitor() {
     try {
       setLoading(true)
 
-      // 모든 데이터 조회 (kw_price_current는 종목별 최신 가격만 저장)
-      const { data, error } = await supabase
+      // 먼저 kw_price_current 데이터 조회
+      const { data: priceData, error: priceError } = await supabase
         .from('kw_price_current')
         .select('*')
         .order('updated_at', { ascending: false })
 
-      if (error) {
-        // 테이블이 없는 경우 조용히 무시 (kw_price_current 테이블은 선택적)
-        if (error.code === 'PGRST205') {
+      if (priceError) {
+        // 테이블이 없는 경우 조용히 무시
+        if (priceError.code === 'PGRST205') {
           console.warn('kw_price_current 테이블이 없습니다. 시장 모니터링 기능이 비활성화됩니다.')
           setMarketData([])
           return
         }
-        throw error
+        throw priceError
       }
 
-      setMarketData(data || [])
+      if (!priceData || priceData.length === 0) {
+        setMarketData([])
+        setLastUpdate(new Date())
+        return
+      }
+
+      // 종목코드 목록 추출
+      const stockCodes = priceData.map((item: any) => item.stock_code)
+
+      // kw_stock_master에서 종목명 일괄 조회
+      const { data: masterData } = await supabase
+        .from('kw_stock_master')
+        .select('stock_code, stock_name')
+        .in('stock_code', stockCodes)
+
+      // 종목명 매핑
+      const stockNameMap = new Map(
+        (masterData || []).map((item: any) => [item.stock_code, item.stock_name])
+      )
+
+      // 데이터 병합
+      const formattedData = priceData.map((item: any) => ({
+        ...item,
+        stock_name: stockNameMap.get(item.stock_code) || item.stock_code
+      }))
+
+      setMarketData(formattedData)
       setLastUpdate(new Date())
     } catch (error) {
       console.error('시장 데이터 로드 실패:', error)
@@ -141,6 +183,9 @@ export default function MarketMonitor() {
     if (changeRate < 0) return <TrendingDown fontSize="small" />
     return null
   }
+
+  // 표시할 종목 데이터 (최근 10개 또는 전체)
+  const displayedStocks = showAllStocks ? marketData : marketData.slice(0, 10)
 
   return (
     <Box>
@@ -188,112 +233,141 @@ export default function MarketMonitor() {
               {/* 요약 카드 */}
               <Grid container spacing={2} mb={3}>
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'error.lighter' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(244, 67, 54, 0.1)', border: '1px solid rgba(244, 67, 54, 0.3)' }}>
                     <Typography variant="caption" color="text.secondary">
                       상승 종목
                     </Typography>
-                    <Typography variant="h4" color="error.main">
+                    <Typography variant="h4" color="error.main" fontWeight="bold">
                       {marketData.filter((d) => d.change_rate > 0).length}
                     </Typography>
                   </Paper>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'primary.lighter' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(33, 150, 243, 0.1)', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
                     <Typography variant="caption" color="text.secondary">
                       하락 종목
                     </Typography>
-                    <Typography variant="h4" color="primary.main">
+                    <Typography variant="h4" color="primary.main" fontWeight="bold">
                       {marketData.filter((d) => d.change_rate < 0).length}
                     </Typography>
                   </Paper>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'grey.100' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(158, 158, 158, 0.1)', border: '1px solid rgba(158, 158, 158, 0.3)' }}>
                     <Typography variant="caption" color="text.secondary">
                       보합 종목
                     </Typography>
-                    <Typography variant="h4">
+                    <Typography variant="h4" color="text.primary" fontWeight="bold">
                       {marketData.filter((d) => d.change_rate === 0).length}
                     </Typography>
                   </Paper>
                 </Grid>
               </Grid>
 
-              {/* 종목 테이블 */}
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>종목코드</TableCell>
-                      <TableCell align="right">현재가</TableCell>
-                      <TableCell align="right">등락가</TableCell>
-                      <TableCell align="right">등락률</TableCell>
-                      <TableCell align="right">거래량</TableCell>
-                      <TableCell align="right">52주 고가</TableCell>
-                      <TableCell align="right">52주 저가</TableCell>
-                      <TableCell align="center">업데이트</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {marketData.map((item) => (
-                      <TableRow key={item.stock_code} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
-                            {item.stock_code}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            fontWeight="bold"
-                            color={getPriceColor(item.change_rate)}
-                          >
-                            {formatPrice(item.current_price)}원
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            color={getPriceColor(item.change_rate)}
-                          >
-                            {item.change_price > 0 ? '+' : ''}
-                            {formatPrice(Math.abs(item.change_price))}원
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                            {getPriceIcon(item.change_rate)}
+              {/* 종목 테이블 - 최근 업데이트 종목 */}
+              <Box>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="subtitle1" fontWeight="medium">
+                    최근 업데이트 종목 ({displayedStocks.length}개)
+                  </Typography>
+                  {marketData.length > 10 && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setShowAllStocks(!showAllStocks)}
+                    >
+                      {showAllStocks ? '접기 ▲' : `전체 보기 (${marketData.length}개) ▼`}
+                    </Button>
+                  )}
+                </Stack>
+
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: showAllStocks ? 600 : 400,
+                    overflow: 'auto'
+                  }}
+                >
+                  <Table stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>종목코드</TableCell>
+                        <TableCell>종목명</TableCell>
+                        <TableCell align="right">현재가</TableCell>
+                        <TableCell align="right">등락가</TableCell>
+                        <TableCell align="right">등락률</TableCell>
+                        <TableCell align="right">거래량</TableCell>
+                        <TableCell align="right">52주 고가</TableCell>
+                        <TableCell align="right">52주 저가</TableCell>
+                        <TableCell align="center">업데이트</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayedStocks.map((item) => (
+                        <TableRow key={item.stock_code} hover>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium" fontFamily="monospace">
+                              {item.stock_code}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium">
+                              {item.stock_name || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
                             <Typography
                               variant="body2"
-                              fontWeight="medium"
+                              fontWeight="bold"
                               color={getPriceColor(item.change_rate)}
                             >
-                              {item.change_rate > 0 ? '+' : ''}
-                              {item.change_rate.toFixed(2)}%
+                              {formatPrice(item.current_price)}원
                             </Typography>
-                          </Stack>
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatVolume(item.volume)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ color: 'error.main' }}>
-                          {formatPrice(item.high_52w)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ color: 'primary.main' }}>
-                          {formatPrice(item.low_52w)}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={new Date(item.updated_at).toLocaleTimeString()}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              color={getPriceColor(item.change_rate)}
+                            >
+                              {item.change_price > 0 ? '+' : ''}
+                              {formatPrice(Math.abs(item.change_price))}원
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                              {getPriceIcon(item.change_rate)}
+                              <Typography
+                                variant="body2"
+                                fontWeight="medium"
+                                color={getPriceColor(item.change_rate)}
+                              >
+                                {item.change_rate > 0 ? '+' : ''}
+                                {item.change_rate.toFixed(2)}%
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="right">
+                            {formatVolume(item.volume)}
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: 'error.main' }}>
+                            {formatPrice(item.high_52w)}
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: 'primary.main' }}>
+                            {formatPrice(item.low_52w)}
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={new Date(item.updated_at).toLocaleTimeString()}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
             </>
           )}
         </CardContent>

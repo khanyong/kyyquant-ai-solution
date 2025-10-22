@@ -1,21 +1,22 @@
-import React, { useEffect, useState } from 'react'
-import { 
-  Container, 
-  Grid, 
-  Paper, 
-  Box, 
-  Typography, 
+import React, { useEffect, useState, lazy, Suspense } from 'react'
+import {
+  Container,
+  Grid,
+  Paper,
+  Box,
+  Typography,
   Alert,
   Tab,
   Tabs,
   Chip,
   Stack,
-  Button
+  Button,
+  CircularProgress
 } from '@mui/material'
-import { 
-  Code, 
-  ShowChart, 
-  Assessment, 
+import {
+  Code,
+  ShowChart,
+  Assessment,
   Monitor,
   Speed,
   Settings,
@@ -26,29 +27,28 @@ import {
 import Header from './components/common/Header'
 import LoginDialog from './components/common/LoginDialog'
 import LandingPage from './components/landing/LandingPage'
-import StrategyBuilder from './components/StrategyBuilder'
-import UnifiedStrategyBuilder from './components/UnifiedStrategyBuilder'
-import InvestmentUniverse from './components/InvestmentUniverse'
-import BacktestResults from './components/BacktestResults'
-import BacktestRunner from './components/BacktestRunner'
-import BacktestComparison from './components/backtest/BacktestComparison'
-import SignalMonitor from './components/SignalMonitor'
-import PerformanceDashboard from './components/PerformanceDashboard'
-import TradingSettings from './components/TradingSettings'
-import TestSupabase from './components/test/TestSupabase'
-import TestBacktestTable from './components/test/TestBacktestTable'
-import AutoTradingPanel from './components/trading/AutoTradingPanel'
-import OrderPanel from './components/trading/OrderPanel'
-import PortfolioPanel from './components/trading/PortfolioPanel'
-import MarketOverview from './components/trading/MarketOverview'
-import Community from './components/community/Community'
-import AdminApprovalPanel from './components/admin/AdminApprovalPanel'
-import TestInvestmentUniverse from './components/TestInvestmentUniverse'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 // import { connectWebSocket } from './services/websocket' // Removed - using Supabase instead
 import { checkServerStatus } from './services/api'
 import { authService } from './services/auth'
 import { loginSuccess, logout } from './store/authSlice'
+
+// Lazy load components for code splitting
+const StrategyBuilder = lazy(() => import('./components/StrategyBuilder'))
+const BacktestRunner = lazy(() => import('./components/BacktestRunner'))
+const SignalMonitor = lazy(() => import('./components/SignalMonitor'))
+const PerformanceDashboard = lazy(() => import('./components/PerformanceDashboard'))
+const AutoTradingPanel = lazy(() => import('./components/trading/AutoTradingPanel'))
+const OrderPanel = lazy(() => import('./components/trading/OrderPanel'))
+const PortfolioPanel = lazy(() => import('./components/trading/PortfolioPanel'))
+const MarketOverview = lazy(() => import('./components/trading/MarketOverview'))
+const Community = lazy(() => import('./components/community/Community'))
+const TradingSettings = lazy(() => import('./components/TradingSettings'))
+const TestSupabase = lazy(() => import('./components/test/TestSupabase'))
+const TestBacktestTable = lazy(() => import('./components/test/TestBacktestTable'))
+const InvestmentUniverse = lazy(() => import('./components/InvestmentUniverse'))
+const AdminApprovalPanel = lazy(() => import('./components/admin/AdminApprovalPanel'))
+const TestInvestmentUniverse = lazy(() => import('./components/TestInvestmentUniverse'))
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -66,7 +66,13 @@ function TabPanel(props: TabPanelProps) {
     >
       {value === index && (
         <Box sx={{ pt: 3 }}>
-          {children}
+          <Suspense fallback={
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+              <CircularProgress />
+            </Box>
+          }>
+            {children}
+          </Suspense>
         </Box>
       )}
     </div>

@@ -169,69 +169,69 @@ export default function N8nWorkflowMonitor() {
             <>
               <Grid container spacing={2} mb={3}>
                 <Grid item xs={6} md={3}>
-                  <Paper sx={{ p: 2, bgcolor: 'success.lighter' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(76, 175, 80, 0.1)', border: '1px solid rgba(76, 175, 80, 0.3)' }}>
                     <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                       <CheckCircle color="success" />
                       <Typography variant="caption" color="text.secondary">
                         최근 1분
                       </Typography>
                     </Stack>
-                    <Typography variant="h4" color="success.main">
+                    <Typography variant="h4" color="success.main" fontWeight="bold">
                       {workflows.filter(w =>
                         w.lastExecution?.status === 'success' &&
                         w.lastExecution.startedAt &&
                         new Date().getTime() - new Date(w.lastExecution.startedAt).getTime() < 60000
                       ).length}
                     </Typography>
-                    <Typography variant="caption">실행 성공</Typography>
+                    <Typography variant="caption" color="text.secondary">실행 성공</Typography>
                   </Paper>
                 </Grid>
                 <Grid item xs={6} md={3}>
-                  <Paper sx={{ p: 2, bgcolor: 'error.lighter' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(244, 67, 54, 0.1)', border: '1px solid rgba(244, 67, 54, 0.3)' }}>
                     <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                       <Error color="error" />
                       <Typography variant="caption" color="text.secondary">
                         최근 5분
                       </Typography>
                     </Stack>
-                    <Typography variant="h4" color="error.main">
+                    <Typography variant="h4" color="error.main" fontWeight="bold">
                       {workflows.filter(w =>
                         w.lastExecution?.status === 'error' &&
                         w.lastExecution.startedAt &&
                         new Date().getTime() - new Date(w.lastExecution.startedAt).getTime() < 300000
                       ).length}
                     </Typography>
-                    <Typography variant="caption">실행 실패</Typography>
+                    <Typography variant="caption" color="text.secondary">실행 실패</Typography>
                   </Paper>
                 </Grid>
                 <Grid item xs={6} md={3}>
-                  <Paper sx={{ p: 2, bgcolor: 'primary.lighter' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(33, 150, 243, 0.1)', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
                     <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                       <TrendingUp color="primary" />
                       <Typography variant="caption" color="text.secondary">
                         평균 성공률
                       </Typography>
                     </Stack>
-                    <Typography variant="h4" color="primary.main">
+                    <Typography variant="h4" color="primary.main" fontWeight="bold">
                       {workflows.length > 0
                         ? Math.round(workflows.reduce((sum, w) => sum + w.successRate, 0) / workflows.length)
                         : 0}%
                     </Typography>
-                    <Typography variant="caption">전체 워크플로우</Typography>
+                    <Typography variant="caption" color="text.secondary">전체 워크플로우</Typography>
                   </Paper>
                 </Grid>
                 <Grid item xs={6} md={3}>
-                  <Paper sx={{ p: 2, bgcolor: 'info.lighter' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(2, 136, 209, 0.1)', border: '1px solid rgba(2, 136, 209, 0.3)' }}>
                     <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                       <Timer color="info" />
                       <Typography variant="caption" color="text.secondary">
                         총 실행 횟수
                       </Typography>
                     </Stack>
-                    <Typography variant="h4" color="info.main">
+                    <Typography variant="h4" color="info.main" fontWeight="bold">
                       {workflows.reduce((sum, w) => sum + w.totalExecutions, 0)}
                     </Typography>
-                    <Typography variant="caption">최근 20건</Typography>
+                    <Typography variant="caption" color="text.secondary">최근 20건</Typography>
                   </Paper>
                 </Grid>
               </Grid>

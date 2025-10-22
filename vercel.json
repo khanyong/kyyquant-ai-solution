@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/rest/telemetry/proxy/:path*",
+      "destination": "/api/telemetry-proxy"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
