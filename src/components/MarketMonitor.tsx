@@ -214,7 +214,10 @@ export default function MarketMonitor() {
             <Stack direction="row" spacing={1} alignItems="center">
               {lastUpdate && (
                 <Typography variant="caption" color="text.secondary">
-                  마지막 업데이트: {lastUpdate.toLocaleTimeString()}
+                  {isMarketOpen()
+                    ? `마지막 업데이트: ${lastUpdate.toLocaleTimeString()}`
+                    : '주식시장 휴장 중 - 실시간 업데이트 일시정지'
+                  }
                 </Typography>
               )}
               <Button
