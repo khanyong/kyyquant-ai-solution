@@ -39,6 +39,7 @@ import {
   Update
 } from '@mui/icons-material'
 import { supabase } from '../lib/supabase'
+import { isMarketOpen } from '../utils/marketHours'
 
 interface TradingSignal {
   id: string
@@ -103,8 +104,12 @@ export default function SignalMonitor() {
     fetchMarketData()
     fetchWorkflowStats()
 
-    // 워크플로우 통계 30초마다 업데이트
-    const statsInterval = setInterval(fetchWorkflowStats, 30000)
+    // 워크플로우 통계 30초마다 업데이트 (시장 오픈 시간에만)
+    const statsInterval = setInterval(() => {
+      if (isMarketOpen()) {
+        fetchWorkflowStats()
+      }
+    }, 30000)
 
     // Supabase Realtime 구독 - 매매 신호
     const signalChannel = supabase

@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material'
 import { supabase } from '../lib/supabase'
 import N8nWorkflowMonitor from './N8nWorkflowMonitor'
+import { isMarketOpen, getMarketStatusMessage } from '../utils/marketHours'
 
 interface MarketData {
   stock_code: string
@@ -52,11 +53,18 @@ export default function MarketMonitor() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [showAllStocks, setShowAllStocks] = useState(false)
+  const [marketStatus, setMarketStatus] = useState<string>('')
 
   useEffect(() => {
     fetchMarketData()
 
-    // Supabase Realtime 구독 - 새 데이터 실시간 반영
+    // 시장 상태 초기화 및 주기적 업데이트
+    setMarketStatus(getMarketStatusMessage())
+    const statusInterval = setInterval(() => {
+      setMarketStatus(getMarketStatusMessage())
+    }, 60000) // 1분마다 시장 상태 업데이트
+
+    // Supabase Realtime 구독 - 시장 운영 중에만 활성화
     const channel = supabase
       .channel('kw_price_current')
       .on(
@@ -67,6 +75,12 @@ export default function MarketMonitor() {
           table: 'kw_price_current'
         },
         async (payload) => {
+          // 시장 운영 중에만 데이터 업데이트
+          if (!isMarketOpen()) {
+            console.log('📊 Market closed - skipping realtime update')
+            return
+          }
+
           console.log('📊 New market data:', payload.new)
 
           // payload에서 직접 데이터 사용 (stock_name 포함)
@@ -94,6 +108,7 @@ export default function MarketMonitor() {
       .subscribe()
 
     return () => {
+      clearInterval(statusInterval)
       supabase.removeChannel(channel)
     }
   }, [])
@@ -185,13 +200,24 @@ export default function MarketMonitor() {
       <Card>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h5" component="h2">
-              📊 실시간 시장 모니터링
-            </Typography>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Typography variant="h5" component="h2">
+                📊 실시간 시장 모니터링
+              </Typography>
+              <Chip
+                label={marketStatus}
+                color={isMarketOpen() ? 'success' : 'default'}
+                size="small"
+                variant={isMarketOpen() ? 'filled' : 'outlined'}
+              />
+            </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
               {lastUpdate && (
                 <Typography variant="caption" color="text.secondary">
-                  마지막 업데이트: {lastUpdate.toLocaleTimeString()}
+                  {isMarketOpen()
+                    ? `마지막 업데이트: ${lastUpdate.toLocaleTimeString()}`
+                    : '주식시장 휴장 중 - 실시간 업데이트 일시정지'
+                  }
                 </Typography>
               )}
               <Button
