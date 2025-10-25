@@ -33,6 +33,7 @@ import {
   Timer,
 } from '@mui/icons-material'
 import { n8nClient, WorkflowExecutionSummary, NodeExecutionStatus } from '../lib/n8n'
+import { isMarketOpen, getMarketStatusMessage } from '../utils/marketHours'
 
 export default function N8nWorkflowMonitor() {
   const [workflows, setWorkflows] = useState<WorkflowExecutionSummary[]>([])
@@ -40,13 +41,28 @@ export default function N8nWorkflowMonitor() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [expandedWorkflow, setExpandedWorkflow] = useState<string | false>(false)
+  const [marketStatus, setMarketStatus] = useState<string>('')
 
   useEffect(() => {
     fetchWorkflowData()
 
-    // 30초마다 자동 새로고침
-    const interval = setInterval(fetchWorkflowData, 30000)
-    return () => clearInterval(interval)
+    // 시장 상태 초기화 및 주기적 업데이트
+    setMarketStatus(getMarketStatusMessage())
+    const statusInterval = setInterval(() => {
+      setMarketStatus(getMarketStatusMessage())
+    }, 60000) // 1분마다 시장 상태 업데이트
+
+    // 30초마다 자동 새로고침 (시장 운영 중에만)
+    const interval = setInterval(() => {
+      if (isMarketOpen()) {
+        fetchWorkflowData()
+      }
+    }, 30000)
+
+    return () => {
+      clearInterval(statusInterval)
+      clearInterval(interval)
+    }
   }, [])
 
   const fetchWorkflowData = async () => {
@@ -141,13 +157,24 @@ export default function N8nWorkflowMonitor() {
       <Card>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h5" component="h2">
-              ⚡ n8n 워크플로우 활동
-            </Typography>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Typography variant="h5" component="h2">
+                ⚡ n8n 워크플로우 활동
+              </Typography>
+              <Chip
+                label={marketStatus}
+                color={isMarketOpen() ? 'success' : 'default'}
+                size="small"
+                variant={isMarketOpen() ? 'filled' : 'outlined'}
+              />
+            </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
               {lastUpdate && (
                 <Typography variant="caption" color="text.secondary">
-                  마지막 업데이트: {lastUpdate.toLocaleTimeString()}
+                  {isMarketOpen()
+                    ? `마지막 업데이트: ${lastUpdate.toLocaleTimeString()}`
+                    : '주식시장 휴장 중 - 실시간 업데이트 일시정지'
+                  }
                 </Typography>
               )}
               <IconButton size="small" onClick={fetchWorkflowData} disabled={loading}>
