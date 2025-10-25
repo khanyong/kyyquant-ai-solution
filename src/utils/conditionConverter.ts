@@ -65,7 +65,7 @@ const normalizeIndicatorName = (name: string): string => {
   const normalized = name
     .toLowerCase()
     .replace(/_/g, '_')  // 일단 유지
-    .replace('ma_', 'sma_')  // MA → SMA
+    // .replace('ma_', 'sma_')  // ❌ 제거: ma와 sma는 다른 지표임
     .replace('price', 'close')  // PRICE → close
 
   // 컬럼 매핑 적용
@@ -335,8 +335,8 @@ const fixDynamicColumnNames = (strategy: {
     const name = ind.name?.toLowerCase()
     const params = ind.params || {}
 
-    // SMA, EMA: sma_20, ema_12 형태
-    if (name === 'sma' || name === 'ema') {
+    // MA, SMA, EMA: ma_20, sma_20, ema_12 형태
+    if (name === 'ma' || name === 'sma' || name === 'ema') {
       const period = params.period || 20
       columnMap[name] = `${name}_${period}`
     }

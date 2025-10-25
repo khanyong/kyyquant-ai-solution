@@ -84,6 +84,13 @@ try:
 except ImportError as e:
     print(f"[ERROR] Failed to import order router: {e}")
 
+try:
+    from api.indicators import router as indicators_router
+    app.include_router(indicators_router, tags=["indicators"])
+    print("[OK] Indicators router registered")
+except ImportError as e:
+    print(f"[ERROR] Failed to import indicators router: {e}")
+
 @app.get("/")
 async def root():
     """헬스체크 엔드포인트"""

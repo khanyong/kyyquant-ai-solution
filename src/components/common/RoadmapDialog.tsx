@@ -1524,6 +1524,67 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 26,
+      title: '지표 계산 시스템 통합 및 전략 빌더 수정',
+      status: 'done',
+      priority: 'high',
+      icon: <TrendingUp />,
+      period: '2025.10.26',
+      description: 'Backend 지표 계산 API 개발, n8n workflow v21 생성, 전략 빌더 MA 지표 수정',
+      subtasks: [
+        {
+          title: '✅ Backend 지표 계산 API 개발',
+          details: [
+            'POST /api/indicators/calculate 엔드포인트 구현',
+            'IndicatorCalculator와 통합하여 Supabase indicators 테이블 기반 계산',
+            'DataProvider에서 kw_price_daily 데이터 조회',
+            'IndicatorResult.columns 처리 로직 구현',
+            'MA, Bollinger, RSI, DMI 등 모든 기술적 지표 지원'
+          ]
+        },
+        {
+          title: '✅ n8n Workflow v21 생성',
+          details: [
+            '데이터 병합 후 "지표 계산 API 호출" 노드 추가',
+            'Backend API로부터 ma_20, ma_12, bollinger_*, rsi 등 계산',
+            '조건 체크 로직에 Backend 계산 지표 병합',
+            'console.log로 디버깅 로그 추가',
+            'v20의 지표 계산 누락 문제 해결'
+          ]
+        },
+        {
+          title: '✅ 데이터베이스 스키마 수정',
+          details: [
+            'indicators 테이블: adx, close, volume 비활성화',
+            'indicator_columns: adx→dmi, bollinger_bands→bollinger 통일',
+            'indicator_columns: parabolic_sar→parabolic 통일',
+            'indicator_columns: ma, sma, cci, obv, vwap, williams 추가',
+            'strategies 테이블: entry_conditions에 ma_20, ma_12 수정'
+          ]
+        },
+        {
+          title: '✅ 전략 빌더 MA 지표 수정',
+          details: [
+            'conditionConverter.ts: fixDynamicColumnNames에 ma 추가',
+            'MA 조건이 ma_20 형식으로 변환되도록 수정',
+            'normalizeIndicatorName에서 ma→sma 잘못된 변환 제거',
+            'ma와 sma는 다른 지표임을 명확히 구분',
+            '볼린저 밴드, MACD, 스토캐스틱 다중 출력 지표 정상 작동 확인'
+          ]
+        },
+        {
+          title: '✅ 프로세스 검증 및 문서화',
+          details: [
+            'AUTO_TRADING_BUY_PROCESS.md: 자동매매 프로세스 전체 문서',
+            'PROCESS_VERIFICATION_REPORT.md: 전체 프로세스 검증',
+            'STRATEGY_BUILDER_INDICATOR_VERIFICATION.md: 전략 빌더 호환성 검증',
+            'v20 workflow 지표 계산 누락 문제 근본 원인 분석',
+            '빌드 테스트 성공 (12,639 모듈, 51.63초)'
+          ]
+        }
+      ]
+    },
+    {
+      id: 27,
       title: '성과 분석 대시보드',
       status: 'pending',
       priority: 'medium',
@@ -1584,7 +1645,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 27,
+      id: 28,
       title: 'AI 포트폴리오 최적화',
       status: 'pending',
       priority: 'medium',
@@ -1645,7 +1706,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 28,
+      id: 29,
       title: '알림 시스템',
       status: 'pending',
       priority: 'medium',
@@ -1706,7 +1767,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 29,
+      id: 30,
       title: '모바일 반응형 UI',
       status: 'pending',
       priority: 'low',
@@ -1767,7 +1828,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       ]
     },
     {
-      id: 30,
+      id: 31,
       title: '테스트 및 최적화',
       status: 'pending',
       priority: 'low',
@@ -1893,7 +1954,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 86 // 2025-10-21 기준 진행률 (자동매매 고도화 및 랜딩 페이지 개선 완료)
+  const progress = 87 // 2025-10-26 기준 진행률 (지표 계산 시스템 통합 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 
