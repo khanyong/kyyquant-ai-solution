@@ -90,6 +90,9 @@ function MainApp() {
   const [currentTab, setCurrentTab] = useState(0)
   const [activeStrategies, setActiveStrategies] = useState<any[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
+
+  // Debug log
+  console.log('🎯 MainApp: isConnected =', isConnected, ', currentTab =', currentTab)
   
   // 전략 실행 함수
   const executeStrategy = (strategy: any) => {

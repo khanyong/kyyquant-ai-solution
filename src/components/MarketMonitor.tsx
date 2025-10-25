@@ -32,7 +32,7 @@ import N8nWorkflowMonitor from './N8nWorkflowMonitor'
 
 interface MarketData {
   stock_code: string
-  stock_name?: string // JOIN으로 가져온 종목명
+  stock_name: string // kw_price_current 테이블에서 직접 가져온 종목명
   current_price: number
   change_price: number
   change_rate: number
@@ -69,17 +69,11 @@ export default function MarketMonitor() {
         async (payload) => {
           console.log('📊 New market data:', payload.new)
 
-          // 종목명을 가져오기 위해 kw_stock_master 조회
+          // payload에서 직접 데이터 사용 (stock_name 포함)
           const newData = payload.new as MarketData
-          const { data: stockData } = await supabase
-            .from('kw_stock_master')
-            .select('stock_name')
-            .eq('stock_code', newData.stock_code)
-            .single()
-
           const updatedData = {
             ...newData,
-            stock_name: stockData?.stock_name || newData.stock_code
+            stock_name: newData.stock_name || newData.stock_code
           }
 
           setMarketData((prev) => {
@@ -107,8 +101,9 @@ export default function MarketMonitor() {
   const fetchMarketData = async () => {
     try {
       setLoading(true)
+      console.log('🔄 MarketMonitor: Fetching market data...')
 
-      // 먼저 kw_price_current 데이터 조회
+      // kw_price_current 데이터 조회 (stock_name 포함)
       const { data: priceData, error: priceError } = await supabase
         .from('kw_price_current')
         .select('*')
@@ -130,25 +125,15 @@ export default function MarketMonitor() {
         return
       }
 
-      // 종목코드 목록 추출
-      const stockCodes = priceData.map((item: any) => item.stock_code)
-
-      // kw_stock_master에서 종목명 일괄 조회
-      const { data: masterData } = await supabase
-        .from('kw_stock_master')
-        .select('stock_code, stock_name')
-        .in('stock_code', stockCodes)
-
-      // 종목명 매핑
-      const stockNameMap = new Map(
-        (masterData || []).map((item: any) => [item.stock_code, item.stock_name])
-      )
-
-      // 데이터 병합
+      // stock_name이 없는 경우 stock_code로 대체
       const formattedData = priceData.map((item: any) => ({
         ...item,
-        stock_name: stockNameMap.get(item.stock_code) || item.stock_code
+        stock_name: item.stock_name || item.stock_code
       }))
+
+      console.log(`✅ MarketMonitor: Loaded ${formattedData.length} stocks`)
+      console.log('📊 Sample data:', formattedData.slice(0, 3))
+      console.log('🔍 Stock names:', formattedData.slice(0, 10).map(d => ({ code: d.stock_code, name: d.stock_name })))
 
       setMarketData(formattedData)
       setLastUpdate(new Date())
