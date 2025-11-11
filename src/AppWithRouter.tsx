@@ -372,10 +372,6 @@ function MainApp() {
             <TabPanel value={currentTab} index={5}>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <MarketMonitor />
-                </Grid>
-
-                <Grid item xs={12}>
                   <MarketOverview />
                 </Grid>
 
