@@ -1,0 +1,814 @@
+{
+  "name": "자동매매 모니터링 v23 (지표 계산 API 제거)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-1",
+      "name": "5분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA"
+            },
+            {
+              "name": "BACKEND_URL",
+              "value": "http://192.168.50.150:8000"
+            }
+          ]
+        }
+      },
+      "id": "set-env-1",
+      "name": "환경변수 설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{new Date().getHours()}}",
+              "operation": "largerEqual",
+              "value2": 9
+            },
+            {
+              "value1": "={{new Date().getHours()}}",
+              "operation": "smallerEqual",
+              "value2": 15
+            },
+            {
+              "value1": "={{new Date().getDay()}}",
+              "operation": "largerEqual",
+              "value2": 1
+            },
+            {
+              "value1": "={{new Date().getDay()}}",
+              "operation": "smallerEqual",
+              "value2": 5
+            }
+          ]
+        }
+      },
+      "id": "market-check-1",
+      "name": "장시간 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$node[\"환경변수 설정\"].json[\"KIWOOM_APP_KEY\"]}}\",\n  \"secretkey\": \"{{$node[\"환경변수 설정\"].json[\"KIWOOM_APP_SECRET\"]}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        }
+      },
+      "id": "get-token-1",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$node[\"환경변수 설정\"].json[\"SUPABASE_URL\"]}}/rest/v1/rpc/get_active_strategies_with_universe",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "={{\"Bearer \" + $node[\"환경변수 설정\"].json[\"SUPABASE_ANON_KEY\"]}}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{$node[\"환경변수 설정\"].json[\"SUPABASE_ANON_KEY\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "get-strategies-1",
+      "name": "자동매매 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nconst envVars = $('환경변수 설정').first().json;\nconst tokenData = $('키움 토큰 발급').first().json;\n\nfor (const item of items) {\n  const strategy = item.json;\n  let stockCodes = [];\n\n  // filtered_stocks가 jsonb 타입인 경우 처리\n  if (strategy.filtered_stocks) {\n    if (Array.isArray(strategy.filtered_stocks)) {\n      // 이미 배열인 경우 (JavaScript에서 파싱됨)\n      stockCodes = strategy.filtered_stocks.filter(code => code && typeof code === 'string');\n    } else if (typeof strategy.filtered_stocks === 'object') {\n      // jsonb 객체인 경우 배열로 변환\n      stockCodes = Object.values(strategy.filtered_stocks).filter(code => code && typeof code === 'string');\n    }\n  }\n\n  console.log(`📊 Strategy: ${strategy.strategy_name}, Stock count: ${stockCodes.length}`);\n\n  stockCodes.forEach(stockCode => {\n    results.push({\n      json: {\n        strategy_id: strategy.strategy_id,\n        strategy_name: strategy.strategy_name,\n        entry_conditions: strategy.entry_conditions,\n        exit_conditions: strategy.exit_conditions,\n        stock_code: stockCode,\n        access_token: tokenData.token,\n        KIWOOM_APP_KEY: envVars.KIWOOM_APP_KEY,\n        KIWOOM_APP_SECRET: envVars.KIWOOM_APP_SECRET,\n        SUPABASE_URL: envVars.SUPABASE_URL,\n        SUPABASE_ANON_KEY: envVars.SUPABASE_ANON_KEY,\n        BACKEND_URL: envVars.BACKEND_URL\n      }\n    });\n  });\n}\n\nconsole.log(`✅ Total items created: ${results.length}`);\nreturn results;"
+      },
+      "id": "extract-stocks-1",
+      "name": "종목 코드 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/api/dostk/mrkcond",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stk_cd\": \"{{$json.stock_code}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "={{\"Bearer \" + $json.access_token}}"
+            },
+            {
+              "name": "cont-yn",
+              "value": "N"
+            },
+            {
+              "name": "next-key",
+              "value": ""
+            },
+            {
+              "name": "api-id",
+              "value": "ka10004"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 6000
+            }
+          }
+        }
+      },
+      "id": "get-price-1",
+      "name": "키움 호가 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 데이터 병합: 종목 코드 추출 + 키움 호가 조회 결과\nconst originalData = $input.first().json; // 종목 코드 추출 노드의 데이터\nconst kiwoomResponse = $input.last().json; // 키움 호가 조회 응답\n\nconsole.log('🔄 데이터 병합 시작');\nconsole.log('📦 Original data keys:', Object.keys(originalData));\nconsole.log('📦 Kiwoom response keys:', Object.keys(kiwoomResponse));\nconsole.log('📋 Original stock_code:', originalData.stock_code);\nconsole.log('📋 Original strategy_id:', originalData.strategy_id);\nconsole.log('📋 Original strategy_name:', originalData.strategy_name);\n\n// 원본 데이터 보존: _original_ 접두사로 모든 필드 복사\nconst mergedData = {\n  // 원본 데이터 완전히 보존\n  _original_stock_code: originalData.stock_code,\n  _original_strategy_id: originalData.strategy_id,\n  _original_strategy_name: originalData.strategy_name,\n  _original_user_id: originalData.user_id,\n  _original_capital: originalData.capital,\n  _original_current_index: originalData.current_index,\n  _original_total_stocks: originalData.total_stocks,\n  _original_entry_conditions: originalData.entry_conditions,\n  _original_exit_conditions: originalData.exit_conditions,\n  _original_SUPABASE_URL: originalData.SUPABASE_URL,\n  _original_SUPABASE_ANON_KEY: originalData.SUPABASE_ANON_KEY,\n  _original_BACKEND_URL: originalData.BACKEND_URL,\n  \n  // 키움 API 응답 데이터 병합\n  ...kiwoomResponse\n};\n\nconsole.log('✅ Merged data keys:', Object.keys(mergedData));\nconsole.log('✅ _original_stock_code:', mergedData._original_stock_code);\nconsole.log('✅ _original_strategy_id:', mergedData._original_strategy_id);\n\nreturn mergedData;"
+      },
+      "id": "merge-data-1",
+      "name": "데이터 병합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 병합된 데이터에서 정보 추출\nconst item = $input.item.json;\nconst kiwoomData = item;\n\n// 환경변수를 직접 참조\nconst envVars = $('환경변수 설정').first().json;\n\n// 이전 노드(데이터 병합)에서 추가한 원본 데이터 사용\nconst strategy_id = kiwoomData._original_strategy_id || '';\nconst strategy_name = kiwoomData._original_strategy_name || '';\nconst entry_conditions = kiwoomData._original_entry_conditions;\nconst exit_conditions = kiwoomData._original_exit_conditions;\nconst stockCode = kiwoomData._original_stock_code || '';\nconst SUPABASE_URL = kiwoomData._original_SUPABASE_URL || envVars.SUPABASE_URL;\nconst SUPABASE_ANON_KEY = kiwoomData._original_SUPABASE_ANON_KEY || envVars.SUPABASE_ANON_KEY;\nconst BACKEND_URL = kiwoomData._original_BACKEND_URL || envVars.BACKEND_URL;\n\nconsole.log('🎯 조건 체크 시작');\nconsole.log('📋 Stock code:', stockCode);\nconsole.log('📋 Strategy:', strategy_name);\n\n// 호가 데이터 파싱 (부호 제거 및 숫자 변환)\nconst parsePrice = (price) => {\n  if (!price) return 0;\n  return parseFloat(String(price).replace(/[+\\-]/g, ''));\n};\n\nconst selPrice = parsePrice(kiwoomData.sel_fpr_bid);\nconst buyPrice = parsePrice(kiwoomData.buy_fpr_bid);\nconst estimatedPrice = (selPrice + buyPrice) / 2;\n\n// ⭐ 종목명 조회: stock_metadata 테이블에서 가져오기\nlet stockName = stockCode; // 기본값: 종목코드\n\ntry {\n  const response = await fetch(\n    `${SUPABASE_URL}/rest/v1/stock_metadata?stock_code=eq.${stockCode}&select=stock_name`,\n    {\n      headers: {\n        'apikey': SUPABASE_ANON_KEY,\n        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`\n      }\n    }\n  );\n\n  const data = await response.json();\n  if (data && data.length > 0 && data[0].stock_name) {\n    stockName = data[0].stock_name;\n  }\n} catch (error) {\n  console.error('Failed to fetch stock name:', error);\n}\n\n// 거래량 계산 (문자열을 숫자로 변환)\nconst selVolume = parseInt(String(kiwoomData.sel_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\nconst buyVolume = parseInt(String(kiwoomData.buy_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n\n// ⭐⭐⭐ 지표 객체: 호가 데이터만 사용 (Backend API 제거)\nconst indicators = {\n  close: estimatedPrice,\n  sel_price: selPrice,\n  buy_price: buyPrice,\n  volume: selVolume + buyVolume\n};\n\nconsole.log('📈 Indicators:', indicators);\n\n// 매수/매도 신호는 조건이 없으므로 항상 false\nconst buySignal = false;\nconst sellSignal = false;\n\nreturn {\n  strategy_id: strategy_id,\n  strategy_name: strategy_name,\n  stock_code: stockCode,\n  stock_name: stockName,\n  current_price: estimatedPrice,\n  indicators: indicators,\n  buy_signal: buySignal,\n  sell_signal: sellSignal,\n  signal_type: 'NONE',\n  signal_strength: 0,\n  timestamp: new Date().toISOString(),\n  SUPABASE_URL: SUPABASE_URL,\n  SUPABASE_ANON_KEY: SUPABASE_ANON_KEY,\n  BACKEND_URL: BACKEND_URL,\n  sel_price: selPrice,\n  buy_price: buyPrice,\n  volume: indicators.volume\n};"
+      },
+      "id": "check-conditions-1",
+      "name": "조건 체크 및 신호 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/kw_stock_master",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stock_code\": {{JSON.stringify($json.stock_code)}},\n  \"stock_name\": {{JSON.stringify($json.stock_name)}},\n  \"market\": \"KOSPI\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{\"Bearer \" + $json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-stock-master",
+      "name": "종목 마스터 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2150,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nconst stockCode = item.stock_code;\nconst currentPrice = item.current_price;\n\n// Supabase에서 어제 종가 조회\nconst supabaseUrl = item.SUPABASE_URL;\nconst supabaseKey = item.SUPABASE_ANON_KEY;\n\ntry {\n  // kw_price_daily에서 최근 종가 조회 (전일 종가)\n  const response = await fetch(\n    `${supabaseUrl}/rest/v1/kw_price_daily?stock_code=eq.${stockCode}&select=close&order=trade_date.desc&limit=1`,\n    {\n      headers: {\n        'apikey': supabaseKey,\n        'Authorization': `Bearer ${supabaseKey}`\n      }\n    }\n  );\n  \n  const data = await response.json();\n  const previousClose = data && data.length > 0 ? parseFloat(data[0].close) : currentPrice;\n  \n  // 등락가 및 등락률 계산\n  const changePrice = currentPrice - previousClose;\n  const changeRate = previousClose > 0 ? ((changePrice / previousClose) * 100) : 0;\n  \n  return {\n    ...item,\n    previous_close: previousClose,\n    change_price: changePrice,\n    change_rate: changeRate\n  };\n} catch (error) {\n  console.error('Failed to fetch previous close:', error);\n  // 에러 시 기본값 사용 (등락가/률 = 0)\n  return {\n    ...item,\n    previous_close: currentPrice,\n    change_price: 0,\n    change_rate: 0\n  };\n}"
+      },
+      "id": "calc-price-change",
+      "name": "등락가/률 계산",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/kw_price_current",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stock_code\": {{JSON.stringify($json.stock_code)}},\n  \"stock_name\": {{JSON.stringify($json.stock_name || $json.stock_code)}},\n  \"current_price\": {{$json.current_price}},\n  \"change_price\": {{$json.change_price}},\n  \"change_rate\": {{$json.change_rate}},\n  \"volume\": {{$json.volume || 0}},\n  \"high_52w\": {{$json.sel_price || 0}},\n  \"low_52w\": {{$json.buy_price || 0}},\n  \"market_cap\": 0\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{\"Bearer \" + $json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-market-data",
+      "name": "시장 데이터 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.signal_type}}",
+              "operation": "notEqual",
+              "value2": "NONE"
+            }
+          ]
+        }
+      },
+      "id": "check-signal-1",
+      "name": "신호 있음?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2250,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/trading_signals",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"strategy_id\": {{JSON.stringify($json.strategy_id)}},\n  \"stock_code\": {{JSON.stringify($json.stock_code)}},\n  \"stock_name\": {{JSON.stringify($json.stock_name)}},\n  \"signal_type\": {{JSON.stringify($json.signal_type)}},\n  \"signal_strength\": {{$json.signal_strength}},\n  \"current_price\": {{$json.current_price}},\n  \"volume\": {{$json.indicators.volume || 0}},\n  \"conditions_met\": {{JSON.stringify($json.indicators)}}\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{\"Bearer \" + $json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "save-signal-1",
+      "name": "신호 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2450,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$('조건 체크 및 신호 생성').item.json.signal_type}}",
+              "operation": "equal",
+              "value2": "BUY"
+            }
+          ]
+        }
+      },
+      "id": "check-buy-signal",
+      "name": "매수 신호만?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2650,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const signal = $('조건 체크 및 신호 생성').item.json;\n\n// 계좌 잔고 (TODO: DB에서 조회)\nconst availableCash = 10000000;\n\n// 계좌의 10%로 매수\nconst allocationPercentage = 0.10;\nconst maxBudget = availableCash * allocationPercentage;\n\nconst currentPrice = signal.current_price;\nconst quantity = Math.floor(maxBudget / currentPrice);\n\nif (quantity < 1) {\n  return {\n    json: {\n      skip: true,\n      reason: '주문 가능 수량 부족',\n      stock_code: signal.stock_code,\n      current_price: currentPrice\n    }\n  };\n}\n\nreturn {\n  json: {\n    skip: false,\n    stock_code: signal.stock_code,\n    stock_name: signal.stock_name,\n    quantity: quantity,\n    price: 0,\n    order_type: 'buy',\n    current_price: currentPrice,\n    order_amount: currentPrice * quantity,\n    account_balance: availableCash,\n    strategy_id: signal.strategy_id,\n    strategy_name: signal.strategy_name,\n    signal_strength: signal.signal_strength,\n    SUPABASE_URL: signal.SUPABASE_URL,\n    SUPABASE_ANON_KEY: signal.SUPABASE_ANON_KEY,\n    BACKEND_URL: signal.BACKEND_URL\n  }\n};"
+      },
+      "id": "calc-quantity",
+      "name": "주문 수량 계산",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2850,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/rpc/check_strategy_capital",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_strategy_id\": {{JSON.stringify($json.strategy_id)}},\n  \"p_order_amount\": {{$json.order_amount}},\n  \"p_account_balance\": {{$json.account_balance}}\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{\"Bearer \" + $json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        }
+      },
+      "id": "check-capital",
+      "name": "자금 검증",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3050,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const validation = $input.item.json;\nconst orderData = $('주문 수량 계산').item.json;\n\nreturn {\n  json: {\n    ...orderData,\n    capital_validation: validation,\n    allowed: validation.allowed,\n    validation_reason: validation.reason\n  }\n};"
+      },
+      "id": "merge-validation",
+      "name": "검증 결과 병합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3250,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.allowed}}",
+              "operation": "equal",
+              "value2": true
+            },
+            {
+              "value1": "={{$json.skip}}",
+              "operation": "notEqual",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-validation",
+      "name": "자금 검증 통과?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3450,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.BACKEND_URL}}/api/order/buy",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stock_code\": {{JSON.stringify($json.stock_code)}},\n  \"quantity\": {{$json.quantity}},\n  \"price\": {{$json.price}},\n  \"order_type\": {{JSON.stringify($json.order_type)}}\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "execute-order",
+      "name": "키움 주문 실행",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3650,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('검증 결과 병합').item.json.SUPABASE_URL}}/rest/v1/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"f912da32-897f-4dbb-9242-3a438e9733a8\",\n  \"stock_code\": {{JSON.stringify($('검증 결과 병합').item.json.stock_code)}},\n  \"order_type\": \"BUY\",\n  \"order_status\": {{JSON.stringify($json.status || 'completed')}},\n  \"order_price\": {{$('검증 결과 병합').item.json.current_price}},\n  \"order_quantity\": {{$('검증 결과 병합').item.json.quantity}},\n  \"executed_price\": {{$json.price || $('검증 결과 병합').item.json.current_price}},\n  \"executed_quantity\": {{$json.status === 'success' ? $('검증 결과 병합').item.json.quantity : 0}},\n  \"kiwoom_order_no\": {{JSON.stringify($json.order_no)}}\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('검증 결과 병합').item.json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{\"Bearer \" + $('검증 결과 병합').item.json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "save-order",
+      "name": "주문 기록 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3850,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.SUPABASE_URL}}/rest/v1/trading_logs",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"log_type\": \"capital_validation_failed\",\n  \"strategy_id\": {{JSON.stringify($json.strategy_id)}},\n  \"stock_code\": {{JSON.stringify($json.stock_code)}},\n  \"message\": {{JSON.stringify(\"자금 부족: \" + $json.validation_reason)}},\n  \"metadata\": {{JSON.stringify($json.capital_validation)}},\n  \"created_at\": {{JSON.stringify($now)}}\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{\"Bearer \" + $json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "log-validation-failure",
+      "name": "검증 실패 로그",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3650,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "5분마다 실행": {
+      "main": [
+        [
+          {
+            "node": "환경변수 설정",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "환경변수 설정": {
+      "main": [
+        [
+          {
+            "node": "장시간 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장시간 체크": {
+      "main": [
+        [
+          {
+            "node": "키움 토큰 발급",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 토큰 발급": {
+      "main": [
+        [
+          {
+            "node": "자동매매 전략 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "자동매매 전략 조회": {
+      "main": [
+        [
+          {
+            "node": "종목 코드 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "종목 코드 추출": {
+      "main": [
+        [
+          {
+            "node": "키움 호가 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 호가 조회": {
+      "main": [
+        [
+          {
+            "node": "데이터 병합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터 병합": {
+      "main": [
+        [
+          {
+            "node": "조건 체크 및 신호 생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "조건 체크 및 신호 생성": {
+      "main": [
+        [
+          {
+            "node": "신호 있음?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "종목 마스터 저장",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "등락가/률 계산",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "종목 마스터 저장": {
+      "main": [
+        []
+      ]
+    },
+    "등락가/률 계산": {
+      "main": [
+        [
+          {
+            "node": "시장 데이터 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "신호 있음?": {
+      "main": [
+        [
+          {
+            "node": "신호 저장",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "매수 신호만?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "매수 신호만?": {
+      "main": [
+        [
+          {
+            "node": "주문 수량 계산",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "주문 수량 계산": {
+      "main": [
+        [
+          {
+            "node": "자금 검증",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "자금 검증": {
+      "main": [
+        [
+          {
+            "node": "검증 결과 병합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "검증 결과 병합": {
+      "main": [
+        [
+          {
+            "node": "자금 검증 통과?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "자금 검증 통과?": {
+      "main": [
+        [
+          {
+            "node": "키움 주문 실행",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "검증 실패 로그",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 주문 실행": {
+      "main": [
+        [
+          {
+            "node": "주문 기록 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "executionTimeout": 1800
+  }
+}

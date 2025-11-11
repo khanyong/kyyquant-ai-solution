@@ -1,0 +1,208 @@
+{
+  "name": "자동매매 모니터링 v32 (배치 처리 5개씩)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-1",
+      "name": "1시간마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA"
+            },
+            {
+              "name": "BACKEND_URL",
+              "value": "http://192.168.50.150:8000"
+            }
+          ]
+        }
+      },
+      "id": "set-env-1",
+      "name": "환경변수 설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{new Date().getHours()}}",
+              "operation": "largerEqual",
+              "value2": 9
+            },
+            {
+              "value1": "={{new Date().getHours()}}",
+              "operation": "smallerEqual",
+              "value2": 15
+            },
+            {
+              "value1": "={{new Date().getDay()}}",
+              "operation": "largerEqual",
+              "value2": 1
+            },
+            {
+              "value1": "={{new Date().getDay()}}",
+              "operation": "smallerEqual",
+              "value2": 5
+            }
+          ]
+        }
+      },
+      "id": "market-check-1",
+      "name": "장시간 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$node[\"환경변수 설정\"].json[\"KIWOOM_APP_KEY\"]}}\",\n  \"secretkey\": \"{{$node[\"환경변수 설정\"].json[\"KIWOOM_APP_SECRET\"]}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        }
+      },
+      "id": "get-token-1",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$node[\"환경변수 설정\"].json[\"SUPABASE_URL\"]}}/rest/v1/rpc/get_active_strategies_with_universe",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "={{\"Bearer \" + $node[\"환경변수 설정\"].json[\"SUPABASE_ANON_KEY\"]}}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{$node[\"환경변수 설정\"].json[\"SUPABASE_ANON_KEY\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "get-strategies-1",
+      "name": "자동매매 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst envVars = $('환경변수 설정').first().json;\nconst tokenData = $('키움 토큰 발급').first().json;\n\nconst results = [];\n\nfor (const item of items) {\n  const strategy = item.json;\n  let stockCodes = [];\n\n  if (strategy.filtered_stocks) {\n    if (Array.isArray(strategy.filtered_stocks)) {\n      stockCodes = strategy.filtered_stocks.filter(code => code && typeof code === 'string');\n    } else if (typeof strategy.filtered_stocks === 'object') {\n      stockCodes = Object.values(strategy.filtered_stocks).filter(code => code && typeof code === 'string');\n    }\n  }\n\n  console.log(`📊 Strategy: ${strategy.strategy_name}, Stock count: ${stockCodes.length}`);\n\n  // 5개씩 배치로 나누기\n  const batchSize = 5;\n  for (let batchIndex = 0; batchIndex < Math.ceil(stockCodes.length / batchSize); batchIndex++) {\n    const batchStart = batchIndex * batchSize;\n    const batchEnd = Math.min(batchStart + batchSize, stockCodes.length);\n    const batch = stockCodes.slice(batchStart, batchEnd);\n\n    results.push({\n      json: {\n        batch_index: batchIndex,\n        batch_start: batchStart,\n        batch_end: batchEnd,\n        total_batches: Math.ceil(stockCodes.length / batchSize),\n        stocks: batch,\n        strategy_id: strategy.strategy_id,\n        strategy_name: strategy.strategy_name,\n        access_token: tokenData.token,\n        KIWOOM_APP_KEY: envVars.KIWOOM_APP_KEY,\n        SUPABASE_URL: envVars.SUPABASE_URL,\n        SUPABASE_ANON_KEY: envVars.SUPABASE_ANON_KEY\n      }\n    });\n  }\n}\n\nconsole.log(`✅ Total batches created: ${results.length}`);\nreturn results;"
+      },
+      "id": "create-batches",
+      "name": "배치 생성 (5개씩)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-batches",
+      "name": "배치별 루프",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// 배치 내 종목 처리 (5개씩, 60초 간격)\n// ============================================================================\n\nconst batch = $input.first().json;\nconst envVars = $('환경변수 설정').first().json;\n\nconsole.log(`📦 배치 ${batch.batch_index + 1}/${batch.total_batches} 처리 중 (종목 ${batch.batch_start + 1}-${batch.batch_end})`);\n\nconst results = [];\n\nfor (let i = 0; i < batch.stocks.length; i++) {\n  const stockCode = batch.stocks[i];\n  \n  // 첫 번째 종목이 아니면 60초 대기\n  if (i > 0) {\n    console.log(`⏱️ 60초 대기 중...`);\n    await new Promise(resolve => setTimeout(resolve, 60000));\n  }\n\n  console.log(`🔍 [${batch.batch_start + i + 1}] ${stockCode} 조회 중...`);\n\n  try {\n    // 키움 호가 조회\n    const response = await fetch('https://mockapi.kiwoom.com/api/dostk/mrkcond', {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json;charset=UTF-8',\n        'authorization': `Bearer ${batch.access_token}`,\n        'cont-yn': 'N',\n        'next-key': '',\n        'api-id': 'ka10004',\n        'accept': 'application/json'\n      },\n      body: JSON.stringify({ stk_cd: stockCode })\n    });\n\n    const kiwoomData = await response.json();\n\n    const parsePrice = (price) => {\n      if (!price) return 0;\n      return parseFloat(String(price).replace(/[+\\-]/g, ''));\n    };\n\n    const selPrice = parsePrice(kiwoomData.sel_fpr_bid);\n    const buyPrice = parsePrice(kiwoomData.buy_fpr_bid);\n    const estimatedPrice = (selPrice + buyPrice) / 2;\n\n    // 종목명 조회\n    let stockName = stockCode;\n    try {\n      const metaResponse = await fetch(\n        `${batch.SUPABASE_URL}/rest/v1/stock_metadata?stock_code=eq.${stockCode}&select=stock_name`,\n        {\n          headers: {\n            'apikey': batch.SUPABASE_ANON_KEY,\n            'Authorization': `Bearer ${batch.SUPABASE_ANON_KEY}`\n          }\n        }\n      );\n      const metaData = await metaResponse.json();\n      if (metaData && metaData.length > 0 && metaData[0].stock_name) {\n        stockName = metaData[0].stock_name;\n      }\n    } catch (error) {\n      console.error('Failed to fetch stock name:', error);\n    }\n\n    // 전일 종가 조회\n    let previousClose = estimatedPrice;\n    try {\n      const priceResponse = await fetch(\n        `${batch.SUPABASE_URL}/rest/v1/kw_price_daily?stock_code=eq.${stockCode}&select=close&order=trade_date.desc&limit=1`,\n        {\n          headers: {\n            'apikey': batch.SUPABASE_ANON_KEY,\n            'Authorization': `Bearer ${batch.SUPABASE_ANON_KEY}`\n          }\n        }\n      );\n      const priceData = await priceResponse.json();\n      if (priceData && priceData.length > 0) {\n        previousClose = parseFloat(priceData[0].close);\n      }\n    } catch (error) {\n      console.error('Failed to fetch previous close:', error);\n    }\n\n    const changePrice = estimatedPrice - previousClose;\n    const changeRate = previousClose > 0 ? ((changePrice / previousClose) * 100) : 0;\n\n    const selVolume = parseInt(String(kiwoomData.sel_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n    const buyVolume = parseInt(String(kiwoomData.buy_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n\n    // 종목 마스터 저장\n    try {\n      await fetch(`${batch.SUPABASE_URL}/rest/v1/kw_stock_master`, {\n        method: 'POST',\n        headers: {\n          'apikey': batch.SUPABASE_ANON_KEY,\n          'Authorization': `Bearer ${batch.SUPABASE_ANON_KEY}`,\n          'Content-Type': 'application/json',\n          'Prefer': 'resolution=merge-duplicates'\n        },\n        body: JSON.stringify({\n          stock_code: stockCode,\n          stock_name: stockName,\n          market: 'KOSPI'\n        })\n      });\n    } catch (error) {\n      console.error('Failed to save stock master:', error);\n    }\n\n    // 현재가 저장\n    try {\n      await fetch(`${batch.SUPABASE_URL}/rest/v1/kw_price_current`, {\n        method: 'POST',\n        headers: {\n          'apikey': batch.SUPABASE_ANON_KEY,\n          'Authorization': `Bearer ${batch.SUPABASE_ANON_KEY}`,\n          'Content-Type': 'application/json',\n          'Prefer': 'resolution=merge-duplicates'\n        },\n        body: JSON.stringify({\n          stock_code: stockCode,\n          stock_name: stockName,\n          current_price: estimatedPrice,\n          change_price: changePrice,\n          change_rate: changeRate,\n          volume: selVolume + buyVolume,\n          high_52w: selPrice,\n          low_52w: buyPrice,\n          market_cap: 0\n        })\n      });\n    } catch (error) {\n      console.error('Failed to save current price:', error);\n    }\n\n    results.push({\n      json: {\n        stock_code: stockCode,\n        stock_name: stockName,\n        current_price: estimatedPrice,\n        change_rate: changeRate,\n        success: true\n      }\n    });\n\n    console.log(`✅ ${stockCode} (${stockName}) - ${estimatedPrice.toLocaleString()}원`);\n\n  } catch (error) {\n    console.error(`❌ ${stockCode} 처리 실패:`, error.message);\n    results.push({\n      json: {\n        stock_code: stockCode,\n        error: error.message,\n        success: false\n      }\n    });\n  }\n}\n\nconsole.log(`✅ 배치 ${batch.batch_index + 1} 완료: ${results.length}개 종목 처리`);\nreturn results;"
+      },
+      "id": "process-batch",
+      "name": "배치 내 종목 처리",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {},
+      "id": "batch-complete",
+      "name": "모든 배치 완료",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1650, 400]
+    }
+  ],
+  "connections": {
+    "1시간마다 실행": {
+      "main": [[{"node": "환경변수 설정", "type": "main", "index": 0}]]
+    },
+    "환경변수 설정": {
+      "main": [[{"node": "장시간 체크", "type": "main", "index": 0}]]
+    },
+    "장시간 체크": {
+      "main": [[{"node": "키움 토큰 발급", "type": "main", "index": 0}]]
+    },
+    "키움 토큰 발급": {
+      "main": [[{"node": "자동매매 전략 조회", "type": "main", "index": 0}]]
+    },
+    "자동매매 전략 조회": {
+      "main": [[{"node": "배치 생성 (5개씩)", "type": "main", "index": 0}]]
+    },
+    "배치 생성 (5개씩)": {
+      "main": [[{"node": "배치별 루프", "type": "main", "index": 0}]]
+    },
+    "배치별 루프": {
+      "main": [
+        [{"node": "배치 내 종목 처리", "type": "main", "index": 0}],
+        [{"node": "모든 배치 완료", "type": "main", "index": 0}]
+      ]
+    },
+    "배치 내 종목 처리": {
+      "main": [[{"node": "배치별 루프", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "executionTimeout": 3600
+  }
+}

@@ -1,0 +1,490 @@
+import React, { useState, useEffect } from 'react'
+import {
+  Box,
+  Paper,
+  Typography,
+  Stack,
+  Chip,
+  Button,
+  Divider,
+  Grid,
+  LinearProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Collapse,
+  IconButton,
+  Alert
+} from '@mui/material'
+import {
+  TrendingUp,
+  TrendingDown,
+  Stop,
+  Settings,
+  ExpandMore,
+  ExpandLess,
+  Warning,
+  CheckCircle
+} from '@mui/icons-material'
+import { supabase } from '../../lib/supabase'
+
+interface StrategySignal {
+  stock_code: string
+  stock_name: string
+  signal_type: 'buy' | 'sell'
+  current_price: number
+  change_rate: number
+  signal_strength?: number
+  created_at: string
+}
+
+interface Position {
+  stock_code: string
+  stock_name: string
+  quantity: number
+  avg_price: number
+  current_price: number
+  profit_rate: number
+  profit_amount: number
+}
+
+interface StrategyCardProps {
+  strategyId: string
+  strategyName: string
+  universes: { filter_id: string; filter_name: string }[]
+  allocatedCapital: number
+  allocatedPercent: number
+  onStop: () => void
+  onEdit: () => void
+}
+
+export default function StrategyCard({
+  strategyId,
+  strategyName,
+  universes,
+  allocatedCapital,
+  allocatedPercent,
+  onStop,
+  onEdit
+}: StrategyCardProps) {
+  const [expanded, setExpanded] = useState(false)
+  const [signals, setSignals] = useState<StrategySignal[]>([])
+  const [positions, setPositions] = useState<Position[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadStrategyData()
+  }, [strategyId])
+
+  const loadStrategyData = async () => {
+    try {
+      setLoading(true)
+
+      // 시그널 조회 (최근 24시간)
+      const { data: signalData, error: signalError } = await supabase
+        .from('trading_signals')
+        .select('*')
+        .eq('strategy_id', strategyId)
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (!signalError && signalData) {
+        setSignals(signalData)
+      }
+
+      // 포지션 조회 (실제 보유 종목)
+      const { data: positionData, error: positionError } = await supabase
+        .from('positions')
+        .select('*')
+        .eq('strategy_id', strategyId)
+        .eq('status', 'open')
+
+      if (!positionError && positionData) {
+        // 현재가 정보와 조인하여 수익률 계산
+        const positionsWithPrice = await Promise.all(
+          positionData.map(async (pos: any) => {
+            const { data: priceData } = await supabase
+              .from('kw_price_current')
+              .select('current_price, stock_name')
+              .eq('stock_code', pos.stock_code)
+              .single()
+
+            const currentPrice = priceData?.current_price || pos.avg_price
+            const profitAmount = (currentPrice - pos.avg_price) * pos.quantity
+            const profitRate = ((currentPrice - pos.avg_price) / pos.avg_price) * 100
+
+            return {
+              stock_code: pos.stock_code,
+              stock_name: priceData?.stock_name || pos.stock_code,
+              quantity: pos.quantity,
+              avg_price: pos.avg_price,
+              current_price: currentPrice,
+              profit_rate: profitRate,
+              profit_amount: profitAmount
+            }
+          })
+        )
+
+        setPositions(positionsWithPrice)
+      }
+    } catch (error) {
+      console.error('전략 데이터 로드 실패:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('ko-KR').format(value)
+  }
+
+  const formatPercent = (value: number) => {
+    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+  }
+
+  const getProfitColor = (value: number) => {
+    if (value > 0) return 'error.main'
+    if (value < 0) return 'primary.main'
+    return 'text.secondary'
+  }
+
+  const buySignals = signals.filter(s => s.signal_type === 'buy')
+  const sellSignals = signals.filter(s => s.signal_type === 'sell')
+
+  const totalInvested = positions.reduce((sum, pos) => sum + (pos.avg_price * pos.quantity), 0)
+  const totalValue = positions.reduce((sum, pos) => sum + (pos.current_price * pos.quantity), 0)
+  const totalProfit = totalValue - totalInvested
+  const totalProfitRate = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0
+  const availableCapital = allocatedCapital - totalInvested
+
+  return (
+    <Paper sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider' }}>
+      <Stack spacing={2}>
+        {/* 헤더 */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              {strategyName}
+            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip
+                label={`${allocatedPercent}% 할당`}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+              {universes.map((u) => (
+                <Chip
+                  key={u.filter_id}
+                  label={u.filter_name}
+                  size="small"
+                  variant="outlined"
+                />
+              ))}
+            </Stack>
+          </Box>
+
+          <Stack direction="row" spacing={1}>
+            <Button
+              size="small"
+              startIcon={<Settings />}
+              onClick={onEdit}
+              variant="outlined"
+            >
+              수정
+            </Button>
+            <Button
+              size="small"
+              startIcon={<Stop />}
+              onClick={onStop}
+              variant="outlined"
+              color="error"
+            >
+              중지
+            </Button>
+            <IconButton onClick={() => setExpanded(!expanded)} size="small">
+              {expanded ? <ExpandLess /> : <ExpandMore />}
+            </IconButton>
+          </Stack>
+        </Stack>
+
+        <Divider />
+
+        {/* 요약 정보 */}
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                할당금액
+              </Typography>
+              <Typography variant="h6" fontWeight="bold">
+                {formatCurrency(allocatedCapital)}원
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                투자 중
+              </Typography>
+              <Typography variant="h6" fontWeight="bold">
+                {formatCurrency(totalInvested)}원
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {positions.length}개 종목
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                대기금액
+              </Typography>
+              <Typography variant="h6" fontWeight="bold">
+                {formatCurrency(availableCapital)}원
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={(totalInvested / allocatedCapital) * 100}
+                sx={{ mt: 1 }}
+              />
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                수익률
+              </Typography>
+              <Typography
+                variant="h6"
+                fontWeight="bold"
+                color={getProfitColor(totalProfitRate)}
+              >
+                {formatPercent(totalProfitRate)}
+              </Typography>
+              <Typography variant="caption" color={getProfitColor(totalProfit)}>
+                {formatCurrency(Math.abs(totalProfit))}원
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+
+        {/* 시그널 현황 */}
+        <Box>
+          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+            📊 시그널 현황
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            <Chip
+              icon={<TrendingUp />}
+              label={`매수 대기: ${buySignals.length}종목`}
+              color="error"
+              variant="outlined"
+            />
+            <Chip
+              icon={<CheckCircle />}
+              label={`보유 중: ${positions.length}종목`}
+              color="success"
+              variant="outlined"
+            />
+            <Chip
+              icon={<TrendingDown />}
+              label={`매도 예정: ${sellSignals.length}종목`}
+              color="primary"
+              variant="outlined"
+            />
+          </Stack>
+        </Box>
+
+        {/* 주요 종목 */}
+        {positions.length > 0 && (
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+              🎯 주요 보유 종목 (상위 3개)
+            </Typography>
+            <Stack spacing={1}>
+              {positions
+                .sort((a, b) => Math.abs(b.profit_rate) - Math.abs(a.profit_rate))
+                .slice(0, 3)
+                .map((pos) => (
+                  <Box
+                    key={pos.stock_code}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      p: 1,
+                      bgcolor: 'background.default',
+                      borderRadius: 1
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight="medium">
+                      {pos.stock_name} ({pos.stock_code})
+                    </Typography>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Typography
+                        variant="body2"
+                        color={getProfitColor(pos.profit_rate)}
+                        fontWeight="bold"
+                      >
+                        {formatPercent(pos.profit_rate)}
+                      </Typography>
+                      {pos.profit_rate >= 10 && (
+                        <Chip
+                          icon={<TrendingUp />}
+                          label="매도 근접"
+                          size="small"
+                          color="warning"
+                        />
+                      )}
+                      {pos.profit_rate <= -7 && (
+                        <Chip
+                          icon={<Warning />}
+                          label="손절 주의"
+                          size="small"
+                          color="error"
+                        />
+                      )}
+                    </Stack>
+                  </Box>
+                ))}
+            </Stack>
+          </Box>
+        )}
+
+        {/* 상세 정보 (접을 수 있음) */}
+        <Collapse in={expanded}>
+          <Stack spacing={2}>
+            <Divider />
+
+            {/* 전체 포지션 */}
+            {positions.length > 0 ? (
+              <Box>
+                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                  전체 보유 종목
+                </Typography>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>종목명</TableCell>
+                        <TableCell align="right">수량</TableCell>
+                        <TableCell align="right">평균단가</TableCell>
+                        <TableCell align="right">현재가</TableCell>
+                        <TableCell align="right">수익률</TableCell>
+                        <TableCell align="right">평가손익</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {positions.map((pos) => (
+                        <TableRow key={pos.stock_code}>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium">
+                              {pos.stock_name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {pos.stock_code}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">{pos.quantity}주</TableCell>
+                          <TableCell align="right">{formatCurrency(pos.avg_price)}원</TableCell>
+                          <TableCell align="right">{formatCurrency(pos.current_price)}원</TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              color={getProfitColor(pos.profit_rate)}
+                              fontWeight="bold"
+                            >
+                              {formatPercent(pos.profit_rate)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              color={getProfitColor(pos.profit_amount)}
+                              fontWeight="bold"
+                            >
+                              {formatCurrency(Math.abs(pos.profit_amount))}원
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            ) : (
+              <Alert severity="info">보유 중인 종목이 없습니다.</Alert>
+            )}
+
+            {/* 최근 시그널 */}
+            {signals.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                  최근 시그널 (24시간)
+                </Typography>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>종목명</TableCell>
+                        <TableCell>시그널</TableCell>
+                        <TableCell align="right">현재가</TableCell>
+                        <TableCell align="right">등락률</TableCell>
+                        <TableCell>발생시간</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {signals.map((signal, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium">
+                              {signal.stock_name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {signal.stock_code}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={signal.signal_type === 'buy' ? '매수' : '매도'}
+                              size="small"
+                              color={signal.signal_type === 'buy' ? 'error' : 'primary'}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            {formatCurrency(signal.current_price)}원
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              color={getProfitColor(signal.change_rate)}
+                            >
+                              {formatPercent(signal.change_rate)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">
+                              {new Date(signal.created_at).toLocaleString('ko-KR')}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            )}
+          </Stack>
+        </Collapse>
+      </Stack>
+    </Paper>
+  )
+}

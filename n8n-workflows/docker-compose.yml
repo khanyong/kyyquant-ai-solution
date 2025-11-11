@@ -27,6 +27,9 @@ services:
       - KIWOOM_APP_SECRET=9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA
       - KIWOOM_ACCOUNT_NO=81101350-01
       - KIWOOM_API_URL=https://mockapi.kiwoom.com
+
+      # Task Runner Timeout 설정 (기본 300초 → 3600초)
+      - N8N_RUNNERS_TASK_TIMEOUT=3600
       
     volumes:
       - n8n_data:/home/node/.n8n

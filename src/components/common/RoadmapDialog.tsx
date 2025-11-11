@@ -1890,6 +1890,91 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 31,
+      title: '워크플로우 B: 자동매매 실행 시스템',
+      status: 'done',
+      priority: 'high',
+      icon: <AutoGraph />,
+      period: '2025.01.11',
+      description: 'n8n 워크플로우 B 구축 - 5분마다 실시간 매매 신호 생성 및 주문 실행',
+      subtasks: [
+        {
+          title: '✅ 주문 가격 전략 설계',
+          details: [
+            'best_ask, best_bid, mid_price, market 4가지 전략 설계',
+            'offset 조정 기능 (±원 단위)',
+            'strategies 테이블에 order_price_strategy JSONB 컬럼 추가',
+            'SQL 기본값 설정 (매수=매도1호가+10원, 매도=매수1호가-10원)',
+            '기존 전략에 자동으로 기본값 적용'
+          ]
+        },
+        {
+          title: '✅ OrderPriceStrategySelector 컴포넌트',
+          details: [
+            '매수/매도 가격 기준 선택 UI',
+            'offset 입력 필드',
+            '실시간 가격 예시 표시',
+            '추천 설정 가이드',
+            'Material-UI Paper 기반 디자인'
+          ]
+        },
+        {
+          title: '✅ AddStrategyDialog 통합',
+          details: [
+            '4단계로 주문 가격 전략 선택 추가',
+            '전략 저장 시 order_price_strategy 포함',
+            '선택 요약에 주문 가격 전략 표시',
+            '기본값: 빠른 체결 우선 전략',
+            'Dialog 닫을 때 상태 초기화'
+          ]
+        },
+        {
+          title: '✅ 워크플로우 B JSON 생성 및 디버깅',
+          details: [
+            '12개 노드 구조 설계 (트리거 → 전략조회 → 가격조회 → 신호생성 → 주문실행)',
+            '5분마다 자동 실행 스케줄 설정',
+            'DB 캐시 데이터 활용 (워크플로우 A가 수집한 현재가)',
+            '투자유니버스 필터링 (stock_code 매핑 방식)',
+            'Supabase API URL/키 하드코딩 (n8n 표현식 이슈 해결)',
+            'trading_signals 테이블 스키마 확인 및 컬럼 매핑'
+          ]
+        },
+        {
+          title: '✅ trading_signals 테이블 설정',
+          details: [
+            'current_price, change_rate, volume 컬럼 확인',
+            'signal_strength 사용 (confidence 대신)',
+            'processed 필드 사용 (status 대신)',
+            'RLS 정책 수정 (anon 키 INSERT 허용)',
+            'signal_type CHECK 제약 조건 수정 (buy, sell 허용)',
+            '기존 데이터 TRUNCATE 후 재시작'
+          ]
+        },
+        {
+          title: '✅ 워크플로우 B 신호 생성 성공',
+          details: [
+            '활성 전략 조회 (get_active_strategies_with_universe RPC)',
+            '현재가 데이터 병합 (stock_code 맵핑)',
+            '매수 신호 생성 (3% 이상 하락 시)',
+            'trading_signals 테이블에 신호 저장 완료',
+            'KG스틸, 대우건설, 동양생명 매수 신호 생성 확인',
+            '주문 실행은 장중 테스트 예정 (Rate Limit 이슈)'
+          ]
+        },
+        {
+          title: '✅ 워크플로우 아키텍처 분리',
+          details: [
+            '워크플로우 A: 1시간마다 Kiwoom API 실시간 시세 수집',
+            '워크플로우 B: 5분마다 DB 기반 신호 생성',
+            '전략별 독립 실행 (96개 종목×전략 조합 처리)',
+            '중복 종목도 전략별로 다른 지표로 계산',
+            '2개 워크플로우 동시 active 운영',
+            '키움 토큰 Rate Limit 해결 필요 (장중 테스트 예정)'
+          ]
+        }
+      ]
+    },
+    {
+      id: 32,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
@@ -1954,7 +2039,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 87 // 2025-10-26 기준 진행률 (지표 계산 시스템 통합 완료)
+  const progress = 90 // 2025-01-11 기준 진행률 (워크플로우 B 자동매매 실행 시스템 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 

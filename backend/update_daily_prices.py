@@ -58,24 +58,30 @@ def update_stock_daily_prices(stock_code: str, days: int = 100):
         inserted = 0
         updated = 0
 
-        for item in daily_data:
-            # 날짜 파싱
-            trade_date = item.get('stck_bsop_date')  # YYYYMMDD
+        # 모의투자 API 응답 구조 확인
+        if isinstance(daily_data, dict) and 'stk_dt_pole_chart_qry' in daily_data:
+            chart_list = daily_data['stk_dt_pole_chart_qry']
+        else:
+            chart_list = daily_data
+
+        for item in chart_list:
+            # 날짜 파싱 (모의투자 API: 'dt' 필드)
+            trade_date = item.get('dt')  # YYYYMMDD
             if not trade_date or len(trade_date) != 8:
                 continue
 
             formatted_date = f"{trade_date[:4]}-{trade_date[4:6]}-{trade_date[6:8]}"
 
-            # 데이터 준비
+            # 데이터 준비 (모의투자 API 필드명에 맞게 수정)
             price_record = {
                 'stock_code': stock_code,
                 'trade_date': formatted_date,
-                'open': float(item.get('stck_oprc', 0)),
-                'high': float(item.get('stck_hgpr', 0)),
-                'low': float(item.get('stck_lwpr', 0)),
-                'close': float(item.get('stck_clpr', 0)),
-                'volume': int(item.get('acml_vol', 0)),
-                'change_rate': float(item.get('prdy_ctrt', 0))
+                'open': float(item.get('open_pric', 0)),  # 시가
+                'high': float(item.get('high_pric', 0)),  # 고가
+                'low': float(item.get('low_pric', 0)),   # 저가
+                'close': float(item.get('cur_prc', 0)),  # 종가 (현재가)
+                'volume': int(item.get('trde_qty', 0)),  # 거래량
+                'change_rate': float(item.get('trde_tern_rt', 0))  # 전일대비율
             }
 
             # Upsert (있으면 업데이트, 없으면 삽입)

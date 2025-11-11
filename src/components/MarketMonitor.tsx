@@ -118,10 +118,40 @@ export default function MarketMonitor() {
       setLoading(true)
       console.log('🔄 MarketMonitor: Fetching market data...')
 
-      // kw_price_current 데이터 조회 (stock_name 포함)
+      // 1. 활성 전략의 유니버스 종목 조회
+      const { data: strategyData, error: strategyError } = await supabase
+        .rpc('get_active_strategies_with_universe')
+
+      if (strategyError) {
+        console.error('전략 조회 실패:', strategyError)
+        throw strategyError
+      }
+
+      // 모든 전략의 filtered_stocks를 합쳐서 유니크한 종목 코드 리스트 생성
+      const monitoredStockCodes = new Set<string>()
+      strategyData?.forEach((strategy: any) => {
+        if (strategy.filtered_stocks && Array.isArray(strategy.filtered_stocks)) {
+          strategy.filtered_stocks.forEach((code: string) => monitoredStockCodes.add(code))
+        }
+      })
+
+      console.log(`📊 Monitored stock codes: ${monitoredStockCodes.size}개`)
+
+      if (monitoredStockCodes.size === 0) {
+        console.warn('모니터링 중인 종목이 없습니다.')
+        setMarketData([])
+        setLastUpdate(new Date())
+        setLoading(false)
+        return
+      }
+
+      // 2. kw_price_current 데이터 조회 (모니터링 종목만)
+      const stockCodesArray = Array.from(monitoredStockCodes)
       const { data: priceData, error: priceError } = await supabase
         .from('kw_price_current')
         .select('*')
+        .in('stock_code', stockCodesArray)
+        .gt('current_price', 0)
         .order('updated_at', { ascending: false })
 
       if (priceError) {
@@ -215,7 +245,13 @@ export default function MarketMonitor() {
               {lastUpdate && (
                 <Typography variant="caption" color="text.secondary">
                   {isMarketOpen()
-                    ? `마지막 업데이트: ${lastUpdate.toLocaleTimeString()}`
+                    ? `마지막 업데이트: ${lastUpdate.toLocaleTimeString('ko-KR', {
+                        timeZone: 'Asia/Seoul',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                      })}`
                     : '주식시장 휴장 중 - 실시간 업데이트 일시정지'
                   }
                 </Typography>
@@ -249,7 +285,7 @@ export default function MarketMonitor() {
                       상승 종목
                     </Typography>
                     <Typography variant="h4" color="error.main" fontWeight="bold">
-                      {marketData.filter((d) => d.change_rate > 0).length}
+                      {marketData.filter((d) => (d.change_rate || 0) > 0).length}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -259,7 +295,7 @@ export default function MarketMonitor() {
                       하락 종목
                     </Typography>
                     <Typography variant="h4" color="primary.main" fontWeight="bold">
-                      {marketData.filter((d) => d.change_rate < 0).length}
+                      {marketData.filter((d) => (d.change_rate || 0) < 0).length}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -269,7 +305,7 @@ export default function MarketMonitor() {
                       보합 종목
                     </Typography>
                     <Typography variant="h4" color="text.primary" fontWeight="bold">
-                      {marketData.filter((d) => d.change_rate === 0).length}
+                      {marketData.filter((d) => (d.change_rate || 0) === 0).length}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -338,22 +374,26 @@ export default function MarketMonitor() {
                           <TableCell align="right">
                             <Typography
                               variant="body2"
-                              color={getPriceColor(item.change_rate)}
+                              color={getPriceColor(item.change_rate || 0)}
                             >
-                              {item.change_price > 0 ? '+' : ''}
-                              {formatPrice(Math.abs(item.change_price))}원
+                              {item.change_price != null
+                                ? `${item.change_price > 0 ? '+' : ''}${formatPrice(Math.abs(item.change_price))}원`
+                                : '-'
+                              }
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
                             <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                              {getPriceIcon(item.change_rate)}
+                              {getPriceIcon(item.change_rate || 0)}
                               <Typography
                                 variant="body2"
                                 fontWeight="medium"
-                                color={getPriceColor(item.change_rate)}
+                                color={getPriceColor(item.change_rate || 0)}
                               >
-                                {item.change_rate > 0 ? '+' : ''}
-                                {item.change_rate.toFixed(2)}%
+                                {item.change_rate != null
+                                  ? `${item.change_rate > 0 ? '+' : ''}${item.change_rate.toFixed(2)}%`
+                                  : '-'
+                                }
                               </Typography>
                             </Stack>
                           </TableCell>
@@ -361,14 +401,20 @@ export default function MarketMonitor() {
                             {formatVolume(item.volume)}
                           </TableCell>
                           <TableCell align="right" sx={{ color: 'error.main' }}>
-                            {formatPrice(item.high_52w)}
+                            {item.high_52w > 0 ? formatPrice(item.high_52w) : '-'}
                           </TableCell>
                           <TableCell align="right" sx={{ color: 'primary.main' }}>
-                            {formatPrice(item.low_52w)}
+                            {item.low_52w > 0 ? formatPrice(item.low_52w) : '-'}
                           </TableCell>
                           <TableCell align="center">
                             <Chip
-                              label={new Date(item.updated_at).toLocaleTimeString()}
+                              label={new Date(item.updated_at).toLocaleTimeString('ko-KR', {
+                                timeZone: 'Asia/Seoul',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: true
+                              })}
                               size="small"
                               variant="outlined"
                             />

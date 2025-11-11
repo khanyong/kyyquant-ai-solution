@@ -1,0 +1,397 @@
+{
+  "name": "워크플로우 B: 자동 매매 실행 v1",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "5분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            }
+          ]
+        }
+      },
+      "id": "env-vars",
+      "name": "환경변수 설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/rpc/get_active_strategies_with_universe",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-strategies",
+      "name": "활성 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const strategies = $input.all();\nconst envVars = $('환경변수 설정').first().json;\n\n// 모든 전략의 종목을 수집 (중복 제거하지 않음 - 전략별로 다른 조건)\nconst results = [];\n\nfor (const item of strategies) {\n  const strategy = item.json;\n\n  if (!strategy.filtered_stocks || !Array.isArray(strategy.filtered_stocks)) {\n    continue;\n  }\n\n  // 각 종목에 대해 전략 정보 포함\n  strategy.filtered_stocks.forEach(stockCode => {\n    results.push({\n      json: {\n        stock_code: stockCode,\n        strategy_id: strategy.strategy_id,\n        strategy_name: strategy.strategy_name,\n        entry_conditions: strategy.entry_conditions,\n        exit_conditions: strategy.exit_conditions,\n        order_price_strategy: strategy.order_price_strategy || {\n          buy: { type: 'best_ask', offset: 10 },\n          sell: { type: 'best_bid', offset: -10 }\n        },\n        allocated_capital: strategy.allocated_capital,\n        SUPABASE_URL: envVars.SUPABASE_URL,\n        SUPABASE_ANON_KEY: envVars.SUPABASE_ANON_KEY\n      }\n    });\n  });\n}\n\nconsole.log(`📊 총 ${results.length}개 종목×전략 조합 처리`);\nreturn results;"
+      },
+      "id": "extract-stocks",
+      "name": "유니버스 종목 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/kw_price_current?stock_code=eq.{{$json.stock_code}}&select=*",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-prices",
+      "name": "현재가 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const strategyData = $('유니버스 종목 추출').all();\nconst priceData = $input.all();\n\nconsole.log(`📥 전략 데이터: ${strategyData.length}개`);\nconsole.log(`📥 현재가 데이터: ${priceData.length}개`);\n\nif (priceData.length > 0) {\n  console.log(`샘플 현재가 데이터:`, JSON.stringify(priceData[0]?.json));\n}\n\nconst results = [];\n\n// 현재가 데이터를 stock_code로 매핑\nconst priceMap = {};\nfor (const item of priceData) {\n  const price = item.json;\n  if (price && price.stock_code) {\n    priceMap[price.stock_code] = price;\n  }\n}\n\nconsole.log(`📊 현재가 맵 생성 완료: ${Object.keys(priceMap).length}개 종목`);\n\nfor (const item of strategyData) {\n  const strategy = item.json;\n  const priceInfo = priceMap[strategy.stock_code];\n\n  if (!priceInfo) {\n    console.log(`⚠️ ${strategy.stock_code}: 현재가 데이터 없음`);\n    continue;\n  }\n\n  if (!priceInfo.current_price) {\n    console.log(`⚠️ ${strategy.stock_code}: 유효한 현재가 없음`);\n    continue;\n  }\n\n  results.push({\n    json: {\n      ...strategy,\n      stock_name: priceInfo.stock_name || strategy.stock_code,\n      current_price: priceInfo.current_price,\n      change_rate: priceInfo.change_rate || 0,\n      volume: priceInfo.volume || 0,\n      sell_price: priceInfo.high_52w || priceInfo.current_price,\n      buy_price: priceInfo.low_52w || priceInfo.current_price,\n      updated_at: priceInfo.updated_at\n    }\n  });\n}\n\nconsole.log(`✅ ${results.length}개 종목 데이터 병합 완료`);\n\nif (results.length === 0) {\n  console.log(`⚠️ 병합된 데이터 없음`);\n  return [{ json: { status: 'no_data', message: '현재가 데이터 없음' } }];\n}\n\nreturn results;"
+      },
+      "id": "merge-data",
+      "name": "데이터 병합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst signals = [];\n\nfor (const item of items) {\n  const data = item.json;\n\n  // 매수 조건 확인\n  const buyConditions = data.entry_conditions?.buy || [];\n  let buySignal = false;\n\n  // TODO: 실제 지표 기반 조건 확인 (현재는 간단한 예시)\n  // 실제로는 RSI, MACD 등 계산 필요\n  if (buyConditions.length > 0) {\n    // 예: 3% 이상 하락 시 매수\n    if (data.change_rate < -3) {\n      buySignal = true;\n    }\n  }\n\n  // 매도 조건 확인 (보유 종목만)\n  // TODO: positions 테이블 조회하여 실제 보유 여부 확인\n  const sellConditions = data.exit_conditions?.sell || [];\n  let sellSignal = false;\n\n  if (sellConditions.length > 0) {\n    // 예: 5% 이상 상승 시 매도\n    if (data.change_rate > 5) {\n      sellSignal = true;\n    }\n  }\n\n  // 신호 생성\n  if (buySignal) {\n    signals.push({\n      json: {\n        signal_type: 'buy',\n        ...data\n      }\n    });\n  }\n\n  if (sellSignal) {\n    signals.push({\n      json: {\n        signal_type: 'sell',\n        ...data\n      }\n    });\n  }\n}\n\nconsole.log(`📊 ${signals.length}개 매매 신호 생성`);\nreturn signals;"
+      },
+      "id": "generate-signals",
+      "name": "매수매도 신호 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const signal = item.json;\n\n  // 주문 가격 전략\n  const strategy = signal.order_price_strategy[signal.signal_type];\n\n  // 기준 가격 선택\n  let basePrice = 0;\n\n  switch (strategy.type) {\n    case 'best_ask':\n      basePrice = signal.sell_price;  // 매도 1호가\n      break;\n    case 'best_bid':\n      basePrice = signal.buy_price;   // 매수 1호가\n      break;\n    case 'mid_price':\n      basePrice = signal.current_price;  // 중간가\n      break;\n    case 'market':\n      basePrice = null;  // 시장가\n      break;\n    default:\n      basePrice = signal.signal_type === 'buy' ? signal.sell_price : signal.buy_price;\n  }\n\n  // offset 적용\n  const orderPrice = basePrice ? Math.round(basePrice + (strategy.offset || 0)) : null;\n  const orderMethod = basePrice === null ? 'MARKET' : 'LIMIT';\n\n  console.log(`[${signal.signal_type}] ${signal.stock_code}: 기준=${basePrice}, offset=${strategy.offset}, 주문가=${orderPrice}`);\n\n  results.push({\n    json: {\n      ...signal,\n      order_price: orderPrice,\n      order_method: orderMethod\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "calc-price",
+      "name": "주문 가격 계산",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/trading_signals",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"stock_code\": {{JSON.stringify($json.stock_code)}}, \"stock_name\": {{JSON.stringify($json.stock_name || $json.stock_code)}}, \"signal_type\": {{JSON.stringify($json.signal_type)}}, \"strategy_id\": {{JSON.stringify($json.strategy_id)}}, \"current_price\": {{$json.current_price}}, \"change_rate\": {{$json.change_rate}}, \"volume\": {{$json.volume || 0}}, \"signal_strength\": 75, \"processed\": false}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-signal",
+      "name": "신호 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"grant_type\": \"client_credentials\", \"appkey\": \"S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU\", \"secretkey\": \"tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA\"}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-token",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/api/dostk/order",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"stk_cd\": {{JSON.stringify($node[\"주문 가격 계산\"].json.stock_code)}}, \"ord_qty\": \"10\", \"ord_prc\": {{$node[\"주문 가격 계산\"].json.order_price ? JSON.stringify(String($node[\"주문 가격 계산\"].json.order_price)) : '\"0\"'}}, \"ord_type\": {{$node[\"주문 가격 계산\"].json.signal_type === 'buy' ? '\"1\"' : '\"2\"'}}, \"ord_condition\": {{$node[\"주문 가격 계산\"].json.order_method === 'MARKET' ? '\"1\"' : '\"0\"'}}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "={{\"Bearer \" + $node[\"키움 토큰 발급\"].json.token}}"
+            },
+            {
+              "name": "api-id",
+              "value": "ka10005"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "execute-order",
+      "name": "주문 실행",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"signal_id\": {{JSON.stringify($node[\"신호 저장\"].json.id)}}, \"strategy_id\": {{JSON.stringify($node[\"주문 가격 계산\"].json.strategy_id)}}, \"stock_code\": {{JSON.stringify($node[\"주문 가격 계산\"].json.stock_code)}}, \"stock_name\": {{JSON.stringify($node[\"주문 가격 계산\"].json.stock_name || $node[\"주문 가격 계산\"].json.stock_code)}}, \"order_type\": {{JSON.stringify($node[\"주문 가격 계산\"].json.signal_type.toUpperCase())}}, \"order_method\": {{JSON.stringify($node[\"주문 가격 계산\"].json.order_method)}}, \"quantity\": 10, \"order_price\": {{$node[\"주문 가격 계산\"].json.order_price || 0}}, \"status\": \"PENDING\", \"api_response\": {{JSON.stringify($json)}}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-order",
+      "name": "주문 결과 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2450, 300]
+    }
+  ],
+  "connections": {
+    "5분마다 실행": {
+      "main": [
+        [
+          {
+            "node": "환경변수 설정",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "환경변수 설정": {
+      "main": [
+        [
+          {
+            "node": "활성 전략 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "활성 전략 조회": {
+      "main": [
+        [
+          {
+            "node": "유니버스 종목 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "유니버스 종목 추출": {
+      "main": [
+        [
+          {
+            "node": "현재가 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "현재가 조회": {
+      "main": [
+        [
+          {
+            "node": "데이터 병합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터 병합": {
+      "main": [
+        [
+          {
+            "node": "매수매도 신호 생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "매수매도 신호 생성": {
+      "main": [
+        [
+          {
+            "node": "주문 가격 계산",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "주문 가격 계산": {
+      "main": [
+        [
+          {
+            "node": "신호 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "신호 저장": {
+      "main": [
+        [
+          {
+            "node": "키움 토큰 발급",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 토큰 발급": {
+      "main": [
+        [
+          {
+            "node": "주문 실행",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "주문 실행": {
+      "main": [
+        [
+          {
+            "node": "주문 결과 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-11T00:00:00.000Z",
+  "versionId": "1"
+}
