@@ -16,6 +16,8 @@ import { supabase } from '../../lib/supabase'
 import PortfolioOverview from './PortfolioOverview'
 import StrategyCard from './StrategyCard'
 import MarketMonitor from '../MarketMonitor'
+import N8nWorkflowMonitor from '../N8nWorkflowMonitor'
+import PendingOrdersPanel from './PendingOrdersPanel'
 import AddStrategyDialog from './AddStrategyDialog'
 
 interface ActiveStrategy {
@@ -276,8 +278,20 @@ export default function AutoTradingPanelV2() {
         }}
       />
 
+      {/* 대기중인 주문 */}
+      <Box sx={{ mb: 3 }}>
+        <PendingOrdersPanel />
+      </Box>
+
+      {/* n8n 워크플로우 활동 */}
+      <Box sx={{ mb: 3 }}>
+        <N8nWorkflowMonitor />
+      </Box>
+
       {/* 실시간 시장 모니터링 */}
-      <MarketMonitor />
+      <Box sx={{ mb: 3 }}>
+        <MarketMonitor />
+      </Box>
     </Box>
   )
 }

@@ -28,7 +28,6 @@ import {
   Timeline
 } from '@mui/icons-material'
 import { supabase } from '../lib/supabase'
-import N8nWorkflowMonitor from './N8nWorkflowMonitor'
 import { isMarketOpen, getMarketStatusMessage } from '../utils/marketHours'
 
 interface MarketData {
@@ -219,13 +218,6 @@ export default function MarketMonitor() {
 
   return (
     <Box>
-      {/* n8n 워크플로우 모니터링 */}
-      <Box mb={3}>
-        <N8nWorkflowMonitor />
-      </Box>
-
-      <Divider sx={{ my: 3 }} />
-
       {/* 시장 데이터 모니터링 */}
       <Card>
         <CardContent>
