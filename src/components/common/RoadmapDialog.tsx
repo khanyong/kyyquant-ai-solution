@@ -60,7 +60,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Assignment />,
-      period: '2024.08.25 - 2024.08.26',
+      period: '2025.08.25 - 2025.08.26',
       description: 'React 18 + Vite + TypeScript 기반의 모던 웹 애플리케이션 프로젝트 초기 구성',
       subtasks: [
         {
@@ -121,7 +121,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Storage />,
-      period: '2024.08.26 - 2024.08.28',
+      period: '2025.08.26 - 2025.08.28',
       description: 'Supabase PostgreSQL 데이터베이스 설계 및 Row Level Security 구현',
       subtasks: [
         {
@@ -185,7 +185,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Security />,
-      period: '2024.08.28 - 2024.08.31',
+      period: '2025.08.28 - 2025.08.31',
       description: 'Supabase Auth를 활용한 완전한 인증/인가 시스템 구축',
       subtasks: [
         {
@@ -239,7 +239,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         },
         {
-          title: '✅ 회원가입 프로세스 디버깅 및 수정 (2024.08.31)',
+          title: '✅ 회원가입 프로세스 디버깅 및 수정 (2025.08.31)',
           details: [
             'auth.users 트리거 함수 재작성 (SECURITY DEFINER 권한 추가)',
             'user_roles 테이블 RLS 정책 완화하여 회원가입 허용',
@@ -258,7 +258,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Code />,
-      period: '2024.08.29 - 2024.08.30',
+      period: '2025.08.29 - 2025.08.30',
       description: '드래그 앤 드롭 기반의 직관적인 투자 전략 구성 시스템',
       subtasks: [
         {
@@ -335,7 +335,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Assessment />,
-      period: '2024.08.30',
+      period: '2025.08.30',
       description: '과거 데이터 기반 전략 성과 검증 및 분석 시스템',
       subtasks: [
         {
@@ -396,7 +396,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Forum />,
-      period: '2024.08.30',
+      period: '2025.08.30',
       description: '사용자 소통을 위한 다기능 게시판 시스템 구축',
       subtasks: [
         {
@@ -460,7 +460,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Settings />,
-      period: '2024.08.30',
+      period: '2025.08.30',
       description: '개인화된 투자 전략 설정 및 관리 시스템',
       subtasks: [
         {
@@ -522,7 +522,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Dashboard />,
-      period: '2024.08.30 - 2024.09.03',
+      period: '2025.08.30 - 2025.09.03',
       description: '실시간 시장 데이터 및 포트폴리오 모니터링 대시보드',
       subtasks: [
         {
@@ -583,7 +583,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <TrendingUp />,
-      period: '2024.08.31 - 2024.09.03',
+      period: '2025.08.31 - 2025.09.03',
       description: '키움 OpenAPI 연동 자동매매 시스템 구축',
       subtasks: [
         {
@@ -644,7 +644,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Storage />,
-      period: '2024.09.03',
+      period: '2025.09.03',
       description: '키움 OpenAPI → Supabase 완전 자동화 데이터 흐름 구축',
       subtasks: [
         {
@@ -685,7 +685,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <AutoGraph />,
-      period: '2024.09.03',
+      period: '2025.09.03',
       description: 'n8n 기반 자동매매 워크플로우 아키텍처 설계',
       subtasks: [
         {
@@ -726,7 +726,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'medium',
       icon: <Description />,
-      period: '2024.09.03',
+      period: '2025.09.03',
       description: '전체 시스템 구조 및 데이터 흐름 문서화',
       subtasks: [
         {
@@ -1894,7 +1894,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <AutoGraph />,
-      period: '2025.01.11',
+      period: '2025.11.11',
       description: 'n8n 워크플로우 B 구축 - 5분마다 실시간 매매 신호 생성 및 주문 실행',
       subtasks: [
         {
@@ -1979,7 +1979,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'done',
       priority: 'high',
       icon: <Dashboard />,
-      period: '2025.01.13',
+      period: '2025.11.13',
       description: '포트폴리오 현황 표시 오류 수정 및 시그널 상세 정보 가시성 향상',
       subtasks: [
         {
@@ -2042,7 +2042,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
       status: 'pending',
       priority: 'low',
       icon: <Description />,
-      period: '2025.12 예정',
+      period: '2026.12 예정',
       description: '프로젝트 문서화 및 프로덕션 배포',
       subtasks: [
         {
@@ -2102,7 +2102,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 91 // 2025-01-13 기준 진행률 (자동매매 포트폴리오 통계 및 시그널 UI 개선 완료)
+  const progress = 91 // 2025-11-13 기준 진행률 (자동매매 포트폴리오 통계 및 시그널 UI 개선 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 

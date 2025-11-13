@@ -360,7 +360,7 @@ export default function StrategyCard({
                     ))}
                     {buySignals.length > 5 && (
                       <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
-                        외 {buySignals.length - 5}종목 (상세보기에서 전체 확인)
+                        외 {buySignals.length - 5}종목 (전체 {buySignals.length}종목)
                       </Typography>
                     )}
                   </Stack>
@@ -413,7 +413,7 @@ export default function StrategyCard({
                     ))}
                     {positions.length > 5 && (
                       <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
-                        외 {positions.length - 5}종목 (상세보기에서 전체 확인)
+                        외 {positions.length - 5}종목 (전체 {positions.length}종목)
                       </Typography>
                     )}
                   </Stack>
@@ -471,7 +471,7 @@ export default function StrategyCard({
                     })}
                     {sellSignals.length > 5 && (
                       <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
-                        외 {sellSignals.length - 5}종목 (상세보기에서 전체 확인)
+                        외 {sellSignals.length - 5}종목 (전체 {sellSignals.length}종목)
                       </Typography>
                     )}
                   </Stack>
