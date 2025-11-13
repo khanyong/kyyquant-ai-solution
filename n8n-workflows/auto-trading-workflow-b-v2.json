@@ -1,5 +1,5 @@
 {
-  "name": "워크플로우 B: 자동 매매 실행 v1",
+  "name": "워크플로우 B: 자동 매매 실행 v2",
   "nodes": [
     {
       "parameters": {
@@ -228,7 +228,7 @@
           "batching": {
             "batch": {
               "batchSize": 1,
-              "batchInterval": 1000
+              "batchInterval": 2000
             }
           }
         }

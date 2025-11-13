@@ -1,5 +1,5 @@
 {
-  "name": "워크플로우 B: 자동 매매 실행 v1",
+  "name": "워크플로우 B: 자동 매매 실행 v5 (Order Price Fix)",
   "nodes": [
     {
       "parameters": {
@@ -29,6 +29,18 @@
             {
               "name": "SUPABASE_ANON_KEY",
               "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "={{$env.KIWOOM_APP_KEY || 'S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU'}}"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "={{$env.KIWOOM_APP_SECRET || 'tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA'}}"
+            },
+            {
+              "name": "KIWOOM_ACCOUNT_NO",
+              "value": "={{$env.KIWOOM_ACCOUNT_NO || '81101350-01'}}"
             }
           ]
         }
@@ -105,7 +117,32 @@
     },
     {
       "parameters": {
-        "jsCode": "const strategyData = $('유니버스 종목 추출').all();\nconst priceData = $input.all();\n\nconsole.log(`📥 전략 데이터: ${strategyData.length}개`);\nconsole.log(`📥 현재가 데이터: ${priceData.length}개`);\n\nif (priceData.length > 0) {\n  console.log(`샘플 현재가 데이터:`, JSON.stringify(priceData[0]?.json));\n}\n\nconst results = [];\n\n// 현재가 데이터를 stock_code로 매핑\nconst priceMap = {};\nfor (const item of priceData) {\n  const price = item.json;\n  if (price && price.stock_code) {\n    priceMap[price.stock_code] = price;\n  }\n}\n\nconsole.log(`📊 현재가 맵 생성 완료: ${Object.keys(priceMap).length}개 종목`);\n\nfor (const item of strategyData) {\n  const strategy = item.json;\n  const priceInfo = priceMap[strategy.stock_code];\n\n  if (!priceInfo) {\n    console.log(`⚠️ ${strategy.stock_code}: 현재가 데이터 없음`);\n    continue;\n  }\n\n  if (!priceInfo.current_price) {\n    console.log(`⚠️ ${strategy.stock_code}: 유효한 현재가 없음`);\n    continue;\n  }\n\n  results.push({\n    json: {\n      ...strategy,\n      stock_name: priceInfo.stock_name || strategy.stock_code,\n      current_price: priceInfo.current_price,\n      change_rate: priceInfo.change_rate || 0,\n      volume: priceInfo.volume || 0,\n      sell_price: priceInfo.high_52w || priceInfo.current_price,\n      buy_price: priceInfo.low_52w || priceInfo.current_price,\n      updated_at: priceInfo.updated_at\n    }\n  });\n}\n\nconsole.log(`✅ ${results.length}개 종목 데이터 병합 완료`);\n\nif (results.length === 0) {\n  console.log(`⚠️ 병합된 데이터 없음`);\n  return [{ json: { status: 'no_data', message: '현재가 데이터 없음' } }];\n}\n\nreturn results;"
+        "method": "GET",
+        "url": "=https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/kw_price_orderbook?stock_code=eq.{{$json.stock_code}}&select=stock_code,ask_price1,bid_price1,ask_volume1,bid_volume1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-orderbook",
+      "name": "호가 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 450]
+    },
+    {
+      "parameters": {
+        "jsCode": "const strategyData = $('유니버스 종목 추출').all();\nconst priceData = $input.first().json;\n\n// 호가 데이터는 선택적 (없을 수 있음)\nlet orderbookData = [];\ntry {\n  const orderbookInput = $input.last();\n  if (orderbookInput && orderbookInput.json) {\n    orderbookData = Array.isArray(orderbookInput.json) ? orderbookInput.json : [orderbookInput.json];\n  }\n} catch (e) {\n  console.log('⚠️ 호가 데이터 없음, 현재가로 대체');\n}\n\nconsole.log(`📥 전략: ${strategyData.length}, 현재가: ${Array.isArray(priceData) ? priceData.length : 1}, 호가: ${orderbookData.length}`);\n\nconst results = [];\n\n// 현재가와 호가를 stock_code로 매핑\nconst priceMap = {};\nconst orderbookMap = {};\n\n// 현재가 데이터 매핑\nif (Array.isArray(priceData)) {\n  for (const price of priceData) {\n    if (price && price.stock_code) {\n      priceMap[price.stock_code] = price;\n    }\n  }\n} else if (priceData && priceData.stock_code) {\n  priceMap[priceData.stock_code] = priceData;\n}\n\n// 호가 데이터 매핑\nfor (const orderbook of orderbookData) {\n  if (orderbook && orderbook.stock_code) {\n    orderbookMap[orderbook.stock_code] = orderbook;\n  }\n}\n\nconsole.log(`📊 현재가 맵: ${Object.keys(priceMap).length}개, 호가 맵: ${Object.keys(orderbookMap).length}개`);\n\nfor (const item of strategyData) {\n  const strategy = item.json;\n  const priceInfo = priceMap[strategy.stock_code];\n  const orderbookInfo = orderbookMap[strategy.stock_code];\n\n  if (!priceInfo || !priceInfo.current_price) {\n    console.log(`⚠️ ${strategy.stock_code}: 현재가 없음`);\n    continue;\n  }\n\n  // 호가가 없으면 현재가를 대체값으로 사용\n  const askPrice = orderbookInfo?.ask_price1 || priceInfo.current_price;\n  const bidPrice = orderbookInfo?.bid_price1 || priceInfo.current_price;\n\n  console.log(`✅ ${strategy.stock_code}: 매도호가=${askPrice}, 매수호가=${bidPrice}, 현재가=${priceInfo.current_price}`);\n\n  results.push({\n    json: {\n      ...strategy,\n      stock_name: priceInfo.stock_name || strategy.stock_code,\n      current_price: priceInfo.current_price,\n      change_rate: priceInfo.change_rate || 0,\n      volume: priceInfo.volume || 0,\n      // ✅ 올바른 호가 매핑 (없으면 현재가 사용)\n      sell_price: askPrice,      // 매도 1호가 (ask) 또는 현재가\n      buy_price: bidPrice,        // 매수 1호가 (bid) 또는 현재가\n      ask_volume: orderbookInfo?.ask_volume1 || 0,\n      bid_volume: orderbookInfo?.bid_volume1 || 0,\n      updated_at: priceInfo.updated_at\n    }\n  });\n}\n\nconsole.log(`✅ ${results.length}개 종목 병합 완료`);\n\nif (results.length === 0) {\n  return [{ json: { status: 'no_data', message: '데이터 없음' } }];\n}\n\nreturn results;"
       },
       "id": "merge-data",
       "name": "데이터 병합",
@@ -175,7 +212,7 @@
         "url": "https://mockapi.kiwoom.com/oauth2/token",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"grant_type\": \"client_credentials\", \"appkey\": \"S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU\", \"secretkey\": \"tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA\"}",
+        "jsonBody": "{\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU\",\n  \"secretkey\": \"tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA\"\n}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -202,11 +239,48 @@
     },
     {
       "parameters": {
+        "jsCode": "const tokenData = $input.first().json;\nconst signalData = $('신호 저장').first().json;\n\nreturn {\n  json: {\n    ...signalData,\n    token: tokenData.token\n  }\n};"
+      },
+      "id": "merge-data-for-order",
+      "name": "데이터 병합 (주문용)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2150, 300]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "https://mockapi.kiwoom.com/api/dostk/order",
+        "url": "https://mockapi.kiwoom.com/api/dostk/ordr",
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\"stk_cd\": {{JSON.stringify($node[\"주문 가격 계산\"].json.stock_code)}}, \"ord_qty\": \"10\", \"ord_prc\": {{$node[\"주문 가격 계산\"].json.order_price ? JSON.stringify(String($node[\"주문 가격 계산\"].json.order_price)) : '\"0\"'}}, \"ord_type\": {{$node[\"주문 가격 계산\"].json.signal_type === 'buy' ? '\"1\"' : '\"2\"'}}, \"ord_condition\": {{$node[\"주문 가격 계산\"].json.order_method === 'MARKET' ? '\"1\"' : '\"0\"'}}}",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "dmst_stex_tp",
+              "value": "KRX"
+            },
+            {
+              "name": "stk_cd",
+              "value": "={{$json.stock_code}}"
+            },
+            {
+              "name": "ord_qty",
+              "value": "10"
+            },
+            {
+              "name": "ord_uv",
+              "value": ""
+            },
+            {
+              "name": "trde_tp",
+              "value": "3"
+            },
+            {
+              "name": "cond_uv",
+              "value": ""
+            }
+          ]
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -216,11 +290,19 @@
             },
             {
               "name": "authorization",
-              "value": "={{\"Bearer \" + $node[\"키움 토큰 발급\"].json.token}}"
+              "value": "={{\"Bearer \" + $json.token}}"
+            },
+            {
+              "name": "cont-yn",
+              "value": "N"
+            },
+            {
+              "name": "next-key",
+              "value": ""
             },
             {
               "name": "api-id",
-              "value": "ka10005"
+              "value": "kt10000"
             }
           ]
         },
@@ -228,7 +310,7 @@
           "batching": {
             "batch": {
               "batchSize": 1,
-              "batchInterval": 1000
+              "batchInterval": 2000
             }
           }
         }
@@ -241,11 +323,21 @@
     },
     {
       "parameters": {
+        "jsCode": "// 주문 실행 결과 (키움 API 응답)\nconst orderApiResponse = $input.first().json;\n\n// 신호 데이터 (ID 필요)\nconst signalData = $('신호 저장').first().json;\n\n// 병합된 데이터 (주문 정보 포함)\nconst mergedData = $('데이터 병합 (주문용)').first().json;\n\nreturn {\n  json: {\n    signal_id: signalData.id,\n    strategy_id: mergedData.strategy_id,\n    stock_code: mergedData.stock_code,\n    stock_name: mergedData.stock_name || mergedData.stock_code,\n    order_type: mergedData.signal_type.toUpperCase(),\n    order_method: mergedData.order_method,\n    quantity: 10,\n    order_price: mergedData.order_price || 0,\n    status: 'PENDING',\n    api_response: JSON.stringify(orderApiResponse)\n  }\n};"
+      },
+      "id": "prepare-order-data",
+      "name": "주문 데이터 준비",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2450, 300]
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://hznkyaomtrpzcayayayh.supabase.co/rest/v1/orders",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"signal_id\": {{JSON.stringify($node[\"신호 저장\"].json.id)}}, \"strategy_id\": {{JSON.stringify($node[\"주문 가격 계산\"].json.strategy_id)}}, \"stock_code\": {{JSON.stringify($node[\"주문 가격 계산\"].json.stock_code)}}, \"stock_name\": {{JSON.stringify($node[\"주문 가격 계산\"].json.stock_name || $node[\"주문 가격 계산\"].json.stock_code)}}, \"order_type\": {{JSON.stringify($node[\"주문 가격 계산\"].json.signal_type.toUpperCase())}}, \"order_method\": {{JSON.stringify($node[\"주문 가격 계산\"].json.order_method)}}, \"quantity\": 10, \"order_price\": {{$node[\"주문 가격 계산\"].json.order_price || 0}}, \"status\": \"PENDING\", \"api_response\": {{JSON.stringify($json)}}}",
+        "jsonBody": "={{JSON.stringify($json)}}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -273,7 +365,7 @@
       "name": "주문 결과 저장",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2450, 300]
+      "position": [2650, 300]
     }
   ],
   "connections": {
@@ -317,6 +409,11 @@
             "node": "현재가 조회",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "호가 조회",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -328,6 +425,17 @@
             "node": "데이터 병합",
             "type": "main",
             "index": 0
+          }
+        ]
+      ]
+    },
+    "호가 조회": {
+      "main": [
+        [
+          {
+            "node": "데이터 병합",
+            "type": "main",
+            "index": 1
           }
         ]
       ]
@@ -380,6 +488,17 @@
       "main": [
         [
           {
+            "node": "데이터 병합 (주문용)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터 병합 (주문용)": {
+      "main": [
+        [
+          {
             "node": "주문 실행",
             "type": "main",
             "index": 0
@@ -388,6 +507,17 @@
       ]
     },
     "주문 실행": {
+      "main": [
+        [
+          {
+            "node": "주문 데이터 준비",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "주문 데이터 준비": {
       "main": [
         [
           {
@@ -406,6 +536,6 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 1,
-  "updatedAt": "2025-01-11T00:00:00.000Z",
-  "versionId": "1"
+  "updatedAt": "2025-01-13T00:00:00.000Z",
+  "versionId": "5"
 }
