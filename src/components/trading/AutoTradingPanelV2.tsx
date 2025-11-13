@@ -19,6 +19,7 @@ import MarketMonitor from '../MarketMonitor'
 import N8nWorkflowMonitor from '../N8nWorkflowMonitor'
 import PendingOrdersPanel from './PendingOrdersPanel'
 import AddStrategyDialog from './AddStrategyDialog'
+import EditStrategyDialog from './EditStrategyDialog'
 
 interface ActiveStrategy {
   strategy_id: string
@@ -36,6 +37,8 @@ interface ActiveStrategy {
 export default function AutoTradingPanelV2() {
   const [activeStrategies, setActiveStrategies] = useState<ActiveStrategy[]>([])
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editingStrategy, setEditingStrategy] = useState<ActiveStrategy | null>(null)
   const [loading, setLoading] = useState(true)
   const [portfolioStats, setPortfolioStats] = useState({
     totalCapital: 0,
@@ -105,17 +108,35 @@ export default function AutoTradingPanelV2() {
       const { data: strategyData } = await supabase
         .rpc('get_active_strategies_with_universe')
 
-      const totalAllocated = strategyData?.reduce((sum: number, item: any) => {
-        return sum + (parseFloat(item.allocated_capital) || 0)
-      }, 0) || 0
+      console.log('=== Portfolio Stats Debug ===')
+      console.log('RPC strategyData:', strategyData)
 
-      const activeStrategiesCount = new Set(strategyData?.map((item: any) => item.strategy_id)).size
+      // 중복 제거: 전략별로 한 번만 계산 (RPC는 전략-유니버스 조합마다 row를 반환)
+      const uniqueStrategies = new Map<string, number>()
+      strategyData?.forEach((item: any) => {
+        console.log(`Strategy ${item.strategy_id}:`, {
+          name: item.strategy_name,
+          allocated_capital: item.allocated_capital,
+          allocated_percent: item.allocated_percent
+        })
+        if (!uniqueStrategies.has(item.strategy_id)) {
+          uniqueStrategies.set(item.strategy_id, parseFloat(item.allocated_capital) || 0)
+        }
+      })
 
-      // 2. 전체 포지션 조회
+      console.log('Unique strategies map:', Array.from(uniqueStrategies.entries()))
+
+      const totalAllocated = Array.from(uniqueStrategies.values()).reduce((sum, val) => sum + val, 0)
+      const activeStrategiesCount = uniqueStrategies.size
+
+      console.log('Total allocated:', totalAllocated)
+      console.log('Active strategies count:', activeStrategiesCount)
+
+      // 2. 전체 포지션 조회 (position_status = 'open' 인 것만)
       const { data: positions, error: posError } = await supabase
         .from('positions')
         .select('*')
-        .eq('status', 'open')
+        .eq('position_status', 'open')
 
       if (posError) throw posError
 
@@ -132,8 +153,8 @@ export default function AutoTradingPanelV2() {
               .eq('stock_code', pos.stock_code)
               .single()
 
-            const currentPrice = priceData?.current_price || pos.avg_price
-            const invested = pos.avg_price * pos.quantity
+            const currentPrice = priceData?.current_price || pos.avg_buy_price
+            const invested = pos.avg_buy_price * pos.quantity
             const value = currentPrice * pos.quantity
 
             return { invested, value }
@@ -147,7 +168,7 @@ export default function AutoTradingPanelV2() {
       const totalProfit = totalValue - totalInvested
       const totalProfitRate = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0
 
-      setPortfolioStats({
+      const newStats = {
         totalCapital: totalAllocated, // 임시: 실제로는 계좌 정보에서 가져와야 함
         totalAllocated,
         totalInvested,
@@ -156,7 +177,10 @@ export default function AutoTradingPanelV2() {
         totalProfitRate,
         activeStrategiesCount,
         totalPositions: positions?.length || 0
-      })
+      }
+
+      console.log('Setting portfolio stats:', newStats)
+      setPortfolioStats(newStats)
     } catch (error) {
       console.error('포트폴리오 통계 로드 실패:', error)
     }
@@ -196,8 +220,11 @@ export default function AutoTradingPanelV2() {
   }
 
   const handleEditStrategy = (strategyId: string) => {
-    // TODO: 전략 수정 다이얼로그 열기
-    alert('전략 수정 기능은 준비 중입니다.')
+    const strategy = activeStrategies.find(s => s.strategy_id === strategyId)
+    if (strategy) {
+      setEditingStrategy(strategy)
+      setShowEditDialog(true)
+    }
   }
 
   if (loading) {
@@ -277,6 +304,24 @@ export default function AutoTradingPanelV2() {
           loadData()
         }}
       />
+
+      {/* 자동매매 수정 다이얼로그 */}
+      {editingStrategy && (
+        <EditStrategyDialog
+          open={showEditDialog}
+          strategyId={editingStrategy.strategy_id}
+          strategyName={editingStrategy.strategy_name}
+          currentAllocatedCapital={editingStrategy.allocated_capital}
+          currentAllocatedPercent={editingStrategy.allocated_percent}
+          onClose={() => {
+            setShowEditDialog(false)
+            setEditingStrategy(null)
+          }}
+          onSuccess={() => {
+            loadData()
+          }}
+        />
+      )}
 
       {/* 대기중인 주문 */}
       <Box sx={{ mb: 3 }}>

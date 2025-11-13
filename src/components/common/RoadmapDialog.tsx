@@ -1975,6 +1975,69 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     },
     {
       id: 32,
+      title: '자동매매 포트폴리오 통계 및 시그널 UI 개선',
+      status: 'done',
+      priority: 'high',
+      icon: <Dashboard />,
+      period: '2025.01.13',
+      description: '포트폴리오 현황 표시 오류 수정 및 시그널 상세 정보 가시성 향상',
+      subtasks: [
+        {
+          title: '✅ 포트폴리오 통계 표시 오류 수정',
+          details: [
+            'Database 컬럼명 불일치 해결 (status → position_status, avg_price → avg_buy_price)',
+            'AutoTradingPanelV2.tsx의 loadPortfolioStats() 쿼리 수정',
+            'StrategyCard.tsx의 포지션 조회 쿼리 수정',
+            '포트폴리오 요약 카드에 정확한 통계 표시 (총 할당 자금, 투자 중, 평가액, 수익률)',
+            'Console 로깅으로 데이터 흐름 검증'
+          ]
+        },
+        {
+          title: '✅ 전략별 할당 자금 중복 계산 해결',
+          details: [
+            'RPC 함수 get_active_strategies_with_universe가 전략-유니버스 조합마다 행 반환',
+            'Map 자료구조로 전략별 중복 제거 로직 구현',
+            'uniqueStrategies Map으로 전략 ID 기준 중복 필터링',
+            'totalAllocated 정확한 합계 계산',
+            '활성 전략 수 정확한 카운트 (uniqueStrategies.size)'
+          ]
+        },
+        {
+          title: '✅ 매도 시그널 필터링 로직 개선',
+          details: [
+            '보유하지 않은 종목에 대한 매도 시그널 제외',
+            'holdingStockCodes Set 생성 (보유 종목 코드 목록)',
+            '매도 시그널 필터링: 보유 종목만 포함',
+            '매수 시그널은 모든 종목 포함',
+            '의미 없는 매도 예정 종목 표시 제거'
+          ]
+        },
+        {
+          title: '✅ 시그널 상세 정보 아코디언 UI 구현',
+          details: [
+            '매수 대기, 보유 중, 매도 예정 칩을 클릭 가능하게 변경',
+            'Collapse 컴포넌트로 확장/축소 애니메이션 구현',
+            '각 섹션별 최대 5개 종목 표시 (초과 시 "외 N종목" 안내)',
+            '매수 대기: 종목명, 현재가, 등락률 표시',
+            '보유 중: 종목명, 보유 수량, 수익률 표시',
+            '매도 예정: 종목명, 현재가, 보유 종목 수익률 표시',
+            'showBuySignals, showHoldings, showSellSignals state 관리'
+          ]
+        },
+        {
+          title: '✅ 사용자 질문 답변 시스템',
+          details: [
+            '매수대기 종목 vs 대기중인 주문 개념 차이 설명',
+            '매수대기 종목 = trading_signals 테이블의 시그널 (추천)',
+            '대기중인 주문 = 증권사에 실제 주문 넣었으나 미체결',
+            '워크플로우: 시그널 생성 → 주문 생성 → 체결 대기 → 포지션',
+            'PendingOrdersPanel에서 실제 주문 상태 확인 가능'
+          ]
+        }
+      ]
+    },
+    {
+      id: 33,
       title: '문서화 및 배포',
       status: 'pending',
       priority: 'low',
@@ -2039,7 +2102,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 90 // 2025-01-11 기준 진행률 (워크플로우 B 자동매매 실행 시스템 완료)
+  const progress = 91 // 2025-01-13 기준 진행률 (자동매매 포트폴리오 통계 및 시그널 UI 개선 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 

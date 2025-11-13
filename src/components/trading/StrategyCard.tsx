@@ -74,6 +74,9 @@ export default function StrategyCard({
   const [signals, setSignals] = useState<StrategySignal[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [loading, setLoading] = useState(true)
+  const [showBuySignals, setShowBuySignals] = useState(false)
+  const [showHoldings, setShowHoldings] = useState(false)
+  const [showSellSignals, setShowSellSignals] = useState(false)
 
   useEffect(() => {
     loadStrategyData()
@@ -83,25 +86,15 @@ export default function StrategyCard({
     try {
       setLoading(true)
 
-      // 시그널 조회 (최근 24시간)
-      const { data: signalData, error: signalError } = await supabase
-        .from('trading_signals')
-        .select('*')
-        .eq('strategy_id', strategyId)
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (!signalError && signalData) {
-        setSignals(signalData)
-      }
-
-      // 포지션 조회 (실제 보유 종목)
+      // 포지션 조회 (실제 보유 종목) - 먼저 조회하여 보유 종목 코드 목록 생성
       const { data: positionData, error: positionError } = await supabase
         .from('positions')
         .select('*')
         .eq('strategy_id', strategyId)
-        .eq('status', 'open')
+        .eq('position_status', 'open')
+
+      // 보유 종목 코드 목록
+      const holdingStockCodes = new Set(positionData?.map((pos: any) => pos.stock_code) || [])
 
       if (!positionError && positionData) {
         // 현재가 정보와 조인하여 수익률 계산
@@ -113,15 +106,15 @@ export default function StrategyCard({
               .eq('stock_code', pos.stock_code)
               .single()
 
-            const currentPrice = priceData?.current_price || pos.avg_price
-            const profitAmount = (currentPrice - pos.avg_price) * pos.quantity
-            const profitRate = ((currentPrice - pos.avg_price) / pos.avg_price) * 100
+            const currentPrice = priceData?.current_price || pos.avg_buy_price
+            const profitAmount = (currentPrice - pos.avg_buy_price) * pos.quantity
+            const profitRate = ((currentPrice - pos.avg_buy_price) / pos.avg_buy_price) * 100
 
             return {
               stock_code: pos.stock_code,
               stock_name: priceData?.stock_name || pos.stock_code,
               quantity: pos.quantity,
-              avg_price: pos.avg_price,
+              avg_price: pos.avg_buy_price,
               current_price: currentPrice,
               profit_rate: profitRate,
               profit_amount: profitAmount
@@ -130,6 +123,26 @@ export default function StrategyCard({
         )
 
         setPositions(positionsWithPrice)
+      }
+
+      // 시그널 조회 (최근 24시간)
+      const { data: signalData, error: signalError } = await supabase
+        .from('trading_signals')
+        .select('*')
+        .eq('strategy_id', strategyId)
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (!signalError && signalData) {
+        // 매도 시그널은 보유 중인 종목에 대해서만 필터링
+        const filteredSignals = signalData.filter((signal: any) => {
+          if (signal.signal_type === 'sell') {
+            return holdingStockCodes.has(signal.stock_code)
+          }
+          return true // 매수 시그널은 모두 포함
+        })
+        setSignals(filteredSignals)
       }
     } catch (error) {
       console.error('전략 데이터 로드 실패:', error)
@@ -281,25 +294,196 @@ export default function StrategyCard({
           <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
             📊 시그널 현황
           </Typography>
-          <Stack direction="row" spacing={2}>
-            <Chip
-              icon={<TrendingUp />}
-              label={`매수 대기: ${buySignals.length}종목`}
-              color="error"
-              variant="outlined"
-            />
-            <Chip
-              icon={<CheckCircle />}
-              label={`보유 중: ${positions.length}종목`}
-              color="success"
-              variant="outlined"
-            />
-            <Chip
-              icon={<TrendingDown />}
-              label={`매도 예정: ${sellSignals.length}종목`}
-              color="primary"
-              variant="outlined"
-            />
+          <Stack spacing={1}>
+            <Stack direction="row" spacing={2}>
+              <Chip
+                icon={<TrendingUp />}
+                label={`매수 대기: ${buySignals.length}종목`}
+                color="error"
+                variant="outlined"
+                onClick={() => setShowBuySignals(!showBuySignals)}
+                sx={{ cursor: 'pointer' }}
+              />
+              <Chip
+                icon={<CheckCircle />}
+                label={`보유 중: ${positions.length}종목`}
+                color="success"
+                variant="outlined"
+                onClick={() => setShowHoldings(!showHoldings)}
+                sx={{ cursor: 'pointer' }}
+              />
+              <Chip
+                icon={<TrendingDown />}
+                label={`매도 예정: ${sellSignals.length}종목`}
+                color="primary"
+                variant="outlined"
+                onClick={() => setShowSellSignals(!showSellSignals)}
+                sx={{ cursor: 'pointer' }}
+              />
+            </Stack>
+
+            {/* 매수 대기 종목 리스트 */}
+            <Collapse in={showBuySignals}>
+              {buySignals.length > 0 ? (
+                <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="caption" fontWeight="bold" gutterBottom display="block">
+                    💰 매수 대기 종목
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {buySignals.slice(0, 5).map((signal, idx) => (
+                      <Box
+                        key={idx}
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          p: 1,
+                          bgcolor: 'background.paper',
+                          borderRadius: 0.5
+                        }}
+                      >
+                        <Typography variant="body2">
+                          {signal.stock_name} ({signal.stock_code})
+                        </Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="body2">
+                            {formatCurrency(signal.current_price)}원
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color={getProfitColor(signal.change_rate)}
+                          >
+                            {formatPercent(signal.change_rate)}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    ))}
+                    {buySignals.length > 5 && (
+                      <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
+                        외 {buySignals.length - 5}종목 (상세보기에서 전체 확인)
+                      </Typography>
+                    )}
+                  </Stack>
+                </Box>
+              ) : (
+                <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    매수 대기 종목이 없습니다.
+                  </Typography>
+                </Box>
+              )}
+            </Collapse>
+
+            {/* 보유 중 종목 리스트 */}
+            <Collapse in={showHoldings}>
+              {positions.length > 0 ? (
+                <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="caption" fontWeight="bold" gutterBottom display="block">
+                    📈 보유 중인 종목
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {positions.slice(0, 5).map((pos) => (
+                      <Box
+                        key={pos.stock_code}
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          p: 1,
+                          bgcolor: 'background.paper',
+                          borderRadius: 0.5
+                        }}
+                      >
+                        <Typography variant="body2">
+                          {pos.stock_name} ({pos.stock_code})
+                        </Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="body2">
+                            {pos.quantity}주
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color={getProfitColor(pos.profit_rate)}
+                            fontWeight="bold"
+                          >
+                            {formatPercent(pos.profit_rate)}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    ))}
+                    {positions.length > 5 && (
+                      <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
+                        외 {positions.length - 5}종목 (상세보기에서 전체 확인)
+                      </Typography>
+                    )}
+                  </Stack>
+                </Box>
+              ) : (
+                <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    보유 중인 종목이 없습니다.
+                  </Typography>
+                </Box>
+              )}
+            </Collapse>
+
+            {/* 매도 예정 종목 리스트 */}
+            <Collapse in={showSellSignals}>
+              {sellSignals.length > 0 ? (
+                <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="caption" fontWeight="bold" gutterBottom display="block">
+                    📉 매도 예정 종목
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {sellSignals.slice(0, 5).map((signal, idx) => {
+                      const position = positions.find(p => p.stock_code === signal.stock_code)
+                      return (
+                        <Box
+                          key={idx}
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            p: 1,
+                            bgcolor: 'background.paper',
+                            borderRadius: 0.5
+                          }}
+                        >
+                          <Typography variant="body2">
+                            {signal.stock_name} ({signal.stock_code})
+                          </Typography>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography variant="body2">
+                              {formatCurrency(signal.current_price)}원
+                            </Typography>
+                            {position && (
+                              <Typography
+                                variant="caption"
+                                color={getProfitColor(position.profit_rate)}
+                                fontWeight="bold"
+                              >
+                                {formatPercent(position.profit_rate)}
+                              </Typography>
+                            )}
+                          </Stack>
+                        </Box>
+                      )
+                    })}
+                    {sellSignals.length > 5 && (
+                      <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
+                        외 {sellSignals.length - 5}종목 (상세보기에서 전체 확인)
+                      </Typography>
+                    )}
+                  </Stack>
+                </Box>
+              ) : (
+                <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    매도 예정 종목이 없습니다.
+                  </Typography>
+                </Box>
+              )}
+            </Collapse>
           </Stack>
         </Box>
 

@@ -29,6 +29,8 @@ interface PortfolioOverviewProps {
 }
 
 export default function PortfolioOverview({ stats }: PortfolioOverviewProps) {
+  console.log('PortfolioOverview received stats:', stats)
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ko-KR').format(value)
   }

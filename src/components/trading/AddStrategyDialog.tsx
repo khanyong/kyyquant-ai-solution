@@ -81,6 +81,7 @@ export default function AddStrategyDialog({ open, onClose, onSuccess }: AddStrat
 
   const [allocatedCapital, setAllocatedCapital] = useState<number>(0)
   const [allocatedPercent, setAllocatedPercent] = useState<number>(0)
+  const [accountBalance, setAccountBalance] = useState<number>(0)
 
   const [orderPriceStrategy, setOrderPriceStrategy] = useState<OrderPriceStrategy>({
     buy: { type: 'best_ask', offset: 10 },
@@ -99,8 +100,31 @@ export default function AddStrategyDialog({ open, onClose, onSuccess }: AddStrat
     if (open) {
       loadStrategies()
       loadFilters()
+      loadAccountBalance()
     }
   }, [open])
+
+  const loadAccountBalance = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('kw_account_balance')
+        .select('deposit')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error) {
+        console.error('계좌 잔고 조회 실패:', error)
+        return
+      }
+
+      if (data) {
+        setAccountBalance(data.deposit)
+      }
+    } catch (error) {
+      console.error('계좌 잔고 조회 오류:', error)
+    }
+  }
 
   const loadStrategies = async () => {
     try {
@@ -434,28 +458,56 @@ export default function AddStrategyDialog({ open, onClose, onSuccess }: AddStrat
               💰 3단계: 자금 할당
             </Typography>
 
-            <Stack direction="row" spacing={2}>
-              <FormControl fullWidth>
-                <InputLabel>할당 비율 (%)</InputLabel>
-                <OutlinedInput
-                  type="number"
-                  value={allocatedPercent}
-                  onChange={(e) => setAllocatedPercent(parseFloat(e.target.value) || 0)}
-                  label="할당 비율 (%)"
-                  endAdornment={<InputAdornment position="end">%</InputAdornment>}
-                />
-              </FormControl>
+            <Stack spacing={2}>
+              {accountBalance > 0 && (
+                <Alert severity="info" sx={{ mb: 1 }}>
+                  현재 예수금: <strong>{accountBalance.toLocaleString()}원</strong>
+                </Alert>
+              )}
 
-              <FormControl fullWidth>
-                <InputLabel>할당 금액 (원)</InputLabel>
-                <OutlinedInput
-                  type="number"
-                  value={allocatedCapital}
-                  onChange={(e) => setAllocatedCapital(parseFloat(e.target.value) || 0)}
-                  label="할당 금액 (원)"
-                  endAdornment={<InputAdornment position="end">원</InputAdornment>}
-                />
-              </FormControl>
+              <Stack direction="row" spacing={2}>
+                <FormControl fullWidth>
+                  <InputLabel>할당 비율 (%)</InputLabel>
+                  <OutlinedInput
+                    type="number"
+                    value={allocatedPercent}
+                    onChange={(e) => {
+                      const percent = parseFloat(e.target.value) || 0
+                      setAllocatedPercent(percent)
+                      // 자동으로 할당 금액 계산
+                      if (accountBalance > 0) {
+                        setAllocatedCapital(Math.round(accountBalance * percent / 100))
+                      }
+                    }}
+                    label="할당 비율 (%)"
+                    endAdornment={<InputAdornment position="end">%</InputAdornment>}
+                  />
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel>할당 금액 (원)</InputLabel>
+                  <OutlinedInput
+                    type="number"
+                    value={allocatedCapital}
+                    onChange={(e) => {
+                      const capital = parseFloat(e.target.value) || 0
+                      setAllocatedCapital(capital)
+                      // 역계산: 금액 입력 시 비율 자동 계산
+                      if (accountBalance > 0) {
+                        setAllocatedPercent(Math.round(capital / accountBalance * 100 * 100) / 100)
+                      }
+                    }}
+                    label="할당 금액 (원)"
+                    endAdornment={<InputAdornment position="end">원</InputAdornment>}
+                  />
+                </FormControl>
+              </Stack>
+
+              {allocatedPercent > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  💡 {allocatedPercent}% = {allocatedCapital.toLocaleString()}원
+                </Typography>
+              )}
             </Stack>
           </Box>
 

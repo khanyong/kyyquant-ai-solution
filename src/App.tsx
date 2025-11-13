@@ -49,6 +49,7 @@ const TestBacktestTable = lazy(() => import('./components/test/TestBacktestTable
 const InvestmentUniverse = lazy(() => import('./components/InvestmentUniverse'))
 const AdminApprovalPanel = lazy(() => import('./components/admin/AdminApprovalPanel'))
 const TestInvestmentUniverse = lazy(() => import('./components/TestInvestmentUniverse'))
+const DebugPortfolio = lazy(() => import('./pages/DebugPortfolio'))
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -427,6 +428,7 @@ function App() {
             
             <TabPanel value={currentTab} index={6}>
               <Stack spacing={3}>
+                <DebugPortfolio />
                 <TestBacktestTable />
                 <TestInvestmentUniverse />
                 <InvestmentUniverse />
