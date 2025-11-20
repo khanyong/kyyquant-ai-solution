@@ -54,7 +54,7 @@ export default function EditStrategyDialog({
     try {
       const { data, error } = await supabase
         .from('kw_account_balance')
-        .select('deposit')
+        .select('available_cash, total_cash, deposit')
         .order('updated_at', { ascending: false })
         .limit(1)
         .single()
@@ -65,7 +65,10 @@ export default function EditStrategyDialog({
       }
 
       if (data) {
-        setAccountBalance(data.deposit)
+        // available_cash를 우선 사용, 없으면 total_cash, 마지막으로 deposit
+        const balance = data.available_cash || data.total_cash || data.deposit || 0
+        console.log('계좌 잔고 로드:', { available_cash: data.available_cash, total_cash: data.total_cash, deposit: data.deposit, selected: balance })
+        setAccountBalance(balance)
       }
     } catch (error) {
       console.error('계좌 잔고 조회 오류:', error)
@@ -87,6 +90,37 @@ export default function EditStrategyDialog({
       setLoading(true)
       setError('')
 
+      // 1. 현재 전략 정보 조회 (user_id와 현재 할당 금액)
+      const { data: currentStrategy, error: fetchError } = await supabase
+        .from('strategies')
+        .select('allocated_capital, user_id')
+        .eq('id', strategyId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      const previousAllocation = currentStrategy.allocated_capital || 0
+      const allocationDiff = allocatedCapital - previousAllocation
+
+      // 2. 계좌 잔고 조회
+      const { data: balance, error: balanceError } = await supabase
+        .from('kw_account_balance')
+        .select('available_cash')
+        .eq('user_id', currentStrategy.user_id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (balanceError) throw balanceError
+
+      // 3. 할당 금액 증가 시 사용 가능 현금 확인
+      if (allocationDiff > 0 && balance.available_cash < allocationDiff) {
+        setError(`사용 가능한 현금이 부족합니다. (필요: ${allocationDiff.toLocaleString()}원, 가용: ${balance.available_cash.toLocaleString()}원)`)
+        setLoading(false)
+        return
+      }
+
+      // 4. 전략 업데이트
       const { error: updateError } = await supabase
         .from('strategies')
         .update({
@@ -96,6 +130,18 @@ export default function EditStrategyDialog({
         .eq('id', strategyId)
 
       if (updateError) throw updateError
+
+      // 5. available_cash 업데이트 (차감 또는 반환)
+      const newAvailableCash = balance.available_cash - allocationDiff
+      const { error: cashError } = await supabase
+        .from('kw_account_balance')
+        .update({
+          available_cash: newAvailableCash,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', currentStrategy.user_id)
+
+      if (cashError) throw cashError
 
       // 성공
       onSuccess()

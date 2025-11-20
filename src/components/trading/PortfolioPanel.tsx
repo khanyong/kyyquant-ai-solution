@@ -143,6 +143,67 @@ const PortfolioPanel: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchPortfolio()
+
+      // Realtime 구독: orders 테이블 변경 감지
+      const ordersChannel = supabase
+        .channel('orders_changes_portfolio')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'orders'
+          },
+          (payload) => {
+            console.log('📦 Order status changed:', payload)
+            // 주문 상태가 EXECUTED나 PARTIAL로 변경되면 포트폴리오 새로고침
+            if (payload.new && (payload.new.status === 'EXECUTED' || payload.new.status === 'PARTIAL')) {
+              console.log('✅ Order executed, refreshing portfolio...')
+              fetchPortfolio()
+            }
+          }
+        )
+        .subscribe()
+
+      // Realtime 구독: kw_account_balance 테이블 변경 감지
+      const balanceChannel = supabase
+        .channel('balance_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'kw_account_balance'
+          },
+          (payload) => {
+            console.log('💰 Account balance changed:', payload)
+            fetchPortfolio()
+          }
+        )
+        .subscribe()
+
+      // Realtime 구독: kw_portfolio 테이블 변경 감지
+      const portfolioChannel = supabase
+        .channel('portfolio_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'kw_portfolio'
+          },
+          (payload) => {
+            console.log('📊 Portfolio changed:', payload)
+            fetchPortfolio()
+          }
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(ordersChannel)
+        supabase.removeChannel(balanceChannel)
+        supabase.removeChannel(portfolioChannel)
+      }
     }
   }, [user])
 
@@ -219,56 +280,91 @@ const PortfolioPanel: React.FC = () => {
 
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary">
+                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <Typography variant="caption" color="text.secondary" gutterBottom>
                         총 자산
                       </Typography>
-                      <Typography variant="h5" fontWeight="bold" color="primary">
+                      <Typography
+                        variant="h6"
+                        fontWeight="bold"
+                        color="primary"
+                        sx={{
+                          fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
                         ₩{formatNumber(balance.total_asset)}
                       </Typography>
                     </Paper>
                   </Grid>
 
                   <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary">
+                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <Typography variant="caption" color="text.secondary" gutterBottom>
                         보유 현금
                       </Typography>
-                      <Typography variant="h5" fontWeight="bold">
+                      <Typography
+                        variant="h6"
+                        fontWeight="bold"
+                        sx={{
+                          fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
                         ₩{formatNumber(balance.total_cash)}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         주문가능: ₩{formatNumber(balance.order_cash)}
                       </Typography>
                     </Paper>
                   </Grid>
 
                   <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary">
+                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <Typography variant="caption" color="text.secondary" gutterBottom>
                         주식 평가액
                       </Typography>
-                      <Typography variant="h5" fontWeight="bold" color="info.main">
+                      <Typography
+                        variant="h6"
+                        fontWeight="bold"
+                        color="info.main"
+                        sx={{
+                          fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
                         ₩{formatNumber(balance.stock_value)}
                       </Typography>
                     </Paper>
                   </Grid>
 
                   <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary">
+                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <Typography variant="caption" color="text.secondary" gutterBottom>
                         평가손익
                       </Typography>
                       <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
                         {balance.profit_loss >= 0 ? (
-                          <TrendingUp color="success" />
+                          <TrendingUp color="success" fontSize="small" />
                         ) : (
-                          <TrendingDown color="error" />
+                          <TrendingDown color="error" fontSize="small" />
                         )}
                         <Typography
-                          variant="h5"
+                          variant="h6"
                           fontWeight="bold"
                           color={balance.profit_loss >= 0 ? 'success.main' : 'error.main'}
+                          sx={{
+                            fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1rem' },
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
                         >
                           {balance.profit_loss >= 0 ? '+' : ''}
                           ₩{formatNumber(balance.profit_loss)}

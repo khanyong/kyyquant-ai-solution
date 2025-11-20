@@ -1,0 +1,262 @@
+{
+  "name": "Workflow V7-3: Auto Cancel Pending Orders",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  o.id,\n  o.strategy_id,\n  o.stock_code,\n  o.stock_name,\n  o.order_type,\n  o.order_price,\n  o.quantity,\n  o.kiwoom_order_no,\n  o.auto_cancel_at,\n  o.created_at,\n  EXTRACT(EPOCH FROM (NOW() - o.created_at))/60 as minutes_elapsed\nFROM orders o\nWHERE o.status IN ('PENDING', 'PARTIAL')\nAND o.auto_cancel_at IS NOT NULL\nAND o.auto_cancel_at <= NOW()"
+      },
+      "name": "Get Orders to Cancel",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "If Has Orders",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Orders",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/kiwoom/cancel-order",
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "order_no",
+              "value": "={{ $json.kiwoom_order_no }}"
+            },
+            {
+              "name": "stock_code",
+              "value": "={{ $json.stock_code }}"
+            },
+            {
+              "name": "order_type",
+              "value": "={{ $json.order_type }}"
+            },
+            {
+              "name": "quantity",
+              "value": "={{ $json.quantity }}"
+            }
+          ]
+        }
+      },
+      "name": "Cancel Order via Kiwoom",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determine cancellation reason\nconst minutesElapsed = $json.minutes_elapsed || 0;\nconst cancelReason = `자동 취소 (시간 초과: ${Math.floor(minutesElapsed)}분 경과)`;\n\nreturn {\n  json: {\n    ...$json,\n    cancellation_reason: cancelReason,\n    cancelled_at: new Date().toISOString()\n  }\n};"
+      },
+      "name": "Set Cancel Reason",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE orders\nSET \n  status = 'CANCELLED',\n  cancellation_reason = '{{ $json.cancellation_reason }}',\n  updated_at = NOW()\nWHERE id = '{{ $json.id }}'\nRETURNING id, strategy_id, stock_code"
+      },
+      "name": "Update Order Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1450, 200],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE trading_signals\nSET \n  signal_status = 'CANCELLED',\n  updated_at = NOW()\nWHERE order_id = '{{ $json.id }}'"
+      },
+      "name": "Update Signal Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1650, 200],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM strategy_monitoring\nWHERE strategy_id = '{{ $json.strategy_id }}'\nAND stock_code = '{{ $json.stock_code }}'"
+      },
+      "name": "Remove from Monitoring",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1850, 200],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "No Orders to Cancel",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [
+        [
+          {
+            "node": "Get Orders to Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Orders to Cancel": {
+      "main": [
+        [
+          {
+            "node": "If Has Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Orders": {
+      "main": [
+        [
+          {
+            "node": "Split Orders",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Orders to Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Orders": {
+      "main": [
+        [
+          {
+            "node": "Cancel Order via Kiwoom",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Order via Kiwoom": {
+      "main": [
+        [
+          {
+            "node": "Set Cancel Reason",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Cancel Reason": {
+      "main": [
+        [
+          {
+            "node": "Update Order Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Order Status": {
+      "main": [
+        [
+          {
+            "node": "Update Signal Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Signal Status": {
+      "main": [
+        [
+          {
+            "node": "Remove from Monitoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

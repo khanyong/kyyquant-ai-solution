@@ -1,0 +1,237 @@
+{
+  "name": "Workflow V7-1: Condition Proximity Monitoring",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  s.id as strategy_id,\n  s.name as strategy_name,\n  s.entry_conditions,\n  s.universe,\n  s.position_size\nFROM strategies s\nWHERE s.is_active = true\nAND s.entry_conditions IS NOT NULL\nAND s.entry_conditions::text != '{}'"
+      },
+      "name": "Get Active Strategies",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Strategies",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract stock codes from universe\nconst universe = $input.item.json.universe;\nconst stockCodes = Array.isArray(universe) && universe.length > 0 \n  ? universe \n  : ['005930', '000660', '035720']; // Default stocks if universe is null\n\nreturn stockCodes.map(code => ({\n  json: {\n    strategy_id: $input.item.json.strategy_id,\n    strategy_name: $input.item.json.strategy_name,\n    entry_conditions: $input.item.json.entry_conditions,\n    position_size: $input.item.json.position_size,\n    stock_code: code\n  }\n}));"
+      },
+      "name": "Extract Stock Codes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Stocks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/kiwoom/market-data",
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "stock_code",
+              "value": "={{ $json.stock_code }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Market Data from Kiwoom",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate condition match score based on actual entry_conditions structure\nconst entryConditions = $input.item.json.entry_conditions;\nconst marketData = $input.item.json.market_data || {};\n\n// Parse entry conditions if string\nconst conditions = typeof entryConditions === 'string' \n  ? JSON.parse(entryConditions) \n  : entryConditions;\n\n// Get buy conditions array from entry_conditions.buy\nconst buyConditions = conditions?.buy || [];\n\nif (!Array.isArray(buyConditions) || buyConditions.length === 0) {\n  // No buy conditions, return 0 score\n  return {\n    json: {\n      strategy_id: $input.item.json.strategy_id,\n      stock_code: $input.item.json.stock_code,\n      stock_name: marketData.stock_name || '',\n      current_price: marketData.current_price || 0,\n      condition_match_score: 0,\n      conditions_met: {},\n      is_near_entry: false\n    }\n  };\n}\n\n// Helper function to get nested value\nfunction getNestedValue(obj, path) {\n  if (!path || typeof path !== 'string') return path;\n  return path.split('.').reduce((curr, key) => curr?.[key], obj) ?? 0;\n}\n\n// Evaluate each condition\nconst conditionsMet = {};\nconst scores = [];\n\nbuyConditions.forEach((condition, index) => {\n  // Get left and right values\n  const leftField = condition.left;\n  const rightField = condition.right;\n  \n  // If right is a string, it's a field name; if number, it's a value\n  const leftValue = typeof leftField === 'string' \n    ? (getNestedValue(marketData, leftField) || marketData[leftField] || 0)\n    : leftField;\n  \n  const rightValue = typeof rightField === 'string'\n    ? (getNestedValue(marketData, rightField) || marketData[rightField] || 0) \n    : (rightField || 0);\n  \n  const operator = condition.operator;\n  \n  let met = false;\n  let progress = 0;\n  \n  // Evaluate condition based on operator\n  switch (operator) {\n    case '>':\n      met = leftValue > rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.min((leftValue / rightValue) * 100, 99);\n      }\n      break;\n    case '>=':\n      met = leftValue >= rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.min((leftValue / rightValue) * 100, 99);\n      }\n      break;\n    case '<':\n      met = leftValue < rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(100 - ((leftValue - rightValue) / rightValue * 100), 0);\n      }\n      break;\n    case '<=':\n      met = leftValue <= rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(100 - ((leftValue - rightValue) / rightValue * 100), 0);\n      }\n      break;\n    case '==':\n    case '=':\n      const diff = Math.abs(leftValue - rightValue);\n      met = diff < 0.01;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(0, 100 - (diff / Math.abs(rightValue) * 100));\n      }\n      break;\n    default:\n      progress = 0;\n  }\n  \n  conditionsMet[`condition_${index}`] = {\n    field: leftField,\n    required: `${leftField} ${operator} ${rightField}`,\n    current: `${leftValue.toFixed(2)} ${operator} ${rightValue}`,\n    met: met,\n    progress: progress.toFixed(2)\n  };\n  \n  scores.push(progress);\n});\n\n// Calculate average score\nconst avgScore = scores.length > 0 \n  ? scores.reduce((a, b) => a + b, 0) / scores.length \n  : 0;\n\nreturn {\n  json: {\n    strategy_id: $input.item.json.strategy_id,\n    stock_code: $input.item.json.stock_code,\n    stock_name: marketData.stock_name || '',\n    current_price: marketData.current_price || 0,\n    condition_match_score: parseFloat(avgScore.toFixed(2)),\n    conditions_met: conditionsMet,\n    is_near_entry: avgScore >= 80\n  }\n};"
+      },
+      "name": "Calculate Condition Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.condition_match_score }}",
+              "operation": "largerEqual",
+              "value2": 80
+            }
+          ]
+        }
+      },
+      "name": "If Score >= 80",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO strategy_monitoring (\n  strategy_id,\n  stock_code,\n  stock_name,\n  current_price,\n  condition_match_score,\n  conditions_met,\n  is_near_entry,\n  updated_at\n)\nVALUES (\n  '{{ $json.strategy_id }}',\n  '{{ $json.stock_code }}',\n  '{{ $json.stock_name }}',\n  {{ $json.current_price }},\n  {{ $json.condition_match_score }},\n  '{{ JSON.stringify($json.conditions_met) }}'::jsonb,\n  {{ $json.is_near_entry }},\n  NOW()\n)\nON CONFLICT (strategy_id, stock_code)\nDO UPDATE SET\n  stock_name = EXCLUDED.stock_name,\n  current_price = EXCLUDED.current_price,\n  condition_match_score = EXCLUDED.condition_match_score,\n  conditions_met = EXCLUDED.conditions_met,\n  is_near_entry = EXCLUDED.is_near_entry,\n  updated_at = NOW()"
+      },
+      "name": "Upsert to Strategy Monitoring",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1850, 200],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "No Action",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1850, 400]
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [
+        [
+          {
+            "node": "Get Active Strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Strategies": {
+      "main": [
+        [
+          {
+            "node": "Split Strategies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Strategies": {
+      "main": [
+        [
+          {
+            "node": "Extract Stock Codes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Stock Codes": {
+      "main": [
+        [
+          {
+            "node": "Split Stocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Stocks": {
+      "main": [
+        [
+          {
+            "node": "Get Market Data from Kiwoom",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Market Data from Kiwoom": {
+      "main": [
+        [
+          {
+            "node": "Calculate Condition Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Condition Score": {
+      "main": [
+        [
+          {
+            "node": "If Score >= 80",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Score >= 80": {
+      "main": [
+        [
+          {
+            "node": "Upsert to Strategy Monitoring",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

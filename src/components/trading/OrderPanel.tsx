@@ -108,7 +108,16 @@ const OrderPanel: React.FC = () => {
       )}
 
       {!selectedStock ? (
-        <Alert severity="info">종목을 선택해주세요</Alert>
+        <Alert severity="info">
+          <Typography variant="body2" gutterBottom fontWeight="bold">
+            📌 수동 주문 패널
+          </Typography>
+          <Typography variant="body2">
+            시장 상황에 따라 직접 매수/매도 주문을 입력할 수 있습니다.
+            <br />
+            종목을 선택하면 주문을 시작할 수 있습니다.
+          </Typography>
+        </Alert>
       ) : (
         <Stack spacing={2}>
           <Box>
