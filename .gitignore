@@ -93,3 +93,17 @@ nas_upload_OLD_*/
 *.wmv
 *.flv
 *.webm
+
+# Backup and temporary files
+*.backup
+*.old
+*_backup.*
+*_old.*
+*_backup_*/
+*_OLD_*/
+**/*_patch.txt
+backend/*_log.txt
+backend/update_log.txt
+backend/backend_log.txt
+**/*_backup.py
+**/*_backup.sql
