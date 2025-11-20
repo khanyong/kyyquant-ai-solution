@@ -81,6 +81,7 @@ export default function PendingOrdersPanel() {
         .from('orders')
         .select('*')
         .in('status', ['PENDING', 'PARTIAL'])
+        .not('user_id', 'is', null)  // user_id가 NULL인 잘못된 주문 제외
         .order('created_at', { ascending: false })
         .limit(20)
 
@@ -158,7 +159,7 @@ export default function PendingOrdersPanel() {
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            📋 대기중인 주문
+            📋 미체결 주문
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
             <Typography color="text.secondary">로딩 중...</Typography>
@@ -174,7 +175,7 @@ export default function PendingOrdersPanel() {
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="h6" fontWeight="bold">
-              📋 대기중인 주문
+              📋 미체결 주문
             </Typography>
             <Chip
               label={`${orders.length}개`}
@@ -194,7 +195,7 @@ export default function PendingOrdersPanel() {
 
         {orders.length === 0 ? (
           <Alert severity="info" icon={<AccessTime />}>
-            대기중인 주문이 없습니다.
+            미체결 주문이 없습니다.
           </Alert>
         ) : (
           <TableContainer component={Paper} variant="outlined">

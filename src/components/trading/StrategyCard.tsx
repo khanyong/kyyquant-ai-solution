@@ -27,7 +27,8 @@ import {
   ExpandMore,
   ExpandLess,
   Warning,
-  CheckCircle
+  CheckCircle,
+  Delete
 } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 
@@ -59,6 +60,7 @@ interface StrategyCardProps {
   allocatedPercent: number
   onStop: () => void
   onEdit: () => void
+  onDelete: () => void
 }
 
 export default function StrategyCard({
@@ -68,7 +70,8 @@ export default function StrategyCard({
   allocatedCapital,
   allocatedPercent,
   onStop,
-  onEdit
+  onEdit,
+  onDelete
 }: StrategyCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [signals, setSignals] = useState<StrategySignal[]>([])
@@ -215,9 +218,18 @@ export default function StrategyCard({
               startIcon={<Stop />}
               onClick={onStop}
               variant="outlined"
-              color="error"
+              color="warning"
             >
               중지
+            </Button>
+            <Button
+              size="small"
+              startIcon={<Delete />}
+              onClick={onDelete}
+              variant="outlined"
+              color="error"
+            >
+              삭제
             </Button>
             <IconButton onClick={() => setExpanded(!expanded)} size="small">
               {expanded ? <ExpandLess /> : <ExpandMore />}

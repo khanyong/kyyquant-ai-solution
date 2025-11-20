@@ -143,30 +143,26 @@ serve(async (req) => {
 
     console.log('✅ 토큰 발급 성공:', accessToken.substring(0, 20) + '...')
 
-    // 2. 계좌평가잔고내역 조회 (kt00018)
-    // 문서: /api/dostk/acnt 엔드포인트 사용
-    console.log('📊 계좌평가잔고내역 조회 시작 (TR: kt00018)')
-
-    const [accountPrefix, accountSuffix] = accountNumber.split('-')
+    // 2. 계좌평가잔고내역 조회
+    // 모의투자: kt00018 (국내주식 계좌평가잔고내역)
+    const TR_ID = 'kt00018'
+    console.log(`📊 계좌평가잔고내역 조회 시작 (TR: ${TR_ID})`)
 
     const portfolioResponse = await fetch(
-      `${baseUrl}/api/dostk/acnt?` +
-        new URLSearchParams({
-          CANO: accountPrefix,         // 계좌번호 앞자리 (8112)
-          ACNT_PRDT_CD: accountSuffix, // 계좌번호 뒷자리 (5100)
-          INQR_DVSN_1: '1',           // 조회구분1
-          INQR_DVSN_2: '0',           // 조회구분2
-        }),
+      `${baseUrl}/api/dostk/acnt`,
       {
-        method: 'GET',
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          authorization: `Bearer ${accessToken}`,
-          appkey: appKey,
-          appsecret: appSecret,
-          'api-id': 'kt00018',        // TR ID: 계좌평가잔고내역요청
-          custtype: 'P',               // 개인
+          'Content-Type': 'application/json;charset=UTF-8',
+          'authorization': `Bearer ${accessToken}`,
+          'api-id': TR_ID,
+          'cont-yn': 'N',
+          'next-key': '',
         },
+        body: JSON.stringify({
+          qry_tp: '1',          // 조회구분 1:합산, 2:개별
+          dmst_stex_tp: 'KRX',  // 국내거래소구분 KRX:한국거래소 (모의투자는 KRX만 지원)
+        }),
       }
     )
 
@@ -180,52 +176,75 @@ serve(async (req) => {
       const portfolioResult = await portfolioResponse.json()
       console.log('📈 보유종목 조회 응답:', JSON.stringify(portfolioResult))
 
-      if (portfolioResult.rt_cd === '0') {
-        // output2에서 잔고 정보 추출
-        if (portfolioResult.output2 && portfolioResult.output2.length > 0) {
-          balanceData = portfolioResult.output2[0]
-          console.log('✅ 잔고 정보 조회 성공 (output2)')
+      if (portfolioResult.return_code === 0) {
+        // 잔고 정보 구성
+        const totalCash = portfolioResult.prsm_dpst_aset_amt || '0'
+        balanceData = {
+          dnca_tot_amt: totalCash,  // 예수금 총액
+          nxdy_excc_amt: totalCash,  // 사용가능 현금 (초기값: 전체 현금)
+          ord_psbl_cash: totalCash,  // 주문가능 현금
+          prvs_rcdl_excc_amt: totalCash,  // 전일정산금액
+          pchs_amt_smtl_amt: portfolioResult.tot_pur_amt || '0',  // 매입금액합계
+        }
+        console.log('✅ 잔고 정보 조회 성공')
 
-          // DB에 잔고 저장
-          try {
-            await supabaseClient.rpc('sync_kiwoom_account_balance', {
-              p_user_id: user.id,
-              p_account_number: accountNumber,
-              p_balance_data: balanceData,
-            })
-          } catch (e) {
-            console.warn('⚠️ 잔고 저장 실패:', e)
-          }
+        // DB에 잔고 저장
+        try {
+          await supabaseClient.rpc('sync_kiwoom_account_balance', {
+            p_user_id: user.id,
+            p_account_number: accountNumber,
+            p_balance_data: balanceData,
+          })
+        } catch (e) {
+          console.warn('⚠️ 잔고 저장 실패:', e)
         }
 
-        // output1에서 보유종목 정보 추출
-        if (portfolioResult.output1) {
-          portfolioItems = portfolioResult.output1
-          console.log(`✅ 보유 종목 조회 성공 (${portfolioItems.length}개)`)
+        // 보유종목 정보 추출
+        portfolioItems = portfolioResult.acnt_evlt_remn_indv_tot || []
+        console.log(`✅ 보유 종목 조회 성공 (${portfolioItems.length}개)`)
 
-          // DB에 저장
-          try {
-            await supabaseClient.rpc('sync_kiwoom_portfolio', {
-              p_user_id: user.id,
-              p_account_number: accountNumber,
-              p_portfolio_data: portfolioItems,
-            })
+        // DB에 저장 (보유 종목이 0개여도 호출하여 기존 데이터 삭제)
+        try {
+          await supabaseClient.rpc('sync_kiwoom_portfolio', {
+            p_user_id: user.id,
+            p_account_number: accountNumber,
+            p_portfolio_data: portfolioItems,
+          })
 
-            // 합계 업데이트
-            await supabaseClient.rpc('update_account_totals', {
-              p_user_id: user.id,
-              p_account_number: accountNumber,
-            })
-          } catch (e) {
-            console.warn('⚠️ 포트폴리오 저장 실패:', e)
-          }
+          // 합계 업데이트
+          await supabaseClient.rpc('update_account_totals', {
+            p_user_id: user.id,
+            p_account_number: accountNumber,
+          })
+        } catch (e) {
+          console.warn('⚠️ 포트폴리오 저장 실패:', e)
         }
       } else {
-        console.warn('⚠️ 보유종목 조회 실패 (응답 코드):', portfolioResult.rt_cd, portfolioResult.msg1)
+        console.warn('⚠️ 보유종목 조회 실패 (응답 코드):', portfolioResult.return_code, portfolioResult.return_msg)
       }
     } else {
       const errorText = await portfolioResponse.text()
-      console.warn('⚠️ 보유 종목 조회 실패:', errorText)
+      console.error('❌ 보유 종목 조회 실패:', errorText)
+
+      // 키움 API 에러 처리
+      let errorMessage = '키움 API 계좌 조회 실패'
+      try {
+        const errorJson = JSON.parse(errorText)
+        if (errorJson.status === 500) {
+          errorMessage = '키움 서버 오류: 장중 시간(09:00~15:30)에 다시 시도해주세요'
+        } else {
+          errorMessage = `키움 API 에러: ${errorJson.message || errorText}`
+        }
+      } catch {
+        errorMessage = `키움 API 에러 (${portfolioResponse.status}): ${errorText}`
+      }
+
+      throw new Error(errorMessage)
+    }
+
+    // 성공 응답 (balanceData가 있는 경우만)
+    if (!balanceData) {
+      throw new Error('키움 API에서 계좌 데이터를 받지 못했습니다')
     }
 
     return new Response(

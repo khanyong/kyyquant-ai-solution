@@ -112,7 +112,7 @@ function MainApp() {
     }
     
     const handleNavigateToInvestmentSettings = () => {
-      setCurrentTab(6) // 투자설정 탭으로 이동
+      setCurrentTab(2) // 투자설정 탭으로 이동
     }
 
     window.addEventListener('navigateToStrategyBuilder', handleNavigateToStrategyBuilder as EventListener)
@@ -253,9 +253,9 @@ function MainApp() {
                     }
                   }}
                 />
-                <Tab 
-                  icon={<Code />} 
-                  label="전략 빌더" 
+                <Tab
+                  icon={<Code />}
+                  label="전략 빌더"
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -264,9 +264,24 @@ function MainApp() {
                     }
                   }}
                 />
-                <Tab 
-                  icon={<Assessment />} 
-                  label="백테스팅" 
+                <Tab
+                  icon={<SettingsIcon />}
+                  label={
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <span>투자 설정</span>
+                    </Stack>
+                  }
+                  sx={{
+                    '&.Mui-selected': {
+                      '& .MuiSvgIcon-root': {
+                        color: '#607d8b'
+                      }
+                    }
+                  }}
+                />
+                <Tab
+                  icon={<Assessment />}
+                  label="백테스팅"
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -286,20 +301,9 @@ function MainApp() {
                     }
                   }}
                 />
-                <Tab 
-                  icon={<ShowChart />} 
-                  label="성과 분석" 
-                  sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#9c27b0'
-                      }
-                    }
-                  }}
-                />
-                <Tab 
-                  icon={<TrendingUp />} 
-                  label="자동매매" 
+                <Tab
+                  icon={<TrendingUp />}
+                  label="자동매매"
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -308,26 +312,13 @@ function MainApp() {
                     }
                   }}
                 />
-                <Tab 
-                  icon={<SettingsIcon />} 
-                  label={
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <span>투자설정</span>
-                      <Chip 
-                        label="상세" 
-                        size="small" 
-                        sx={{ 
-                          height: 16, 
-                          fontSize: '0.65rem',
-                          '& .MuiChip-label': { px: 0.5 }
-                        }} 
-                      />
-                    </Stack>
-                  }
+                <Tab
+                  icon={<ShowChart />}
+                  label="성과 분석"
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
-                        color: '#607d8b'
+                        color: '#9c27b0'
                       }
                     }
                   }}
@@ -352,21 +343,21 @@ function MainApp() {
             <TabPanel value={currentTab} index={0}>
               <Community />
             </TabPanel>
-            
+
             <TabPanel value={currentTab} index={1}>
               <StrategyBuilder onExecute={executeStrategy} />
             </TabPanel>
 
             <TabPanel value={currentTab} index={2}>
-              <BacktestRunner />
+              <TradingSettingsWithUniverse />
             </TabPanel>
 
             <TabPanel value={currentTab} index={3}>
-              <SignalMonitor />
+              <BacktestRunner />
             </TabPanel>
 
             <TabPanel value={currentTab} index={4}>
-              <PerformanceDashboard />
+              <SignalMonitor />
             </TabPanel>
 
             <TabPanel value={currentTab} index={5}>
@@ -412,13 +403,13 @@ function MainApp() {
                     </Paper>
                   )}
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <Paper sx={{ p: 2 }}>
                     <OrderPanel />
                   </Paper>
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <Paper sx={{ p: 2 }}>
                     <PortfolioPanel />
@@ -428,7 +419,7 @@ function MainApp() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={6}>
-              <TradingSettingsWithUniverse />
+              <PerformanceDashboard />
             </TabPanel>
           </Container>
         </>

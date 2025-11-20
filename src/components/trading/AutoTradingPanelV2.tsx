@@ -15,8 +15,6 @@ import {
 import { supabase } from '../../lib/supabase'
 import PortfolioOverview from './PortfolioOverview'
 import StrategyCard from './StrategyCard'
-import MarketMonitor from '../MarketMonitor'
-import N8nWorkflowMonitor from '../N8nWorkflowMonitor'
 import PendingOrdersPanel from './PendingOrdersPanel'
 import AddStrategyDialog from './AddStrategyDialog'
 import EditStrategyDialog from './EditStrategyDialog'
@@ -187,23 +185,59 @@ export default function AutoTradingPanelV2() {
   }
 
   const handleStopStrategy = async (strategyId: string) => {
-    if (!confirm('정말 이 전략을 중지하시겠습니까?')) {
+    if (!confirm('정말 이 전략을 중지하시겠습니까?\n\n자동매매가 중지되지만 전략은 유지됩니다.')) {
       return
     }
 
     try {
-      // 전략 비활성화
+      // 1. 현재 전략 할당 금액 조회
+      const { data: strategy, error: fetchError } = await supabase
+        .from('strategies')
+        .select('allocated_capital, user_id')
+        .eq('id', strategyId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      const releasedCapital = strategy.allocated_capital || 0
+
+      // 2. 자동매매만 중지 (is_active는 유지)
       const { error: strategyError } = await supabase
         .from('strategies')
         .update({
           auto_execute: false,
-          auto_trade_enabled: false
+          auto_trade_enabled: false,
+          allocated_capital: 0,
+          allocated_percent: 0
         })
         .eq('id', strategyId)
 
       if (strategyError) throw strategyError
 
-      // 연결된 유니버스 비활성화
+      // 3. available_cash에 금액 반환
+      if (releasedCapital > 0) {
+        const { data: balance, error: balanceError } = await supabase
+          .from('kw_account_balance')
+          .select('available_cash')
+          .eq('user_id', strategy.user_id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (balanceError) throw balanceError
+
+        const { error: cashError } = await supabase
+          .from('kw_account_balance')
+          .update({
+            available_cash: balance.available_cash + releasedCapital,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', strategy.user_id)
+
+        if (cashError) throw cashError
+      }
+
+      // 4. 연결된 유니버스 비활성화
       const { error: universeError } = await supabase
         .from('strategy_universes')
         .update({ is_active: false })
@@ -211,11 +245,81 @@ export default function AutoTradingPanelV2() {
 
       if (universeError) throw universeError
 
-      // 데이터 새로고침
+      // 5. 데이터 새로고침
       loadData()
     } catch (error: any) {
       console.error('전략 중지 실패:', error)
       alert(`전략 중지 실패: ${error.message}`)
+    }
+  }
+
+  const handleDeleteStrategy = async (strategyId: string) => {
+    if (!confirm('정말 이 전략을 삭제하시겠습니까?\n\n⚠️ 삭제된 전략은 목록에서 제거되며, 자동매매도 중지됩니다.\n이 작업은 되돌릴 수 없습니다.')) {
+      return
+    }
+
+    try {
+      // 1. 현재 전략 할당 금액 조회
+      const { data: strategy, error: fetchError } = await supabase
+        .from('strategies')
+        .select('allocated_capital, user_id')
+        .eq('id', strategyId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      const releasedCapital = strategy.allocated_capital || 0
+
+      // 2. 전략 완전 비활성화 (soft delete)
+      const { error: strategyError } = await supabase
+        .from('strategies')
+        .update({
+          is_active: false,
+          auto_execute: false,
+          auto_trade_enabled: false,
+          allocated_capital: 0,
+          allocated_percent: 0
+        })
+        .eq('id', strategyId)
+
+      if (strategyError) throw strategyError
+
+      // 3. available_cash에 금액 반환
+      if (releasedCapital > 0) {
+        const { data: balance, error: balanceError } = await supabase
+          .from('kw_account_balance')
+          .select('available_cash')
+          .eq('user_id', strategy.user_id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (balanceError) throw balanceError
+
+        const { error: cashError } = await supabase
+          .from('kw_account_balance')
+          .update({
+            available_cash: balance.available_cash + releasedCapital,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', strategy.user_id)
+
+        if (cashError) throw cashError
+      }
+
+      // 4. 연결된 유니버스 비활성화
+      const { error: universeError } = await supabase
+        .from('strategy_universes')
+        .update({ is_active: false })
+        .eq('strategy_id', strategyId)
+
+      if (universeError) throw universeError
+
+      // 5. 데이터 새로고침
+      loadData()
+    } catch (error: any) {
+      console.error('전략 삭제 실패:', error)
+      alert(`전략 삭제 실패: ${error.message}`)
     }
   }
 
@@ -277,6 +381,7 @@ export default function AutoTradingPanelV2() {
                 allocatedPercent={strategy.allocated_percent}
                 onStop={() => handleStopStrategy(strategy.strategy_id)}
                 onEdit={() => handleEditStrategy(strategy.strategy_id)}
+                onDelete={() => handleDeleteStrategy(strategy.strategy_id)}
               />
             ))}
           </Stack>
@@ -326,16 +431,6 @@ export default function AutoTradingPanelV2() {
       {/* 대기중인 주문 */}
       <Box sx={{ mb: 3 }}>
         <PendingOrdersPanel />
-      </Box>
-
-      {/* n8n 워크플로우 활동 */}
-      <Box sx={{ mb: 3 }}>
-        <N8nWorkflowMonitor />
-      </Box>
-
-      {/* 실시간 시장 모니터링 */}
-      <Box sx={{ mb: 3 }}>
-        <MarketMonitor />
       </Box>
     </Box>
   )
