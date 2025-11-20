@@ -13,7 +13,7 @@ from indicators.calculator import IndicatorCalculator, ExecOptions
 load_dotenv()
 
 # Supabase 클라이언트 생성
-client = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_KEY'))
+client = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_SERVICE_ROLE_KEY'))
 
 def get_stock_data(stock_code='005930', days=100):
     """주가 데이터 가져오기"""

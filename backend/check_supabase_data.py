@@ -11,7 +11,7 @@ print('Checking Supabase Connection and Data')
 print('=' * 70)
 
 url = os.getenv('SUPABASE_URL')
-key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
 print(f'SUPABASE_URL: {url}')
 print(f'SUPABASE_KEY: {key[:20] + "..." if key else "None"}')

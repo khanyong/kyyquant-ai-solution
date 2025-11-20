@@ -15,10 +15,10 @@ def setup_indicators():
 
     # Supabase 연결
     url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+    key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
     if not url or not key:
-        print("Error: SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+        print("Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables")
         return
 
     supabase = create_client(url, key)

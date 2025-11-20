@@ -30,7 +30,7 @@ def get_supabase_client() -> Client:
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_KEY")
     if not url or not key:
-        raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment")
+        raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
     return create_client(url, key)
 
 def extract_result_keys_from_code(code: str):

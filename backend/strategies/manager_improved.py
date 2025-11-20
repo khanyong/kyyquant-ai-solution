@@ -35,7 +35,7 @@ class StrategyManager:
         """데이터베이스 연결 초기화"""
         try:
             url = os.getenv('SUPABASE_URL')
-            key = os.getenv('SUPABASE_KEY')
+            key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
             if url and key:
                 self.supabase = create_client(url, key)
                 print("Supabase connected for strategy management")

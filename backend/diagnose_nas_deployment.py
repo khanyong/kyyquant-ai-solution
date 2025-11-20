@@ -22,7 +22,7 @@ def check_environment():
 
     critical_vars = {
         'SUPABASE_URL': os.getenv('SUPABASE_URL'),
-        'SUPABASE_KEY': os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY'),
+        'SUPABASE_SERVICE_ROLE_KEY': os.getenv('SUPABASE_SERVICE_ROLE_KEY'),
         'ENFORCE_DB_INDICATORS': os.getenv('ENFORCE_DB_INDICATORS', 'true')
     }
 
@@ -49,7 +49,7 @@ def check_supabase_connection():
         from supabase import create_client
 
         url = os.getenv('SUPABASE_URL')
-        key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+        key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
         if not url or not key:
             print("✗ Supabase 연결 정보 없음")

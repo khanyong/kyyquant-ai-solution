@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-client = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_KEY'))
+client = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_SERVICE_ROLE_KEY'))
 
 # 개선된 Ichimoku 코드
 new_code = """tenkan_p = int(params.get('tenkan', 9))

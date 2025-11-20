@@ -19,7 +19,7 @@ def check_strategy_system():
 
     # Supabase 연결
     url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+    key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
     if not url or not key:
         print("❌ Supabase 연결 정보 없음")
@@ -188,7 +188,7 @@ def check_sample_strategy_detail():
     """샘플 전략 상세 분석"""
 
     url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+    key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
     if not url or not key:
         return

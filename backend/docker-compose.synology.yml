@@ -12,7 +12,7 @@ services:
     environment:
       # Supabase 설정
       - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       # 키움 API 설정
       - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
       - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}

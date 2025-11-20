@@ -18,7 +18,7 @@ def download_indicators():
 
     # Supabase 연결
     url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+    key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
     if not url or not key:
         print("❌ Supabase 연결 정보가 없습니다.")
@@ -193,7 +193,7 @@ backup_data = ''')
 def restore():
     """indicators 테이블에 데이터 복원"""
     url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+    key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
     if not url or not key:
         print("❌ Supabase 연결 정보가 없습니다.")

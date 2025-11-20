@@ -34,7 +34,7 @@ class StrategyManager:
         """데이터베이스 연결 초기화"""
         try:
             url = os.getenv('SUPABASE_URL')
-            key = os.getenv('SUPABASE_KEY')
+            key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
             # 디버깅: 환경변수 확인
             print(f"DEBUG: SUPABASE_URL = {url[:30]}..." if url else "DEBUG: SUPABASE_URL is None")

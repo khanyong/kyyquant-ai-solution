@@ -8,7 +8,7 @@ from supabase import create_client
 load_dotenv()
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-supabase = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_KEY'))
+supabase = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_SERVICE_ROLE_KEY'))
 
 # ============================================================
 # 1. Supabase Indicators - Formula가 생성하는 컬럼명
