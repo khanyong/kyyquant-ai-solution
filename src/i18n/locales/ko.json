@@ -1,0 +1,90 @@
+{
+  "common": {
+    "demo_mode": "데모 모드: 백엔드 서버를 사용할 수 없어 모의 데이터를 사용합니다.",
+    "loading": "로딩 중...",
+    "error": "오류",
+    "success": "성공",
+    "cancel": "취소",
+    "confirm": "확인",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "수정",
+    "search": "검색"
+  },
+  "tabs": {
+    "community": "커뮤니티",
+    "strategy_builder": "전략 빌더",
+    "investment_settings": "투자 설정",
+    "backtesting": "백테스팅",
+    "realtime_signals": "실시간 신호",
+    "auto_trading": "자동매매",
+    "performance": "성과 분석",
+    "admin": "관리자"
+  },
+  "auto_trading": {
+    "premium_only": "🔒 프리미엄 회원 전용 기능",
+    "premium_description": "자동매매 기능은 프리미엄 회원만 이용하실 수 있습니다.",
+    "feature_247": "24/7 자동 매매 실행",
+    "feature_monitoring": "실시간 신호 모니터링",
+    "feature_multi_strategy": "다중 전략 동시 운영",
+    "feature_universe": "투자유니버스 자동 필터링",
+    "upgrade_message": "프리미엄 플랜으로 업그레이드하여 자동매매를 시작하세요",
+    "view_premium": "프리미엄 플랜 보기"
+  },
+  "header": {
+    "login": "로그인",
+    "logout": "로그아웃",
+    "settings": "설정",
+    "mypage": "마이페이지"
+  },
+  "landing": {
+    "title": "KyyQuant AI Solution",
+    "subtitle": "AI 기반 퀀트 투자 자동화 솔루션",
+    "start_now": "시작하기"
+  },
+  "strategy": {
+    "create": "전략 생성",
+    "edit": "전략 수정",
+    "delete": "전략 삭제",
+    "run": "전략 실행",
+    "stop": "전략 중지"
+  },
+  "backtest": {
+    "start": "백테스트 시작",
+    "results": "백테스트 결과",
+    "period": "기간",
+    "initial_capital": "초기 자본",
+    "commission": "수수료"
+  },
+  "portfolio": {
+    "total_value": "총 자산",
+    "profit_loss": "손익",
+    "holdings": "보유 종목",
+    "cash": "현금"
+  },
+  "order": {
+    "buy": "매수",
+    "sell": "매도",
+    "price": "가격",
+    "quantity": "수량",
+    "amount": "금액",
+    "order_type": "주문 유형",
+    "market_order": "시장가",
+    "limit_order": "지정가"
+  },
+  "market": {
+    "kospi": "KOSPI",
+    "kosdaq": "KOSDAQ",
+    "index": "지수",
+    "change": "변동",
+    "volume": "거래량"
+  },
+  "settings": {
+    "general": "일반 설정",
+    "trading": "매매 설정",
+    "notification": "알림 설정",
+    "api": "API 설정",
+    "language": "언어",
+    "theme": "테마"
+  }
+}

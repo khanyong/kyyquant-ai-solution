@@ -9,13 +9,21 @@ env/
 venv/
 .venv/
 
-# Environment variables
+# Environment variables - NEVER commit these!
 .env
+.env.*
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
 .env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+backend/.env
+backend/.env.*
+backend/.env.local
+backend/.env.production
+nas_upload/**/.env*
 
 # IDE and editor files
 .vscode/

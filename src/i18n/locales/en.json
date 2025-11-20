@@ -1,0 +1,90 @@
+{
+  "common": {
+    "demo_mode": "Demo Mode: Using mock data as backend server is unavailable.",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search"
+  },
+  "tabs": {
+    "community": "Community",
+    "strategy_builder": "Strategy Builder",
+    "investment_settings": "Investment Settings",
+    "backtesting": "Backtesting",
+    "realtime_signals": "Realtime Signals",
+    "auto_trading": "Auto Trading",
+    "performance": "Performance Analysis",
+    "admin": "Admin"
+  },
+  "auto_trading": {
+    "premium_only": "🔒 Premium Members Only",
+    "premium_description": "Auto trading is available for premium members only.",
+    "feature_247": "24/7 Automated Trading",
+    "feature_monitoring": "Real-time Signal Monitoring",
+    "feature_multi_strategy": "Multiple Strategy Operations",
+    "feature_universe": "Automated Investment Universe Filtering",
+    "upgrade_message": "Upgrade to premium plan to start auto trading",
+    "view_premium": "View Premium Plan"
+  },
+  "header": {
+    "login": "Login",
+    "logout": "Logout",
+    "settings": "Settings",
+    "mypage": "My Page"
+  },
+  "landing": {
+    "title": "KyyQuant AI Solution",
+    "subtitle": "AI-Powered Quantitative Investment Automation",
+    "start_now": "Get Started"
+  },
+  "strategy": {
+    "create": "Create Strategy",
+    "edit": "Edit Strategy",
+    "delete": "Delete Strategy",
+    "run": "Run Strategy",
+    "stop": "Stop Strategy"
+  },
+  "backtest": {
+    "start": "Start Backtest",
+    "results": "Backtest Results",
+    "period": "Period",
+    "initial_capital": "Initial Capital",
+    "commission": "Commission"
+  },
+  "portfolio": {
+    "total_value": "Total Value",
+    "profit_loss": "P&L",
+    "holdings": "Holdings",
+    "cash": "Cash"
+  },
+  "order": {
+    "buy": "Buy",
+    "sell": "Sell",
+    "price": "Price",
+    "quantity": "Quantity",
+    "amount": "Amount",
+    "order_type": "Order Type",
+    "market_order": "Market Order",
+    "limit_order": "Limit Order"
+  },
+  "market": {
+    "kospi": "KOSPI",
+    "kosdaq": "KOSDAQ",
+    "index": "Index",
+    "change": "Change",
+    "volume": "Volume"
+  },
+  "settings": {
+    "general": "General Settings",
+    "trading": "Trading Settings",
+    "notification": "Notification Settings",
+    "api": "API Settings",
+    "language": "Language",
+    "theme": "Theme"
+  }
+}
