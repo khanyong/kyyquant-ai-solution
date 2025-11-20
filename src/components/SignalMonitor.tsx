@@ -24,7 +24,11 @@ import {
   Collapse,
   Stack,
   Grid,
-  Divider
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Pagination
 } from '@mui/material'
 import {
   TrendingUp,
@@ -36,10 +40,16 @@ import {
   ExpandLess,
   Bolt,
   ShowChart,
-  Update
+  Update,
+  CheckCircle,
+  Error,
+  Schedule,
+  PlayArrow,
+  Timer
 } from '@mui/icons-material'
 import { supabase } from '../lib/supabase'
-import { isMarketOpen } from '../utils/marketHours'
+import { isMarketOpen, getMarketStatusMessage } from '../utils/marketHours'
+import { n8nClient, WorkflowExecutionSummary, NodeExecutionStatus } from '../lib/n8n'
 
 interface TradingSignal {
   id: string
@@ -63,6 +73,7 @@ interface Strategy {
 
 interface MarketData {
   stock_code: string
+  stock_name: string
   current_price: number
   change_price: number  // change_amount → change_price
   change_rate: number
@@ -76,38 +87,87 @@ interface MarketData {
 interface WorkflowStats {
   last1min: number
   last5min: number
-  last1hour: number
-  activeStrategies: number
+  successRate: number
+  totalExecutions: number
+}
+
+interface PendingStock {
+  stock_code: string
+  stock_name: string
+  current_price: number
+  condition_match_score: number
+  is_near_entry: boolean
+  strategy_id: string
+  updated_at: string
+}
+
+interface PendingSellStock {
+  stock_code: string
+  stock_name: string
+  current_price: number
+  exit_condition_match_score: number
+  is_near_exit: boolean
+  is_held: boolean
+  strategy_id: string
+  updated_at: string
 }
 
 export default function SignalMonitor() {
   const [signals, setSignals] = useState<TradingSignal[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [marketData, setMarketData] = useState<MarketData[]>([])
+  const [pendingStocks, setPendingStocks] = useState<PendingStock[]>([])
+  const [pendingSellStocks, setPendingSellStocks] = useState<PendingSellStock[]>([])
   const [filterStrategy, setFilterStrategy] = useState<string>('all')
   const [filterType, setFilterType] = useState<string>('all')
   const [notifications, setNotifications] = useState(true)
   const [expandedSignals, setExpandedSignals] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [signalPage, setSignalPage] = useState(1)
+  const [signalsPerPage] = useState(10)
   const [marketLoading, setMarketLoading] = useState(true)
   const [lastMarketUpdate, setLastMarketUpdate] = useState<Date | null>(null)
   const [workflowStats, setWorkflowStats] = useState<WorkflowStats>({
     last1min: 0,
     last5min: 0,
-    last1hour: 0,
-    activeStrategies: 0
+    successRate: 0,
+    totalExecutions: 0
   })
+  const [marketStats, setMarketStats] = useState({
+    rising: 0,
+    falling: 0,
+    neutral: 0
+  })
+  const [workflows, setWorkflows] = useState<WorkflowExecutionSummary[]>([])
+  const [workflowLoading, setWorkflowLoading] = useState(true)
+  const [workflowError, setWorkflowError] = useState<string | null>(null)
+  const [lastWorkflowUpdate, setLastWorkflowUpdate] = useState<Date | null>(null)
+  const [expandedWorkflow, setExpandedWorkflow] = useState<string | false>(false)
+  const [marketStatus, setMarketStatus] = useState<string>('')
+  const [showAllStocks, setShowAllStocks] = useState(false)
 
   useEffect(() => {
     fetchSignals()
     fetchStrategies()
     fetchMarketData()
+    fetchPendingStocks()
+    fetchPendingSellStocks()  // 매도 대기 종목 초기 로드
     fetchWorkflowStats()
+    fetchWorkflowData()
+
+    // 시장 상태 초기화 및 주기적 업데이트
+    setMarketStatus(getMarketStatusMessage())
+    const statusInterval = setInterval(() => {
+      setMarketStatus(getMarketStatusMessage())
+    }, 60000) // 1분마다 시장 상태 업데이트
 
     // 워크플로우 통계 30초마다 업데이트 (시장 오픈 시간에만)
     const statsInterval = setInterval(() => {
       if (isMarketOpen()) {
         fetchWorkflowStats()
+        fetchWorkflowData()
+        fetchPendingStocks()  // 매수 대기 종목도 함께 업데이트
+        fetchPendingSellStocks()  // 매도 대기 종목도 함께 업데이트
       }
     }, 30000)
 
@@ -155,6 +215,7 @@ export default function SignalMonitor() {
       .subscribe()
 
     return () => {
+      clearInterval(statusInterval)
       clearInterval(statsInterval)
       supabase.removeChannel(signalChannel)
       supabase.removeChannel(marketChannel)
@@ -163,11 +224,30 @@ export default function SignalMonitor() {
 
   const fetchSignals = async () => {
     try {
+      // 활성화된 자동매매 전략의 신호만 가져오기
+      const { data: activeStrategyIds } = await supabase
+        .from('strategies')
+        .select('id')
+        .eq('is_active', true)
+        .eq('auto_trade_enabled', true)
+
+      if (!activeStrategyIds || activeStrategyIds.length === 0) {
+        setSignals([])
+        return
+      }
+
+      const strategyIds = activeStrategyIds.map(s => s.id)
+
+      // 최근 24시간 이내 신호만 조회
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
       const { data, error } = await supabase
         .from('trading_signals')
         .select('*')
+        .in('strategy_id', strategyIds)
+        .gte('created_at', twentyFourHoursAgo)  // 최근 24시간 필터 추가
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(100)
 
       if (error) throw error
       setSignals(data || [])
@@ -184,6 +264,7 @@ export default function SignalMonitor() {
         .from('strategies')
         .select('id, name')
         .eq('is_active', true)
+        .eq('auto_trade_enabled', true)
 
       if (error) throw error
       setStrategies(data || [])
@@ -196,21 +277,131 @@ export default function SignalMonitor() {
     try {
       setMarketLoading(true)
 
-      // kw_price_current 테이블에서 전체 데이터 조회
+      // RPC로 활성화된 전략의 필터링된 종목 코드 가져오기 (온라인 배포 버전과 동일한 방식)
+      const { data: strategyData, error: strategyError } = await supabase
+        .rpc('get_active_strategies_with_universe')
+
+      if (strategyError) {
+        console.error('전략 데이터 로드 실패:', strategyError)
+        setMarketData([])
+        setLastMarketUpdate(new Date())
+        return
+      }
+
+      // 모니터링할 종목 코드 수집
+      const monitoredStockCodes = new Set<string>()
+      strategyData?.forEach((strategy: any) => {
+        if (strategy.filtered_stocks && Array.isArray(strategy.filtered_stocks)) {
+          strategy.filtered_stocks.forEach((code: string) => monitoredStockCodes.add(code))
+        }
+      })
+
+      if (monitoredStockCodes.size === 0) {
+        setMarketData([])
+        setLastMarketUpdate(new Date())
+        return
+      }
+
+      const stockCodesArray = Array.from(monitoredStockCodes)
+
+      // 종목 코드로 현재가 정보 가져오기
       const { data, error } = await supabase
         .from('kw_price_current')
         .select('*')
+        .in('stock_code', stockCodesArray)
         .order('updated_at', { ascending: false })
-        .limit(20)  // 상위 20개 종목만
 
       if (error) throw error
 
       setMarketData(data || [])
       setLastMarketUpdate(new Date())
+
+      // 시장 통계 계산 (상승/하락/보합)
+      if (data && data.length > 0) {
+        const rising = data.filter(d => d.change_rate > 0).length
+        const falling = data.filter(d => d.change_rate < 0).length
+        const neutral = data.filter(d => d.change_rate === 0).length
+        setMarketStats({ rising, falling, neutral })
+      } else {
+        setMarketStats({ rising: 0, falling: 0, neutral: 0 })
+      }
     } catch (error) {
       console.error('시장 데이터 로드 실패:', error)
     } finally {
       setMarketLoading(false)
+    }
+  }
+
+  const fetchPendingStocks = async () => {
+    try {
+      // 활성화된 자동매매 전략의 매수 대기 종목 조회
+      const { data: activeStrategyIds } = await supabase
+        .from('strategies')
+        .select('id')
+        .eq('is_active', true)
+        .eq('auto_trade_enabled', true)
+
+      if (!activeStrategyIds || activeStrategyIds.length === 0) {
+        setPendingStocks([])
+        return
+      }
+
+      const strategyIds = activeStrategyIds.map(s => s.id)
+
+      // 조건 근접도 80% 이상인 종목 조회 (최근 1시간 이내)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+
+      const { data, error } = await supabase
+        .from('strategy_monitoring')
+        .select('*')
+        .in('strategy_id', strategyIds)
+        .gte('condition_match_score', 80)
+        .lt('condition_match_score', 100)  // 100점은 이미 신호 발생
+        .gte('updated_at', oneHourAgo)
+        .order('condition_match_score', { ascending: false })
+        .limit(50)
+
+      if (error) throw error
+      setPendingStocks(data || [])
+    } catch (error) {
+      console.error('매수 대기 종목 조회 실패:', error)
+    }
+  }
+
+  const fetchPendingSellStocks = async () => {
+    try {
+      // 활성화된 자동매매 전략의 매도 대기 종목 조회 (보유 종목만!)
+      const { data: activeStrategyIds } = await supabase
+        .from('strategies')
+        .select('id')
+        .eq('is_active', true)
+        .eq('auto_trade_enabled', true)
+
+      if (!activeStrategyIds || activeStrategyIds.length === 0) {
+        setPendingSellStocks([])
+        return
+      }
+
+      const strategyIds = activeStrategyIds.map(s => s.id)
+
+      // 매도 조건 근접도 80% 이상인 보유 종목 조회 (최근 1시간 이내)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+
+      const { data, error } = await supabase
+        .from('strategy_monitoring')
+        .select('*')
+        .in('strategy_id', strategyIds)
+        .eq('is_held', true)  // ⭐ 보유 종목만!
+        .gte('exit_condition_match_score', 80)
+        .lt('exit_condition_match_score', 100)  // 100점은 이미 신호 발생
+        .gte('updated_at', oneHourAgo)
+        .order('exit_condition_match_score', { ascending: false })
+        .limit(50)
+
+      if (error) throw error
+      setPendingSellStocks(data || [])
+    } catch (error) {
+      console.error('매도 대기 종목 조회 실패:', error)
     }
   }
 
@@ -230,28 +421,100 @@ export default function SignalMonitor() {
         .select('*', { count: 'exact', head: true })
         .gte('created_at', new Date(now.getTime() - 300000).toISOString())
 
-      // 1시간 내 신호 개수
-      const { count: count1hour } = await supabase
+      // 전체 신호 개수 (총 실행 횟수)
+      const { count: totalCount } = await supabase
         .from('trading_signals')
         .select('*', { count: 'exact', head: true })
-        .gte('created_at', new Date(now.getTime() - 3600000).toISOString())
 
-      // 활성 전략 개수 (auto_execute = true)
-      const { count: activeCount } = await supabase
-        .from('strategies')
+      // 성공 신호 개수 (signal_type이 BUY 또는 SELL인 경우)
+      const { count: successCount } = await supabase
+        .from('trading_signals')
         .select('*', { count: 'exact', head: true })
-        .eq('auto_execute', true)
-        .eq('is_active', true)
+        .in('signal_type', ['BUY', 'SELL'])
+
+      const successRate = totalCount && totalCount > 0
+        ? Math.round((successCount || 0) / totalCount * 100)
+        : 0
 
       setWorkflowStats({
         last1min: count1min || 0,
         last5min: count5min || 0,
-        last1hour: count1hour || 0,
-        activeStrategies: activeCount || 0
+        successRate,
+        totalExecutions: totalCount || 0
       })
     } catch (error) {
       console.error('워크플로우 통계 로드 실패:', error)
     }
+  }
+
+  const fetchWorkflowData = async () => {
+    try {
+      setWorkflowLoading(true)
+      setWorkflowError(null)
+      const data = await n8nClient.getAllWorkflowsSummary(20)
+      setWorkflows(data)
+      setLastWorkflowUpdate(new Date())
+    } catch (err) {
+      console.error('워크플로우 데이터 로드 실패:', err)
+      setWorkflowError(String(err))
+    } finally {
+      setWorkflowLoading(false)
+    }
+  }
+
+  const handleAccordionChange = (workflowId: string) => (_: any, isExpanded: boolean) => {
+    setExpandedWorkflow(isExpanded ? workflowId : false)
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'success'
+      case 'error':
+        return 'error'
+      case 'running':
+        return 'info'
+      case 'waiting':
+        return 'warning'
+      default:
+        return 'default'
+    }
+  }
+
+  const getStatusIcon = (status: string): React.ReactElement | undefined => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle fontSize="small" />
+      case 'error':
+        return <Error fontSize="small" />
+      case 'running':
+        return <PlayArrow fontSize="small" />
+      case 'waiting':
+        return <Schedule fontSize="small" />
+      default:
+        return undefined
+    }
+  }
+
+  const formatDuration = (ms?: number) => {
+    if (!ms) return '-'
+    const seconds = Math.floor(ms / 1000)
+    if (seconds < 60) return `${seconds}초`
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}분 ${remainingSeconds}초`
+  }
+
+  const formatTime = (dateStr?: string) => {
+    if (!dateStr) return '-'
+    const date = new Date(dateStr)
+    return date.toLocaleString('ko-KR', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
   }
 
   const filteredSignals = signals.filter(signal => {
@@ -259,6 +522,16 @@ export default function SignalMonitor() {
     if (filterType !== 'all' && signal.signal_type !== filterType) return false
     return true
   })
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredSignals.length / signalsPerPage)
+  const startIndex = (signalPage - 1) * signalsPerPage
+  const endIndex = startIndex + signalsPerPage
+  const paginatedSignals = filteredSignals.slice(startIndex, endIndex)
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setSignalPage(value)
+  }
 
   const toggleExpand = (signalId: string) => {
     const newExpanded = new Set(expandedSignals)
@@ -291,7 +564,7 @@ export default function SignalMonitor() {
     return 'text.secondary'
   }
 
-  const formatTime = (dateString: string) => {
+  const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
     const diff = now.getTime() - date.getTime()
@@ -303,6 +576,9 @@ export default function SignalMonitor() {
     if (hours < 24) return `${hours}시간 전`
     return `${Math.floor(hours / 24)}일 전`
   }
+
+  // 표시할 종목 데이터 (최근 10개 또는 전체)
+  const displayedStocks = showAllStocks ? marketData : marketData.slice(0, 10)
 
   const formatVolume = (volume: number) => {
     if (volume >= 1000000) {
@@ -325,20 +601,62 @@ export default function SignalMonitor() {
 
   return (
     <Box>
-      {/* n8n 워크플로우 활동 통계 */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      {/* n8n 워크플로우 실행 내역 */}
+      <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-            <Bolt sx={{ color: '#ffd700' }} />
-            <Typography variant="h5" color="white">
-              n8n 워크플로우 활동
-            </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+            <Box>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Bolt color="primary" />
+                <Typography variant="h5" gutterBottom>
+                  n8n 워크플로우 실행 내역
+                </Typography>
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                자동매매 워크플로우의 실행 기록 (최근 20건)
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip
+                label={marketStatus}
+                color={isMarketOpen() ? 'success' : 'default'}
+                size="small"
+                icon={isMarketOpen() ? <CheckCircle /> : <Schedule />}
+              />
+              {lastWorkflowUpdate && (
+                <Chip
+                  icon={<Update />}
+                  label={lastWorkflowUpdate.toLocaleTimeString()}
+                  size="small"
+                  variant="outlined"
+                />
+              )}
+              <IconButton onClick={fetchWorkflowData} disabled={workflowLoading}>
+                <Refresh />
+              </IconButton>
+            </Stack>
           </Stack>
-          <Typography variant="body2" color="rgba(255, 255, 255, 0.8)" mb={3}>
-            실시간 자동매매 워크플로우 모니터링 (30초마다 갱신)
-          </Typography>
 
-          <Grid container spacing={2}>
+          {/* 시장 상태 알림 */}
+          {!isMarketOpen() && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                {marketStatus}<br />
+                주식시장 휴장 중 - 실시간 업데이트 일시정지
+              </Typography>
+            </Alert>
+          )}
+
+          {workflowLoading && <LinearProgress sx={{ mb: 2 }} />}
+
+          {workflowError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              n8n 연결 실패: {workflowError}
+            </Alert>
+          )}
+
+          {/* 요약 통계 */}
+          <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
               <Paper
                 sx={{
@@ -349,23 +667,45 @@ export default function SignalMonitor() {
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
-                  최근 1분
+                  최근 1분 성공
                 </Typography>
                 <Typography variant="h3" color="success.main" fontWeight="bold">
-                  {workflowStats.last1min}
+                  {workflows.filter(w => {
+                    const stoppedAt = w.lastExecution?.stoppedAt
+                    if (!stoppedAt || !w.lastExecution) return false
+                    const diff = Date.now() - new Date(stoppedAt).getTime()
+                    return diff < 60000 && w.lastExecution.status === 'success'
+                  }).length}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  개 신호
+                  건
                 </Typography>
-                {workflowStats.last1min > 0 && (
-                  <Chip
-                    label="활성"
-                    size="small"
-                    color="success"
-                    sx={{ mt: 1 }}
-                    icon={<Bolt />}
-                  />
-                )}
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.2) 0%, rgba(244, 67, 54, 0.05) 100%)',
+                  border: '2px solid rgba(244, 67, 54, 0.3)'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  최근 5분 실패
+                </Typography>
+                <Typography variant="h3" color="error.main" fontWeight="bold">
+                  {workflows.filter(w => {
+                    const stoppedAt = w.lastExecution?.stoppedAt
+                    if (!stoppedAt || !w.lastExecution) return false
+                    const diff = Date.now() - new Date(stoppedAt).getTime()
+                    return diff < 300000 && w.lastExecution.status === 'error'
+                  }).length}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  건
+                </Typography>
               </Paper>
             </Grid>
 
@@ -379,34 +719,15 @@ export default function SignalMonitor() {
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
-                  최근 5분
+                  평균 성공률
                 </Typography>
                 <Typography variant="h3" color="primary.main" fontWeight="bold">
-                  {workflowStats.last5min}
+                  {workflows.length > 0
+                    ? Math.round((workflows.filter(w => w.lastExecution?.status === 'success').length / workflows.length) * 100)
+                    : 0}%
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  개 신호
-                </Typography>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={3}>
-              <Paper
-                sx={{
-                  p: 2,
-                  textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.2) 0%, rgba(255, 152, 0, 0.05) 100%)',
-                  border: '2px solid rgba(255, 152, 0, 0.3)'
-                }}
-              >
-                <Typography variant="caption" color="text.secondary" gutterBottom>
-                  최근 1시간
-                </Typography>
-                <Typography variant="h3" color="warning.main" fontWeight="bold">
-                  {workflowStats.last1hour}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  개 신호
+                  최근 20건 기준
                 </Typography>
               </Paper>
             </Grid>
@@ -421,72 +742,179 @@ export default function SignalMonitor() {
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
-                  활성 전략
+                  총 실행 횟수
                 </Typography>
                 <Typography variant="h3" sx={{ color: '#9c27b0' }} fontWeight="bold">
-                  {workflowStats.activeStrategies}
+                  {workflows.length}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  개 실행 중
+                  건 (최근 20건)
                 </Typography>
               </Paper>
             </Grid>
           </Grid>
 
-          {/* 워크플로우 상태 알림 */}
-          {workflowStats.last1min === 0 && workflowStats.activeStrategies > 0 && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              ⚠️ 활성 전략이 있지만 최근 1분간 신호가 없습니다. n8n 워크플로우가 정상 동작하는지 확인하세요.
+          {/* 워크플로우 아코디언 리스트 */}
+          {workflows.length === 0 && !workflowLoading ? (
+            <Alert severity="info">
+              실행된 워크플로우가 없습니다.
             </Alert>
-          )}
-
-          {workflowStats.activeStrategies === 0 && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              💡 현재 활성화된 자동매매 전략이 없습니다. "자동매매" 탭에서 전략을 활성화하세요.
-            </Alert>
-          )}
-
-          {workflowStats.last1min > 0 && (
-            <Alert severity="success" sx={{ mt: 2 }}>
-              ✅ n8n 워크플로우가 정상 동작 중입니다. 최근 1분간 {workflowStats.last1min}개의 신호를 생성했습니다.
-            </Alert>
-          )}
-
-          {/* 전략별 자금 할당 현황 */}
-          {strategies.length > 0 && strategies.some(s => s.allocated_capital || s.allocated_percent) && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle1" color="white" gutterBottom sx={{ fontWeight: 'bold' }}>
-                💰 전략별 자금 할당
-              </Typography>
-              <Grid container spacing={2}>
-                {strategies.filter(s => s.allocated_capital || s.allocated_percent).map((strategy) => (
-                  <Grid item xs={12} md={6} key={strategy.id}>
-                    <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.1)' }}>
-                      <Typography variant="body2" color="white" fontWeight="bold">
-                        {strategy.name}
+          ) : (
+            <Box sx={{ maxHeight: 600, overflow: 'auto' }}>
+              {workflows.map((workflow) => (
+                <Accordion
+                  key={workflow.lastExecution?.id || workflow.workflowName}
+                  expanded={expandedWorkflow === workflow.lastExecution?.id}
+                  onChange={handleAccordionChange(workflow.lastExecution?.id || '')}
+                  sx={{ mb: 1 }}
+                >
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                      <Chip
+                        icon={getStatusIcon(workflow.lastExecution?.status || 'waiting')}
+                        label={workflow.lastExecution?.status || 'waiting'}
+                        color={getStatusColor(workflow.lastExecution?.status || 'waiting') as any}
+                        size="small"
+                      />
+                      <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+                        {workflow.workflowName}
                       </Typography>
-                      <Stack direction="row" spacing={2} mt={1}>
-                        {strategy.allocated_capital && (
-                          <Chip
-                            label={`${strategy.allocated_capital.toLocaleString()}원`}
-                            size="small"
-                            sx={{ bgcolor: 'rgba(76, 175, 80, 0.3)', color: 'white' }}
-                          />
-                        )}
-                        {strategy.allocated_percent && (
-                          <Chip
-                            label={`${strategy.allocated_percent}%`}
-                            size="small"
-                            sx={{ bgcolor: 'rgba(33, 150, 243, 0.3)', color: 'white' }}
-                          />
-                        )}
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Timer fontSize="small" color="action" />
+                        <Typography variant="caption" color="text.secondary">
+                          {formatDuration(workflow.lastExecution?.duration)}
+                        </Typography>
                       </Stack>
-                    </Paper>
-                  </Grid>
-                ))}
-              </Grid>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatTime(workflow.lastExecution?.startedAt)}
+                      </Typography>
+                    </Stack>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        실행 정보
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" color="text.secondary">
+                            실행 ID
+                          </Typography>
+                          <Typography variant="body2" fontFamily="monospace">
+                            {workflow.lastExecution?.id || '-'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" color="text.secondary">
+                            소요 시간
+                          </Typography>
+                          <Typography variant="body2">
+                            {formatDuration(workflow.lastExecution?.duration)}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" color="text.secondary">
+                            시작 시간
+                          </Typography>
+                          <Typography variant="body2">
+                            {formatTime(workflow.lastExecution?.startedAt)}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" color="text.secondary">
+                            종료 시간
+                          </Typography>
+                          <Typography variant="body2">
+                            {formatTime(workflow.lastExecution?.stoppedAt)}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    <Typography variant="subtitle2" gutterBottom>
+                      노드 실행 상세
+                    </Typography>
+                    <TableContainer component={Paper} variant="outlined">
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>노드명</TableCell>
+                            <TableCell align="center">유형</TableCell>
+                            <TableCell align="center">상태</TableCell>
+                            <TableCell align="center">처리 항목</TableCell>
+                            <TableCell align="center">실행 시간</TableCell>
+                            <TableCell align="center">마지막 실행</TableCell>
+                            <TableCell>에러</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {workflow.nodeExecutions && workflow.nodeExecutions.length > 0 ? (
+                            workflow.nodeExecutions.map((node, idx) => (
+                              <TableRow key={idx} hover>
+                                <TableCell>
+                                  <Typography variant="body2" fontWeight="medium">
+                                    {node.nodeName}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Chip label={node.nodeType} size="small" variant="outlined" />
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Chip
+                                    icon={getStatusIcon(node.status)}
+                                    label={node.status}
+                                    color={getStatusColor(node.status) as any}
+                                    size="small"
+                                  />
+                                </TableCell>
+                                <TableCell align="center">
+                                  {node.itemsProcessed ?? '-'}
+                                </TableCell>
+                                <TableCell align="center">
+                                  {formatDuration(node.executionTime)}
+                                </TableCell>
+                                <TableCell align="center">
+                                  {formatTime(node.lastExecutedAt)}
+                                </TableCell>
+                                <TableCell>
+                                  {node.error ? (
+                                    <Tooltip title={node.error}>
+                                      <Chip
+                                        label="에러 발생"
+                                        color="error"
+                                        size="small"
+                                        icon={<Error />}
+                                      />
+                                    </Tooltip>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={7} align="center">
+                                <Typography variant="body2" color="text.secondary">
+                                  노드 실행 정보 없음
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
             </Box>
           )}
+
+          <Alert severity="info" sx={{ mt: 2 }}>
+            워크플로우 실행 내역은 30초마다 자동으로 갱신됩니다.
+          </Alert>
         </CardContent>
       </Card>
 
@@ -498,7 +926,7 @@ export default function SignalMonitor() {
               <Stack direction="row" spacing={1} alignItems="center">
                 <ShowChart sx={{ color: 'white' }} />
                 <Typography variant="h5" color="white" gutterBottom>
-                  시장 모니터링 (n8n)
+                  실시간 시장 모니터링
                 </Typography>
               </Stack>
               <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
@@ -522,64 +950,116 @@ export default function SignalMonitor() {
 
           {marketLoading && <LinearProgress sx={{ mb: 2 }} />}
 
+          {/* 시장 통계 카드 */}
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={4}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.2) 0%, rgba(244, 67, 54, 0.05) 100%)',
+                  border: '2px solid rgba(244, 67, 54, 0.3)'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  상승 종목
+                </Typography>
+                <Typography variant="h3" color="error.main" fontWeight="bold">
+                  {marketStats.rising}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  개
+                </Typography>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(33, 150, 243, 0.05) 100%)',
+                  border: '2px solid rgba(33, 150, 243, 0.3)'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  하락 종목
+                </Typography>
+                <Typography variant="h3" color="primary.main" fontWeight="bold">
+                  {marketStats.falling}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  개
+                </Typography>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Paper
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, rgba(158, 158, 158, 0.2) 0%, rgba(158, 158, 158, 0.05) 100%)',
+                  border: '2px solid rgba(158, 158, 158, 0.3)'
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  보합 종목
+                </Typography>
+                <Typography variant="h3" color="text.secondary" fontWeight="bold">
+                  {marketStats.neutral}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  개
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+
           {marketData.length === 0 && !marketLoading ? (
             <Alert severity="info" sx={{ mt: 2 }}>
-              n8n 워크플로우에서 수집한 데이터가 없습니다. 워크플로우가 활성화되어 있는지 확인하세요.
+              자동매매 전략의 투자유니버스 종목 데이터가 없습니다.
             </Alert>
           ) : (
             <>
-              {/* 시장 요약 */}
-              <Grid container spacing={2} mb={2}>
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(244, 67, 54, 0.1)', border: '1px solid rgba(244, 67, 54, 0.3)' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      상승
-                    </Typography>
-                    <Typography variant="h4" color="error.main">
-                      {marketData.filter((d) => d.change_rate > 0).length}
-                    </Typography>
-                  </Paper>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(33, 150, 243, 0.1)', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      하락
-                    </Typography>
-                    <Typography variant="h4" color="primary.main">
-                      {marketData.filter((d) => d.change_rate < 0).length}
-                    </Typography>
-                  </Paper>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(158, 158, 158, 0.1)', border: '1px solid rgba(158, 158, 158, 0.3)' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      보합
-                    </Typography>
-                    <Typography variant="h4">
-                      {marketData.filter((d) => d.change_rate === 0).length}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
-
               {/* 시장 데이터 테이블 */}
-              <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>종목</TableCell>
-                      <TableCell align="right">현재가</TableCell>
-                      <TableCell align="right">등락률</TableCell>
-                      <TableCell align="right">거래량</TableCell>
-                      <TableCell align="right">고가</TableCell>
-                      <TableCell align="right">저가</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {marketData.map((item) => (
+              <Box>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="subtitle1" fontWeight="medium" color="white">
+                    최근 업데이트 종목 ({displayedStocks.length}개)
+                  </Typography>
+                  {marketData.length > 10 && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setShowAllStocks(!showAllStocks)}
+                      sx={{ color: 'white', borderColor: 'rgba(255, 255, 255, 0.3)' }}
+                    >
+                      {showAllStocks ? '접기 ▲' : `전체 보기 (${marketData.length}개) ▼`}
+                    </Button>
+                  )}
+                </Stack>
+
+                <TableContainer component={Paper} sx={{ maxHeight: showAllStocks ? 600 : 400 }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>종목</TableCell>
+                        <TableCell align="right">현재가</TableCell>
+                        <TableCell align="right">등락률</TableCell>
+                        <TableCell align="right">거래량</TableCell>
+                        <TableCell align="right">고가</TableCell>
+                        <TableCell align="right">저가</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayedStocks.map((item) => (
                       <TableRow key={item.stock_code} hover>
                         <TableCell>
                           <Typography variant="body2" fontWeight="medium">
+                            {item.stock_name || item.stock_code}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
                             {item.stock_code}
                           </Typography>
                         </TableCell>
@@ -620,12 +1100,193 @@ export default function SignalMonitor() {
                   </TableBody>
                 </Table>
               </TableContainer>
+              </Box>
             </>
           )}
         </CardContent>
       </Card>
 
       <Divider sx={{ my: 3 }} />
+
+      {/* 매수 대기 종목 섹션 */}
+      {pendingStocks.length > 0 && (
+        <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+          <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Timer sx={{ color: 'white' }} />
+                  <Typography variant="h5" color="white" gutterBottom>
+                    매수 대기 종목
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
+                  조건 근접도 80% 이상 (곧 매수 신호 발생 가능)
+                </Typography>
+              </Box>
+              <Chip
+                label={`${pendingStocks.length}개 종목`}
+                sx={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  fontWeight: 'bold'
+                }}
+              />
+            </Stack>
+
+            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>종목</TableCell>
+                    <TableCell align="right">현재가</TableCell>
+                    <TableCell align="right">조건 충족도</TableCell>
+                    <TableCell align="right">업데이트</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pendingStocks.map((stock) => {
+                    const strategy = strategies.find(s => s.id === stock.strategy_id)
+                    return (
+                      <TableRow key={`${stock.strategy_id}-${stock.stock_code}`} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {stock.stock_name || stock.stock_code}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {stock.stock_code} {strategy && `• ${strategy.name}`}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" fontWeight="bold">
+                            {stock.current_price?.toLocaleString() || '-'}원
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                            <LinearProgress
+                              variant="determinate"
+                              value={stock.condition_match_score}
+                              sx={{
+                                width: 60,
+                                height: 8,
+                                borderRadius: 1,
+                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: stock.condition_match_score >= 95 ? '#f44336' :
+                                                   stock.condition_match_score >= 90 ? '#ff9800' : '#4caf50'
+                                }
+                              }}
+                            />
+                            <Typography variant="body2" fontWeight="bold" color="error.main">
+                              {stock.condition_match_score.toFixed(0)}%
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(stock.updated_at).toLocaleTimeString('ko-KR')}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 매도 대기 종목 섹션 */}
+      {pendingSellStocks.length > 0 && (
+        <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+          <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Timer sx={{ color: 'white' }} />
+                  <Typography variant="h5" color="white" gutterBottom>
+                    매도 대기 종목
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
+                  보유 종목의 매도 조건 근접도 80% 이상 (곧 매도 신호 발생 가능)
+                </Typography>
+              </Box>
+              <Chip
+                label={`${pendingSellStocks.length}개 보유종목`}
+                sx={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  fontWeight: 'bold'
+                }}
+              />
+            </Stack>
+
+            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>종목</TableCell>
+                    <TableCell align="right">현재가</TableCell>
+                    <TableCell align="right">매도 조건 충족도</TableCell>
+                    <TableCell align="right">업데이트</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pendingSellStocks.map((stock) => {
+                    const strategy = strategies.find(s => s.id === stock.strategy_id)
+                    return (
+                      <TableRow key={`sell-${stock.strategy_id}-${stock.stock_code}`} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {stock.stock_name || stock.stock_code}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {stock.stock_code} {strategy && `• ${strategy.name}`}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" fontWeight="bold">
+                            {stock.current_price?.toLocaleString() || '-'}원
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                            <LinearProgress
+                              variant="determinate"
+                              value={stock.exit_condition_match_score}
+                              sx={{
+                                width: 60,
+                                height: 8,
+                                borderRadius: 1,
+                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: stock.exit_condition_match_score >= 95 ? '#f44336' :
+                                                   stock.exit_condition_match_score >= 90 ? '#ff9800' : '#2196f3'
+                                }
+                              }}
+                            />
+                            <Typography variant="body2" fontWeight="bold" color="primary.main">
+                              {stock.exit_condition_match_score.toFixed(0)}%
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(stock.updated_at).toLocaleTimeString('ko-KR')}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 매매 신호 섹션 */}
       <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -719,7 +1380,7 @@ export default function SignalMonitor() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredSignals.map((signal) => {
+              {paginatedSignals.map((signal) => {
                 const strategy = strategies.find(s => s.id === signal.strategy_id)
                 const isExpanded = expandedSignals.has(signal.id)
 
@@ -776,7 +1437,7 @@ export default function SignalMonitor() {
                       </TableCell>
                       <TableCell align="center">
                         <Typography variant="caption" color="text.secondary">
-                          {formatTime(signal.created_at)}
+                          {formatTimeAgo(signal.created_at)}
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
@@ -816,6 +1477,20 @@ export default function SignalMonitor() {
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {/* 페이지네이션 */}
+      {filteredSignals.length > signalsPerPage && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <Pagination
+            count={totalPages}
+            page={signalPage}
+            onChange={handlePageChange}
+            color="primary"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
       )}
 
       <Card sx={{ mt: 2 }}>

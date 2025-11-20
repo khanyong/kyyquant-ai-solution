@@ -222,10 +222,24 @@ async def check_strategy_signal(request: StrategySignalRequest):
             signal_type = "BUY"
             signal_strength = sum(entry_met.values()) / len(entry_met) if entry_met else 0.0
 
-        # 청산 조건 충족 시 SELL
+        # 청산 조건 충족 시 SELL (보유 종목인 경우만!)
         if exit_conditions and any(exit_met.values()):
-            signal_type = "SELL"
-            signal_strength = sum(exit_met.values()) / len(exit_met) if exit_met else 0.0
+            # 포트폴리오에서 보유 여부 확인
+            portfolio_response = supabase.table('kw_portfolio') \
+                .select('quantity') \
+                .eq('user_id', strategy.get('user_id')) \
+                .eq('stock_code', request.stock_code) \
+                .gt('quantity', 0) \
+                .execute()
+
+            # 보유 수량이 있을 때만 SELL 신호 생성
+            if portfolio_response.data and len(portfolio_response.data) > 0:
+                signal_type = "SELL"
+                signal_strength = sum(exit_met.values()) / len(exit_met) if exit_met else 0.0
+                print(f"[Strategy] SELL 신호 생성: {request.stock_code} (보유 수량: {portfolio_response.data[0]['quantity']})")
+            else:
+                # 보유하지 않은 종목은 HOLD로 처리
+                print(f"[Strategy] SELL 조건 충족했으나 미보유 종목: {request.stock_code}")
 
         return StrategySignalResponse(
             strategy_id=request.strategy_id,
