@@ -39,10 +39,10 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:5173",
         "http://192.168.50.150:3000",
-        "https://*.vercel.app",
         "https://api.bll-pro.com",
         "https://workflow.bll-pro.com"
     ],
+    allow_origin_regex="https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
