@@ -2026,73 +2026,345 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
         },
         {
           title: '✅ 사용자 질문 답변 시스템',
-          details: [
-            '매수대기 종목 vs 대기중인 주문 개념 차이 설명',
-            '매수대기 종목 = trading_signals 테이블의 시그널 (추천)',
-            '대기중인 주문 = 증권사에 실제 주문 넣었으나 미체결',
-            '워크플로우: 시그널 생성 → 주문 생성 → 체결 대기 → 포지션',
-            'PendingOrdersPanel에서 실제 주문 상태 확인 가능'
-          ]
-        }
-      ]
-    },
-    {
-      id: 33,
-      title: '문서화 및 배포',
-      status: 'pending',
-      priority: 'low',
-      icon: <Description />,
-      period: '2026.12 예정',
-      description: '프로젝트 문서화 및 프로덕션 배포',
-      subtasks: [
-        {
-          title: 'API 문서화',
-          details: [
-            'OpenAPI 3.0 스펙 작성',
-            'Swagger UI 통합',
-            'API 예제 코드',
-            'Rate limit 문서화',
-            'WebSocket API 문서'
-          ]
-        },
-        {
-          title: '사용자 가이드',
-          details: [
-            '온보딩 튜토리얼',
-            '기능별 사용 설명서',
-            '비디오 가이드 제작',
-            'FAQ 섹션',
-            '트러블슈팅 가이드'
-          ]
-        },
-        {
-          title: '개발자 문서',
-          details: [
-            '아키텍처 문서',
-            '컴포넌트 문서 (Storybook)',
-            '코드 컨벤션 가이드',
-            'Git 브랜치 전략',
-            'CI/CD 파이프라인 문서'
-          ]
-        },
-        {
-          title: 'Vercel 배포',
-          details: [
-            'Vercel 프로젝트 설정',
-            '환경 변수 설정',
-            'Custom domain 연결',
-            'Preview deployments',
-            'Production 배포'
+          priority: 'low',
+          icon: <BugReport />,
+          period: '2025.11 예정',
+          description: '품질 보증 및 성능 최적화',
+          subtasks: [
+            {
+              title: '단위 테스트',
+              details: [
+                'Jest 테스트 환경 구성',
+                'React Testing Library',
+                '컴포넌트 단위 테스트',
+                '커스텀 훅 테스트',
+                '유틸리티 함수 테스트'
+              ]
+            },
+            {
+              title: '통합 테스트',
+              details: [
+                'E2E 테스트 (Cypress)',
+                'API 통합 테스트',
+                '시나리오 테스트',
+                '크로스 브라우저 테스트',
+                '모바일 디바이스 테스트'
+              ]
+            },
+            {
+              title: '성능 최적화',
+              details: [
+                'Lighthouse 성능 분석',
+                'Bundle 크기 최적화',
+                'Tree shaking',
+                'CDN 최적화',
+                'Database 쿼리 최적화'
+              ]
+            },
+            {
+              title: '보안 점검',
+              details: [
+                'OWASP Top 10 점검',
+                'SQL Injection 방지',
+                'XSS 방지',
+                'CSRF 토큰',
+                'API Rate Limiting'
+              ]
+            },
+            {
+              title: '접근성 개선',
+              details: [
+                'WCAG 2.1 준수',
+                '키보드 네비게이션',
+                '스크린 리더 지원',
+                'Color contrast 검증',
+                'ARIA labels 추가'
+              ]
+            }
           ]
         },
         {
-          title: '모니터링 설정',
-          details: [
-            'Sentry 에러 트래킹',
-            'Google Analytics',
-            'Performance monitoring',
-            'Uptime monitoring',
-            'Log aggregation'
+          id: 31,
+          title: '워크플로우 B: 자동매매 실행 시스템',
+          status: 'done',
+          priority: 'high',
+          icon: <AutoGraph />,
+          period: '2025.11.11',
+          description: 'n8n 워크플로우 B 구축 - 5분마다 실시간 매매 신호 생성 및 주문 실행',
+          subtasks: [
+            {
+              title: '✅ 주문 가격 전략 설계',
+              details: [
+                'best_ask, best_bid, mid_price, market 4가지 전략 설계',
+                'offset 조정 기능 (±원 단위)',
+                'strategies 테이블에 order_price_strategy JSONB 컬럼 추가',
+                'SQL 기본값 설정 (매수=매도1호가+10원, 매도=매수1호가-10원)',
+                '기존 전략에 자동으로 기본값 적용'
+              ]
+            },
+            {
+              title: '✅ OrderPriceStrategySelector 컴포넌트',
+              details: [
+                '매수/매도 가격 기준 선택 UI',
+                'offset 입력 필드',
+                '실시간 가격 예시 표시',
+                '추천 설정 가이드',
+                'Material-UI Paper 기반 디자인'
+              ]
+            },
+            {
+              title: '✅ AddStrategyDialog 통합',
+              details: [
+                '4단계로 주문 가격 전략 선택 추가',
+                '전략 저장 시 order_price_strategy 포함',
+                '선택 요약에 주문 가격 전략 표시',
+                '기본값: 빠른 체결 우선 전략',
+                'Dialog 닫을 때 상태 초기화'
+              ]
+            },
+            {
+              title: '✅ 워크플로우 B JSON 생성 및 디버깅',
+              details: [
+                '12개 노드 구조 설계 (트리거 → 전략조회 → 가격조회 → 신호생성 → 주문실행)',
+                '5분마다 자동 실행 스케줄 설정',
+                'DB 캐시 데이터 활용 (워크플로우 A가 수집한 현재가)',
+                '투자유니버스 필터링 (stock_code 매핑 방식)',
+                'Supabase API URL/키 하드코딩 (n8n 표현식 이슈 해결)',
+                'trading_signals 테이블 스키마 확인 및 컬럼 매핑'
+              ]
+            },
+            {
+              title: '✅ trading_signals 테이블 설정',
+              details: [
+                'current_price, change_rate, volume 컬럼 확인',
+                'signal_strength 사용 (confidence 대신)',
+                'processed 필드 사용 (status 대신)',
+                'RLS 정책 수정 (anon 키 INSERT 허용)',
+                'signal_type CHECK 제약 조건 수정 (buy, sell 허용)',
+                '기존 데이터 TRUNCATE 후 재시작'
+              ]
+            },
+            {
+              title: '✅ 워크플로우 B 신호 생성 성공',
+              details: [
+                '활성 전략 조회 (get_active_strategies_with_universe RPC)',
+                '현재가 데이터 병합 (stock_code 맵핑)',
+                '매수 신호 생성 (3% 이상 하락 시)',
+                'trading_signals 테이블에 신호 저장 완료',
+                'KG스틸, 대우건설, 동양생명 매수 신호 생성 확인',
+                '주문 실행은 장중 테스트 예정 (Rate Limit 이슈)'
+              ]
+            },
+            {
+              title: '✅ 워크플로우 아키텍처 분리',
+              details: [
+                '워크플로우 A: 1시간마다 Kiwoom API 실시간 시세 수집',
+                '워크플로우 B: 5분마다 DB 기반 신호 생성',
+                '전략별 독립 실행 (96개 종목×전략 조합 처리)',
+                '중복 종목도 전략별로 다른 지표로 계산',
+                '2개 워크플로우 동시 active 운영',
+                '키움 토큰 Rate Limit 해결 필요 (장중 테스트 예정)'
+              ]
+            }
+          ]
+        },
+        {
+          id: 32,
+          title: '자동매매 포트폴리오 통계 및 시그널 UI 개선',
+          status: 'done',
+          priority: 'high',
+          icon: <Dashboard />,
+          period: '2025.11.13',
+          description: '포트폴리오 현황 표시 오류 수정 및 시그널 상세 정보 가시성 향상',
+          subtasks: [
+            {
+              title: '✅ 포트폴리오 통계 표시 오류 수정',
+              details: [
+                'Database 컬럼명 불일치 해결 (status → position_status, avg_price → avg_buy_price)',
+                'AutoTradingPanelV2.tsx의 loadPortfolioStats() 쿼리 수정',
+                'StrategyCard.tsx의 포지션 조회 쿼리 수정',
+                '포트폴리오 요약 카드에 정확한 통계 표시 (총 할당 자금, 투자 중, 평가액, 수익률)',
+                'Console 로깅으로 데이터 흐름 검증'
+              ]
+            },
+            {
+              title: '✅ 전략별 할당 자금 중복 계산 해결',
+              details: [
+                'RPC 함수 get_active_strategies_with_universe가 전략-유니버스 조합마다 행 반환',
+                'Map 자료구조로 전략별 중복 제거 로직 구현',
+                'uniqueStrategies Map으로 전략 ID 기준 중복 필터링',
+                'totalAllocated 정확한 합계 계산',
+                '활성 전략 수 정확한 카운트 (uniqueStrategies.size)'
+              ]
+            },
+            {
+              title: '✅ 매도 시그널 필터링 로직 개선',
+              details: [
+                '보유하지 않은 종목에 대한 매도 시그널 제외',
+                'holdingStockCodes Set 생성 (보유 종목 코드 목록)',
+                '매도 시그널 필터링: 보유 종목만 포함',
+                '매수 시그널은 모든 종목 포함',
+                '의미 없는 매도 예정 종목 표시 제거'
+              ]
+            },
+            {
+              title: '✅ 시그널 상세 정보 아코디언 UI 구현',
+              details: [
+                '매수 대기, 보유 중, 매도 예정 칩을 클릭 가능하게 변경',
+                'Collapse 컴포넌트로 확장/축소 애니메이션 구현',
+                '각 섹션별 최대 5개 종목 표시 (초과 시 "외 N종목" 안내)',
+                '매수 대기: 종목명, 현재가, 등락률 표시',
+                '보유 중: 종목명, 보유 수량, 수익률 표시',
+                '매도 예정: 종목명, 현재가, 보유 종목 수익률 표시',
+                'showBuySignals, showHoldings, showSellSignals state 관리'
+              ]
+            },
+            {
+              title: '✅ 사용자 질문 답변 시스템',
+              details: [
+                '매수대기 종목 vs 대기중인 주문 개념 차이 설명',
+                '매수대기 종목 = trading_signals 테이블의 시그널 (추천)',
+                '대기중인 주문 = 증권사에 실제 주문 넣었으나 미체결',
+                '워크플로우: 시그널 생성 → 주문 생성 → 체결 대기 → 포지션',
+                'PendingOrdersPanel에서 실제 주문 상태 확인 가능'
+              ]
+            }
+          ]
+        },
+        {
+          id: 33,
+          title: '문서화 및 배포',
+          status: 'pending',
+          priority: 'low',
+          icon: <Description />,
+          period: '2026.12 예정',
+          description: '프로젝트 문서화 및 프로덕션 배포',
+          subtasks: [
+            {
+              title: 'API 문서화',
+              details: [
+                'OpenAPI 3.0 스펙 작성',
+                'Swagger UI 통합',
+                'API 예제 코드',
+                'Rate limit 문서화',
+                'WebSocket API 문서'
+              ]
+            },
+            {
+              title: '사용자 가이드',
+              details: [
+                '온보딩 튜토리얼',
+                '기능별 사용 설명서',
+                '비디오 가이드 제작',
+                'FAQ 섹션',
+                '트러블슈팅 가이드'
+              ]
+            },
+            {
+              title: '개발자 문서',
+              details: [
+                '아키텍처 문서',
+                '컴포넌트 문서 (Storybook)',
+                '코드 컨벤션 가이드',
+                'Git 브랜치 전략',
+                'CI/CD 파이프라인 문서'
+              ]
+            },
+            {
+              title: 'Vercel 배포',
+              details: [
+                'Vercel 프로젝트 설정',
+                '환경 변수 설정',
+                'Custom domain 연결',
+                'Preview deployments',
+                'Production 배포'
+              ]
+            },
+            {
+              title: '모니터링 설정',
+              details: [
+                'Sentry 에러 트래킹',
+                'Google Analytics',
+                'Performance monitoring',
+                'Uptime monitoring',
+                'Log aggregation'
+              ]
+            }
+          ]
+        },
+        {
+          id: 34,
+          title: '다국어 지원 및 UI 개선',
+          status: 'done',
+          priority: 'medium',
+          icon: <Settings />,
+          period: '2025.11.30',
+          description: '글로벌 사용자를 위한 다국어(i18n) 지원 및 포트폴리오 UI 개선',
+          subtasks: [
+            {
+              title: '✅ i18n 다국어 시스템 구축',
+              details: [
+                'react-i18next 라이브러리 도입',
+                '한국어(ko)/영어(en) 언어팩 구성',
+                'LanguageSwitcher 컴포넌트 구현',
+                '주요 메뉴 및 메시지 다국어 적용',
+                '브라우저 언어 자동 감지'
+              ]
+            },
+            {
+              title: '✅ 포트폴리오 패널 UI 개선',
+              details: [
+                'PortfolioPanel.tsx 리팩토링',
+                '계좌 자산 현황 시각화 개선',
+                '반응형 디자인 적용',
+                '실시간 데이터 연동 최적화'
+              ]
+            },
+            {
+              title: '✅ 전략 카드 UI 개선',
+              details: [
+                'StrategyCard.tsx 디자인 고도화',
+                '전략 상태 표시 직관성 개선',
+                '모바일 환경 최적화'
+              ]
+            }
+          ]
+        },
+        {
+          id: 35,
+          title: '복수 계좌 지원 시스템 (Multi-Account)',
+          status: 'pending',
+          priority: 'high',
+          icon: <Security />,
+          period: '2025.12 예정',
+          description: '다중 키움증권 계좌 동시 운용 및 관리 시스템 구축',
+          subtasks: [
+            {
+              title: '데이터베이스 스키마 확장',
+              details: [
+                'trading_accounts 테이블 생성',
+                '계좌별 API 키/시크릿 안전한 저장',
+                '계좌별 설정 및 상태 관리 필드 추가'
+              ]
+            },
+            {
+              title: '백엔드 멀티 계정 아키텍처',
+              details: [
+                'KiwoomClientManager 구현 (다중 세션 관리)',
+                '계좌별 독립적인 주문/조회 처리',
+                'API 엔드포인트 계좌 파라미터 지원',
+                '실시간 시세 분배 로직 최적화'
+              ]
+            },
+            {
+              title: '프론트엔드 계좌 관리 UI',
+              details: [
+                '계좌 선택 및 전환 기능',
+                '계좌별 포트폴리오 분리 표시',
+                '계좌별 자동매매 전략 할당 UI',
+                '통합 자산 현황 대시보드'
+              ]
+            }
           ]
         }
       ]
@@ -2102,12 +2374,12 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 91 // 2025-11-13 기준 진행률 (자동매매 포트폴리오 통계 및 시그널 UI 개선 완료)
+  const progress = 92 // 2025-11-30 기준 진행률 (다국어 지원 및 UI 개선 완료)
 
   // 최신 로드맵은 MASTER_ROADMAP.md 참조
 
   const getStatusIcon = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'done': return <CheckCircle color="success" />
       case 'in-progress': return <Schedule color="warning" />
       default: return <Schedule color="disabled" />
@@ -2115,7 +2387,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   }
 
   const getPriorityColor = (priority: string) => {
-    switch(priority) {
+    switch (priority) {
       case 'high': return 'error'
       case 'medium': return 'warning'
       case 'low': return 'info'
@@ -2126,8 +2398,8 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
   const activeStep = tasks.findIndex(task => task.status === 'in-progress')
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={onClose}
       maxWidth="lg"
       fullWidth
@@ -2151,7 +2423,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           📌 최신 상세 로드맵은 프로젝트 루트의 <strong>MASTER_ROADMAP.md</strong> 파일을 참조하세요
         </Alert>
       </DialogTitle>
-      
+
       <DialogContent dividers>
         {/* 전체 진행률 */}
         <Paper sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
@@ -2161,9 +2433,9 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
               {progress.toFixed(1)}%
             </Typography>
           </Stack>
-          <LinearProgress 
-            variant="determinate" 
-            value={progress} 
+          <LinearProgress
+            variant="determinate"
+            value={progress}
             sx={{ height: 12, borderRadius: 6 }}
           />
           <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
@@ -2199,7 +2471,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
         <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
           📊 상세 개발 일정
         </Typography>
-        
+
         {tasks.map((task, index) => (
           <Accordion key={task.id} defaultExpanded={task.status === 'in-progress'}>
             <AccordionSummary expandIcon={<ExpandMore />}>
@@ -2213,10 +2485,10 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
                     <Typography variant="subtitle1" fontWeight="bold">
                       #{task.id} {task.title}
                     </Typography>
-                    <Chip 
-                      label={task.priority === 'high' ? '높음' : 
-                             task.priority === 'medium' ? '중간' : '낮음'} 
-                      size="small" 
+                    <Chip
+                      label={task.priority === 'high' ? '높음' :
+                        task.priority === 'medium' ? '중간' : '낮음'}
+                      size="small"
                       color={getPriorityColor(task.priority) as any}
                     />
                     {task.status === 'done' && (
@@ -2244,11 +2516,11 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
                     </Typography>
                     {'details' in subtask && (
                       <List dense sx={{ ml: 2 }}>
-                        {subtask.details.map((detail, didx) => (
+                        {(subtask as any).details.map((detail: string, didx: number) => (
                           <ListItem key={didx} sx={{ py: 0.5 }}>
-                            <ListItemText 
+                            <ListItemText
                               primary={`• ${detail}`}
-                              primaryTypographyProps={{ 
+                              primaryTypographyProps={{
                                 variant: 'body2',
                                 color: task.status === 'done' ? 'text.secondary' : 'text.primary'
                               }}
@@ -2288,7 +2560,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
                 <Chip label="date-fns" size="small" />
               </Stack>
             </Box>
-            
+
             <Box>
               <Typography variant="subtitle1" fontWeight="bold" color="success.main" gutterBottom>
                 Backend & Database
@@ -2302,7 +2574,7 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
                 <Chip label="PostgREST" size="small" color="success" />
               </Stack>
             </Box>
-            
+
             <Box>
               <Typography variant="subtitle1" fontWeight="bold" color="warning.main" gutterBottom>
                 Trading System (개발 예정)
@@ -2332,7 +2604,6 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           </Stack>
         </Paper>
       </DialogContent>
-
       <DialogActions sx={{ p: 2 }}>
         <Button onClick={onClose} variant="contained" size="large">
           닫기
