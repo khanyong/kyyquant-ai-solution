@@ -1,0 +1,528 @@
+{
+  "name": "auto-trading-with-capital-validation-v45",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "0f63aa15-a61a-4ca4-bc4f-6290819beb42",
+      "name": "1 Hour Interval Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1600,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "={{$env.SUPABASE_URL || 'https://hznkyaomtrpzcayayayh.supabase.co'}}"
+            },
+            {
+              "name": "SUPABASE_SERVICE_ROLE_KEY",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA"
+            },
+            {
+              "name": "DEBUG_INFO",
+              "value": "v45: Hardcoded Keys + Mock API + Validation Enabled"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dc6caa47-df12-4158-ad3e-a87ce3b0b3eb",
+      "name": "Env Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -1408,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{new Date().getHours()}}",
+              "operation": "largerEqual",
+              "value2": 9
+            },
+            {
+              "value1": "={{new Date().getHours()}}",
+              "operation": "smallerEqual",
+              "value2": 15
+            },
+            {
+              "value1": "={{new Date().getDay()}}",
+              "operation": "largerEqual",
+              "value2": 1
+            },
+            {
+              "value1": "={{new Date().getDay()}}",
+              "operation": "smallerEqual",
+              "value2": 5
+            }
+          ]
+        }
+      },
+      "id": "07c68e92-046e-46fa-858a-87fdc78b89c9",
+      "name": "장시간 체크 (09:00~15:30, 월~금)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$('Env Config').first().json[\"KIWOOM_APP_KEY\"]}}\",\n  \"secretkey\": \"{{$('Env Config').first().json[\"KIWOOM_APP_SECRET\"]}}\"\n}",
+        "options": {}
+      },
+      "id": "5f11526c-1710-415d-80f4-35bbe959b958",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -992,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json[\"SUPABASE_URL\"] + '/rest/v1/rpc/get_active_strategies_with_universe' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {}
+      },
+      "id": "ad60c24f-58de-4e19-9905-a5b8be8237c5",
+      "name": "자동매매 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -800,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst envVars = $('Env Config').first().json;\nconst tokenData = $('키움 토큰 발급').first().json;\n\nconst results = [];\n\nfor (const item of items) {\n  const strategy = item.json;\n  let stockCodes = [];\n\n  if (strategy.filtered_stocks) {\n    if (Array.isArray(strategy.filtered_stocks)) {\n      stockCodes = strategy.filtered_stocks.filter(code => code && typeof code === 'string');\n    } else if (typeof strategy.filtered_stocks === 'object') {\n      stockCodes = Object.values(strategy.filtered_stocks).filter(code => code && typeof code === 'string');\n    }\n  }\n\n  stockCodes.forEach((stockCode, index) => {\n    results.push({\n      json: {\n        stock_code: stockCode,\n        index: index,\n        total: stockCodes.length,\n        strategy_id: strategy.strategy_id,\n        strategy_name: strategy.strategy_name,\n        access_token: tokenData.access_token || tokenData.token,\n        debug_token_response: tokenData,\n        SUPABASE_URL: envVars.SUPABASE_URL,\n        SUPABASE_SERVICE_ROLE_KEY: envVars.SUPABASE_SERVICE_ROLE_KEY\n      }\n    });\n  });\n}\n\nconsole.log(`📊 Total stocks to process: ${results.length}`);\nreturn results;"
+      },
+      "id": "f7cad130-1fdb-43e6-8c4d-2d6f7efd74d1",
+      "name": "종목 코드 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/api/dostk/mrkcond",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "={{'Bearer ' + $json.access_token}}"
+            },
+            {
+              "name": "cont-yn",
+              "value": "N"
+            },
+            {
+              "name": "next-key"
+            },
+            {
+              "name": "api-id",
+              "value": "ka10004"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"stk_cd\": \"{{$json.stock_code}}\"}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 60000
+            }
+          },
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "id": "923a0041-0e75-4cd3-b575-eff505881b22",
+      "name": "키움 호가 조회 (60초 간격)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -400,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// HTTP Request는 응답만 반환하므로, 입력 데이터를 복원\nconst kiwoomResponses = $input.all();\nconst originalInputs = $('종목 코드 추출').all();\n\nconst results = [];\n\n// 모든 항목 처리\nfor (let i = 0; i < kiwoomResponses.length; i++) {\n  const kiwoomResponse = kiwoomResponses[i].json;\n  const original = originalInputs[i];\n\n  if (!original) {\n    console.error(`Cannot find original data for item ${i}`);\n    continue;\n  }\n\n  console.log(`Processing: ${original.json.stock_code} (${i + 1}/${originalInputs.length})`);\n\n  results.push({\n    json: {\n      ...original.json,\n      kiwoom_data: kiwoomResponse\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "d1359c2a-199b-408b-8109-3d6564c77b4f",
+      "name": "원본 데이터 병합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/stock_metadata?stock_code=eq.{{$json.stock_code}}&select=stock_name,stock_code",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "555afdec-901b-4da1-923a-8e0abf28f35f",
+      "name": "종목명 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/kw_price_daily?stock_code=eq.{{$json.stock_code}}&select=close&order=trade_date.desc&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c24d1f59-8b65-4f03-85ca-d3bbc61a6930",
+      "name": "전일종가 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        200,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 모든 입력 아이템 처리\nconst mergedData = $('원본 데이터 병합').all();\nconst stockNameResults = $('종목명 조회').all();\nconst prevCloseResults = $('전일종가 조회').all();\n\nconst results = [];\n\nfor (let i = 0; i < mergedData.length; i++) {\n  const stockData = mergedData[i].json;\n  const kiwoomPrice = stockData.kiwoom_data;\n  \n  // Supabase 응답은 배열 형태 [ { ... } ] 이므로 첫 번째 요소를 가져옴\n  const stockNameArr = stockNameResults[i]?.json;\n  const prevCloseArr = prevCloseResults[i]?.json;\n  \n  // 배열인지 확인 후 데이터 추출\n  const stockNameObj = Array.isArray(stockNameArr) ? stockNameArr[0] : stockNameArr;\n  const prevCloseObj = Array.isArray(prevCloseArr) ? prevCloseArr[0] : prevCloseArr;\n\n  // 디버깅\n  // console.log(`[${i}] stockNameObj:`, JSON.stringify(stockNameObj));\n  \n  let stockName = stockData.stock_code; // 기본값\n  \n  if (stockNameObj && stockNameObj.stock_name) {\n    stockName = stockNameObj.stock_name;\n  }\n\n  const previousClose = (prevCloseObj && prevCloseObj.close) \n    ? parseFloat(prevCloseObj.close) \n    : 0;\n\n  const parsePrice = (price) => {\n    if (!price) return 0;\n    return parseFloat(String(price).replace(/[+\\-]/g, ''));\n  };\n\n  const selPrice = parsePrice(kiwoomPrice.sel_fpr_bid);\n  const buyPrice = parsePrice(kiwoomPrice.buy_fpr_bid);\n  const estimatedPrice = (selPrice + buyPrice) / 2;\n\n  // ⚠️ 가격 검증 (디버깅 완료 후 복구)\n  if (estimatedPrice === 0 || selPrice === 0 || buyPrice === 0) {\n    continue;\n  }\n\n  const changePrice = previousClose > 0 ? estimatedPrice - previousClose : 0;\n  const changeRate = previousClose > 0 ? ((changePrice / previousClose) * 100) : 0;\n\n  if (changeRate === -100 || changeRate < -50) {\n    continue;\n  }\n\n  const selVolume = parseInt(String(kiwoomPrice.sel_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n  const buyVolume = parseInt(String(kiwoomPrice.buy_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n\n  const result = {\n    stock_code: stockData.stock_code,\n    stock_name: stockName,\n    current_price: estimatedPrice,\n    change_price: changePrice,\n    change_rate: changeRate,\n    volume: selVolume + buyVolume,\n    sel_price: selPrice,\n    buy_price: buyPrice,\n    SUPABASE_URL: stockData.SUPABASE_URL,\n    SUPABASE_SERVICE_ROLE_KEY: stockData.SUPABASE_SERVICE_ROLE_KEY,\n    index: i,\n    total: mergedData.length,\n    debug_kiwoom: kiwoomPrice,\n    debug_prev_close: prevCloseObj\n  };\n\n  results.push({ json: result });\n}\n\nreturn results;"
+      },
+      "id": "2792b5aa-ccc1-4be3-92d2-6a238ca03667",
+      "name": "최종 계산 + 가격 검증",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/kw_stock_master?on_conflict=stock_code",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"stock_code\": {{JSON.stringify($json.stock_code)}}, \"stock_name\": {{JSON.stringify($json.stock_name)}}, \"market\": \"KOSPI\"}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "d32a46f1-51c9-46fa-895e-38de62b666c4",
+      "name": "종목 마스터 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        600,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/kw_price_current?on_conflict=stock_code",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"stock_code\": {{JSON.stringify($('최종 계산 + 가격 검증').item.json.stock_code)}}, \"stock_name\": {{JSON.stringify($('최종 계산 + 가격 검증').item.json.stock_name)}}, \"current_price\": {{$('최종 계산 + 가격 검증').item.json.current_price}}, \"change_price\": {{$('최종 계산 + 가격 검증').item.json.change_price}}, \"change_rate\": {{$('최종 계산 + 가격 검증').item.json.change_rate}}, \"volume\": {{$('최종 계산 + 가격 검증').item.json.volume}}, \"high_52w\": {{$('최종 계산 + 가격 검증').item.json.sel_price}}, \"low_52w\": {{$('최종 계산 + 가격 검증').item.json.buy_price}}, \"market_cap\": 0, \"updated_at\": \"now()\"}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "d1762f07-69e5-478e-ad12-7912d1e47ad9",
+      "name": "현재가 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        112
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "1 Hour Interval Trigger": {
+      "main": [
+        [
+          {
+            "node": "Env Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Env Config": {
+      "main": [
+        [
+          {
+            "node": "장시간 체크 (09:00~15:30, 월~금)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장시간 체크 (09:00~15:30, 월~금)": {
+      "main": [
+        [
+          {
+            "node": "키움 토큰 발급",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 토큰 발급": {
+      "main": [
+        [
+          {
+            "node": "자동매매 전략 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "자동매매 전략 조회": {
+      "main": [
+        [
+          {
+            "node": "종목 코드 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "종목 코드 추출": {
+      "main": [
+        [
+          {
+            "node": "키움 호가 조회 (60초 간격)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 호가 조회 (60초 간격)": {
+      "main": [
+        [
+          {
+            "node": "원본 데이터 병합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "원본 데이터 병합": {
+      "main": [
+        [
+          {
+            "node": "종목명 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "종목명 조회": {
+      "main": [
+        [
+          {
+            "node": "전일종가 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "전일종가 조회": {
+      "main": [
+        [
+          {
+            "node": "최종 계산 + 가격 검증",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "최종 계산 + 가격 검증": {
+      "main": [
+        [
+          {
+            "node": "종목 마스터 저장",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "현재가 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f2868469-8260-496e-953a-c8e8880e038e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6a964998707168341e30932026857643b22b72445e994e6377e87042013895e6"
+  }
+}

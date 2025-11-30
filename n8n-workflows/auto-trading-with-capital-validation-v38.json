@@ -1,5 +1,5 @@
 {
-  "name": "자동매매 모니터링 v38 (Stock Name Fix)",
+  "name": "?�동매매 모니?�링 v38 (Stock Name Fix)",
   "nodes": [
     {
       "parameters": {
@@ -13,7 +13,7 @@
         }
       },
       "id": "schedule-1",
-      "name": "1시간마다 실행",
+      "name": "1?�간마다 ?�행",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -30,7 +30,7 @@
               "value": "https://hznkyaomtrpzcayayayh.supabase.co"
             },
             {
-              "name": "SUPABASE_ANON_KEY",
+              "name": "SUPABASE_SERVICE_ROLE_KEY",
               "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
             },
             {
@@ -45,7 +45,7 @@
         }
       },
       "id": "set-env-1",
-      "name": "환경변수 설정",
+      "name": "?�경변???�정",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
@@ -66,7 +66,7 @@
         }
       },
       "id": "market-check-1",
-      "name": "장시간 체크 (테스트 모드)",
+      "name": "?�시�?체크 (?�스??모드)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
@@ -80,7 +80,7 @@
         "url": "https://mockapi.kiwoom.com/oauth2/token",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$node[\"환경변수 설정\"].json[\"KIWOOM_APP_KEY\"]}}\",\n  \"secretkey\": \"{{$node[\"환경변수 설정\"].json[\"KIWOOM_APP_SECRET\"]}}\"\n}",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$node[\"?�경변???�정\"].json[\"KIWOOM_APP_KEY\"]}}\",\n  \"secretkey\": \"{{$node[\"?�경변???�정\"].json[\"KIWOOM_APP_SECRET\"]}}\"\n}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -92,7 +92,7 @@
         }
       },
       "id": "get-token-1",
-      "name": "키움 토큰 발급",
+      "name": "?��? ?�큰 발급",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -103,23 +103,23 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{$node[\"환경변수 설정\"].json[\"SUPABASE_URL\"]}}/rest/v1/rpc/get_active_strategies_with_universe",
+        "url": "={{$node[\"?�경변???�정\"].json[\"SUPABASE_URL\"]}}/rest/v1/rpc/get_active_strategies_with_universe",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "authorization",
-              "value": "={{\"Bearer \" + $node[\"환경변수 설정\"].json[\"SUPABASE_ANON_KEY\"]}}"
+              "value": "={{\"Bearer \" + $node[\"?�경변???�정\"].json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
             },
             {
               "name": "apikey",
-              "value": "={{$node[\"환경변수 설정\"].json[\"SUPABASE_ANON_KEY\"]}}"
+              "value": "={{$node[\"?�경변???�정\"].json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
             }
           ]
         }
       },
       "id": "get-strategies-1",
-      "name": "자동매매 전략 조회",
+      "name": "?�동매매 ?�략 조회",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -129,7 +129,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst envVars = $('환경변수 설정').first().json;\nconst tokenData = $('키움 토큰 발급').first().json;\n\nconst results = [];\n\nfor (const item of items) {\n  const strategy = item.json;\n  let stockCodes = [];\n\n  if (strategy.filtered_stocks) {\n    if (Array.isArray(strategy.filtered_stocks)) {\n      stockCodes = strategy.filtered_stocks.filter(code => code && typeof code === 'string');\n    } else if (typeof strategy.filtered_stocks === 'object') {\n      stockCodes = Object.values(strategy.filtered_stocks).filter(code => code && typeof code === 'string');\n    }\n  }\n\n  stockCodes.forEach((stockCode, index) => {\n    results.push({\n      json: {\n        stock_code: stockCode,\n        index: index,\n        total: stockCodes.length,\n        strategy_id: strategy.strategy_id,\n        strategy_name: strategy.strategy_name,\n        access_token: tokenData.token,\n        SUPABASE_URL: envVars.SUPABASE_URL,\n        SUPABASE_ANON_KEY: envVars.SUPABASE_ANON_KEY\n      }\n    });\n  });\n}\n\nconsole.log(`📊 Total stocks to process: ${results.length}`);\nreturn results;"
+        "jsCode": "const items = $input.all();\nconst envVars = $('?�경변???�정').first().json;\nconst tokenData = $('?��? ?�큰 발급').first().json;\n\nconst results = [];\n\nfor (const item of items) {\n  const strategy = item.json;\n  let stockCodes = [];\n\n  if (strategy.filtered_stocks) {\n    if (Array.isArray(strategy.filtered_stocks)) {\n      stockCodes = strategy.filtered_stocks.filter(code => code && typeof code === 'string');\n    } else if (typeof strategy.filtered_stocks === 'object') {\n      stockCodes = Object.values(strategy.filtered_stocks).filter(code => code && typeof code === 'string');\n    }\n  }\n\n  stockCodes.forEach((stockCode, index) => {\n    results.push({\n      json: {\n        stock_code: stockCode,\n        index: index,\n        total: stockCodes.length,\n        strategy_id: strategy.strategy_id,\n        strategy_name: strategy.strategy_name,\n        access_token: tokenData.token,\n        SUPABASE_URL: envVars.SUPABASE_URL,\n        SUPABASE_SERVICE_ROLE_KEY: envVars.SUPABASE_SERVICE_ROLE_KEY\n      }\n    });\n  });\n}\n\nconsole.log(`?�� Total stocks to process: ${results.length}`);\nreturn results;"
       },
       "id": "extract-stocks-1",
       "name": "종목 코드 추출",
@@ -189,7 +189,7 @@
         }
       },
       "id": "get-price-1",
-      "name": "키움 호가 조회 (60초 간격)",
+      "name": "?��? ?��? 조회 (60�?간격)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -199,10 +199,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// HTTP Request는 응답만 반환하므로, 입력 데이터를 복원\nconst kiwoomResponses = $input.all();\nconst originalInputs = $('종목 코드 추출').all();\n\nconst results = [];\n\n// 모든 항목 처리\nfor (let i = 0; i < kiwoomResponses.length; i++) {\n  const kiwoomResponse = kiwoomResponses[i].json;\n  const original = originalInputs[i];\n\n  if (!original) {\n    console.error(`Cannot find original data for item ${i}`);\n    continue;\n  }\n\n  console.log(`Processing: ${original.json.stock_code} (${i + 1}/${originalInputs.length})`);\n\n  results.push({\n    json: {\n      ...original.json,\n      kiwoom_data: kiwoomResponse\n    }\n  });\n}\n\nreturn results;"
+        "jsCode": "// HTTP Request???�답�?반환?��?�? ?�력 ?�이?��? 복원\nconst kiwoomResponses = $input.all();\nconst originalInputs = $('종목 코드 추출').all();\n\nconst results = [];\n\n// 모든 ??�� 처리\nfor (let i = 0; i < kiwoomResponses.length; i++) {\n  const kiwoomResponse = kiwoomResponses[i].json;\n  const original = originalInputs[i];\n\n  if (!original) {\n    console.error(`Cannot find original data for item ${i}`);\n    continue;\n  }\n\n  console.log(`Processing: ${original.json.stock_code} (${i + 1}/${originalInputs.length})`);\n\n  results.push({\n    json: {\n      ...original.json,\n      kiwoom_data: kiwoomResponse\n    }\n  });\n}\n\nreturn results;"
       },
       "id": "merge-orig-data",
-      "name": "원본 데이터 병합",
+      "name": "?�본 ?�이??병합",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -219,17 +219,17 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{$json.SUPABASE_ANON_KEY}}"
+              "value": "={{$json.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
               "name": "Authorization",
-              "value": "={{\"Bearer \" + $json.SUPABASE_ANON_KEY}}"
+              "value": "={{\"Bearer \" + $json.SUPABASE_SERVICE_ROLE_KEY}}"
             }
           ]
         }
       },
       "id": "get-stock-name",
-      "name": "종목명 조회",
+      "name": "종목�?조회",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -240,23 +240,23 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{$('원본 데이터 병합').item.json.SUPABASE_URL}}/rest/v1/kw_price_daily?stock_code=eq.{{$('원본 데이터 병합').item.json.stock_code}}&select=close&order=trade_date.desc&limit=1",
+        "url": "={{$('?�본 ?�이??병합').item.json.SUPABASE_URL}}/rest/v1/kw_price_daily?stock_code=eq.{{$('?�본 ?�이??병합').item.json.stock_code}}&select=close&order=trade_date.desc&limit=1",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{$('원본 데이터 병합').item.json.SUPABASE_ANON_KEY}}"
+              "value": "={{$('?�본 ?�이??병합').item.json.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
               "name": "Authorization",
-              "value": "={{\"Bearer \" + $('원본 데이터 병합').item.json.SUPABASE_ANON_KEY}}"
+              "value": "={{\"Bearer \" + $('?�본 ?�이??병합').item.json.SUPABASE_SERVICE_ROLE_KEY}}"
             }
           ]
         }
       },
       "id": "get-prev-close",
-      "name": "전일종가 조회",
+      "name": "?�일종�? 조회",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -266,7 +266,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// 모든 입력 아이템 처리\nconst mergedData = $('원본 데이터 병합').all();\nconst stockNameResults = $('종목명 조회').all();\nconst prevCloseResults = $('전일종가 조회').all();\n\nconst results = [];\n\nfor (let i = 0; i < mergedData.length; i++) {\n  const stockData = mergedData[i].json;\n  const kiwoomPrice = stockData.kiwoom_data;\n  \n  // n8n HTTP Request 노드는 Supabase 배열 응답을 개별 아이템으로 분리함\n  const stockNameData = stockNameResults[i]?.json;\n  const prevCloseData = prevCloseResults[i]?.json;\n\n  // 디버깅\n  console.log(`[${i}] stockNameData:`, JSON.stringify(stockNameData));\n  \n  // HTTP Request 노드가 배열을 풀어서 반환하므로 직접 접근\n  let stockName = stockData.stock_code; // 기본값\n  \n  if (stockNameData && stockNameData.stock_name) {\n    stockName = stockNameData.stock_name;\n    console.log(`[${i}] Found stock_name: ${stockName}`);\n  } else {\n    console.log(`[${i}] stockNameData not found or invalid:`, JSON.stringify(stockNameData));\n  }\n\n  const previousClose = (prevCloseData && prevCloseData.close) \n    ? parseFloat(prevCloseData.close) \n    : 0;\n\n  const parsePrice = (price) => {\n    if (!price) return 0;\n    return parseFloat(String(price).replace(/[+\\-]/g, ''));\n  };\n\n  const selPrice = parsePrice(kiwoomPrice.sel_fpr_bid);\n  const buyPrice = parsePrice(kiwoomPrice.buy_fpr_bid);\n  const estimatedPrice = (selPrice + buyPrice) / 2;\n\n  const changePrice = previousClose > 0 ? estimatedPrice - previousClose : 0;\n  const changeRate = previousClose > 0 ? ((changePrice / previousClose) * 100) : 0;\n\n  const selVolume = parseInt(String(kiwoomPrice.sel_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n  const buyVolume = parseInt(String(kiwoomPrice.buy_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n\n  const result = {\n    stock_code: stockData.stock_code,\n    stock_name: stockName,\n    current_price: estimatedPrice,\n    change_price: changePrice,\n    change_rate: changeRate,\n    volume: selVolume + buyVolume,\n    sel_price: selPrice,\n    buy_price: buyPrice,\n    SUPABASE_URL: stockData.SUPABASE_URL,\n    SUPABASE_ANON_KEY: stockData.SUPABASE_ANON_KEY,\n    index: i,\n    total: mergedData.length\n  };\n\n  console.log(`[${i + 1}/${mergedData.length}] ${result.stock_code} (${result.stock_name}): ${result.current_price.toLocaleString()}원`);\n\n  results.push({ json: result });\n}\n\nreturn results;"
+        "jsCode": "// 모든 ?�력 ?�이??처리\nconst mergedData = $('?�본 ?�이??병합').all();\nconst stockNameResults = $('종목�?조회').all();\nconst prevCloseResults = $('?�일종�? 조회').all();\n\nconst results = [];\n\nfor (let i = 0; i < mergedData.length; i++) {\n  const stockData = mergedData[i].json;\n  const kiwoomPrice = stockData.kiwoom_data;\n  \n  // n8n HTTP Request ?�드??Supabase 배열 ?�답??개별 ?�이?�으�?분리??n  const stockNameData = stockNameResults[i]?.json;\n  const prevCloseData = prevCloseResults[i]?.json;\n\n  // ?�버�?n  console.log(`[${i}] stockNameData:`, JSON.stringify(stockNameData));\n  \n  // HTTP Request ?�드가 배열???�?�서 반환?��?�?직접 ?�근\n  let stockName = stockData.stock_code; // 기본�?n  \n  if (stockNameData && stockNameData.stock_name) {\n    stockName = stockNameData.stock_name;\n    console.log(`[${i}] Found stock_name: ${stockName}`);\n  } else {\n    console.log(`[${i}] stockNameData not found or invalid:`, JSON.stringify(stockNameData));\n  }\n\n  const previousClose = (prevCloseData && prevCloseData.close) \n    ? parseFloat(prevCloseData.close) \n    : 0;\n\n  const parsePrice = (price) => {\n    if (!price) return 0;\n    return parseFloat(String(price).replace(/[+\\-]/g, ''));\n  };\n\n  const selPrice = parsePrice(kiwoomPrice.sel_fpr_bid);\n  const buyPrice = parsePrice(kiwoomPrice.buy_fpr_bid);\n  const estimatedPrice = (selPrice + buyPrice) / 2;\n\n  const changePrice = previousClose > 0 ? estimatedPrice - previousClose : 0;\n  const changeRate = previousClose > 0 ? ((changePrice / previousClose) * 100) : 0;\n\n  const selVolume = parseInt(String(kiwoomPrice.sel_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n  const buyVolume = parseInt(String(kiwoomPrice.buy_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n\n  const result = {\n    stock_code: stockData.stock_code,\n    stock_name: stockName,\n    current_price: estimatedPrice,\n    change_price: changePrice,\n    change_rate: changeRate,\n    volume: selVolume + buyVolume,\n    sel_price: selPrice,\n    buy_price: buyPrice,\n    SUPABASE_URL: stockData.SUPABASE_URL,\n    SUPABASE_SERVICE_ROLE_KEY: stockData.SUPABASE_SERVICE_ROLE_KEY,\n    index: i,\n    total: mergedData.length\n  };\n\n  console.log(`[${i + 1}/${mergedData.length}] ${result.stock_code} (${result.stock_name}): ${result.current_price.toLocaleString()}??);\n\n  results.push({ json: result });\n}\n\nreturn results;"
       },
       "id": "calc-final",
       "name": "최종 계산",
@@ -289,11 +289,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{$json.SUPABASE_ANON_KEY}}"
+              "value": "={{$json.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
               "name": "Authorization",
-              "value": "={{\"Bearer \" + $json.SUPABASE_ANON_KEY}}"
+              "value": "={{\"Bearer \" + $json.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
               "name": "Content-Type",
@@ -314,7 +314,7 @@
         }
       },
       "id": "save-master",
-      "name": "종목 마스터 저장",
+      "name": "종목 마스???�??,
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -334,11 +334,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{$('최종 계산').item.json.SUPABASE_ANON_KEY}}"
+              "value": "={{$('최종 계산').item.json.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
               "name": "Authorization",
-              "value": "={{\"Bearer \" + $('최종 계산').item.json.SUPABASE_ANON_KEY}}"
+              "value": "={{\"Bearer \" + $('최종 계산').item.json.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
               "name": "Content-Type",
@@ -359,7 +359,7 @@
         }
       },
       "id": "save-current",
-      "name": "현재가 저장",
+      "name": "?�재가 ?�??,
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -369,51 +369,51 @@
     }
   ],
   "connections": {
-    "1시간마다 실행": {
+    "1?�간마다 ?�행": {
       "main": [
         [
           {
-            "node": "환경변수 설정",
+            "node": "?�경변???�정",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "환경변수 설정": {
+    "?�경변???�정": {
       "main": [
         [
           {
-            "node": "장시간 체크 (테스트 모드)",
+            "node": "?�시�?체크 (?�스??모드)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "장시간 체크 (테스트 모드)": {
+    "?�시�?체크 (?�스??모드)": {
       "main": [
         [
           {
-            "node": "키움 토큰 발급",
+            "node": "?��? ?�큰 발급",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "키움 토큰 발급": {
+    "?��? ?�큰 발급": {
       "main": [
         [
           {
-            "node": "자동매매 전략 조회",
+            "node": "?�동매매 ?�략 조회",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "자동매매 전략 조회": {
+    "?�동매매 ?�략 조회": {
       "main": [
         [
           {
@@ -428,47 +428,47 @@
       "main": [
         [
           {
-            "node": "키움 호가 조회 (60초 간격)",
+            "node": "?��? ?��? 조회 (60�?간격)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "키움 호가 조회 (60초 간격)": {
+    "?��? ?��? 조회 (60�?간격)": {
       "main": [
         [
           {
-            "node": "원본 데이터 병합",
+            "node": "?�본 ?�이??병합",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "원본 데이터 병합": {
+    "?�본 ?�이??병합": {
       "main": [
         [
           {
-            "node": "종목명 조회",
+            "node": "종목�?조회",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "종목명 조회": {
+    "종목�?조회": {
       "main": [
         [
           {
-            "node": "전일종가 조회",
+            "node": "?�일종�? 조회",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "전일종가 조회": {
+    "?�일종�? 조회": {
       "main": [
         [
           {
@@ -483,18 +483,18 @@
       "main": [
         [
           {
-            "node": "종목 마스터 저장",
+            "node": "종목 마스???�??,
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "종목 마스터 저장": {
+    "종목 마스???�??: {
       "main": [
         [
           {
-            "node": "현재가 저장",
+            "node": "?�재가 ?�??,
             "type": "main",
             "index": 0
           }

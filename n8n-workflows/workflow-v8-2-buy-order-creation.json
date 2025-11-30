@@ -1,0 +1,419 @@
+{
+  "name": "Workflow V8-2: Buy Order Creation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "6aa430fa-de4b-4e27-8dd9-48cdd1e8714b"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_SERVICE_ROLE_KEY",
+              "value": "your_service_role_key_here"
+            },
+            {
+              "name": "BACKEND_API_URL",
+              "value": "http://192.168.50.218:8001"
+            }
+          ]
+        }
+      },
+      "name": "Env Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "id": "0554aad7-d12e-4034-bab4-43759d49ef31"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.SUPABASE_URL }}/rest/v1/rpc/get_buy_candidates",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $json.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "min_score",
+              "value": 0
+            }
+          ]
+        }
+      },
+      "name": "Get Buy Candidates (RPC)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        650,
+        300
+      ],
+      "id": "58740431-82b4-4496-a339-6ca40c43f838"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "If Has Results",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        850,
+        300
+      ],
+      "id": "228f48b1-065d-45f0-af68-59f7f5a54786"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Stocks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1050,
+        200
+      ],
+      "id": "a41119d4-29eb-42ba-8d18-e3ffa8f3f2b8"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Env Config').first().json.SUPABASE_URL }}/rest/v1/account_balance",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Env Config').first().json.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Env Config').first().json.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "order_cash"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            },
+            {
+              "name": "order",
+              "value": "updated_at.desc"
+            }
+          ]
+        }
+      },
+      "name": "Get Account Balance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1250,
+        200
+      ],
+      "id": "0c8660ce-c072-492c-a2cc-1a05e066adc5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate order quantity and price\nconst stock = $('Split Stocks').first().json;\nconst balance = $input.first().json;\n\n// Get available cash\nconst availableCash = balance.order_cash || 0;\n\n// Calculate position size\nconst positionSizePercent = stock.position_size || 10;\nconst positionSize = availableCash * (positionSizePercent / 100);\n\n// Calculate quantity\nconst currentPrice = stock.current_price || 0;\nconst quantity = Math.floor(positionSize / currentPrice);\n\n// Determine order price\nconst orderPrice = currentPrice;\n\n// Calculate auto cancel time (30 minutes from now)\nconst now = new Date();\nconst autoCancelAt = new Date(now.getTime() + 30 * 60 * 1000);\n\nreturn {\n  json: {\n    strategy_id: stock.strategy_id,\n    stock_code: stock.stock_code,\n    stock_name: stock.stock_name,\n    order_type: 'BUY',\n    order_price: orderPrice,\n    quantity: quantity,\n    total_amount: orderPrice * quantity,\n    auto_cancel_at: autoCancelAt.toISOString(),\n    cancel_after_minutes: 30,\n    original_order_price: orderPrice,\n    status: 'PENDING'\n  }\n};"
+      },
+      "name": "Calculate Order Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        200
+      ],
+      "id": "6a6cb24f-bb79-41c5-9b10-7ff27bd63161"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json.BACKEND_API_URL }}/api/order/order",
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "stock_code",
+              "value": "={{ $json.stock_code }}"
+            },
+            {
+              "name": "order_type",
+              "value": "BUY"
+            },
+            {
+              "name": "price",
+              "value": "={{ $json.order_price }}"
+            },
+            {
+              "name": "quantity",
+              "value": "={{ $json.quantity }}"
+            }
+          ]
+        }
+      },
+      "name": "Send Order to Kiwoom",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1650,
+        200
+      ],
+      "id": "c34dbeab-cdef-4e99-a272-86f66ffab2d1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json.SUPABASE_URL }}/rest/v1/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Env Config').first().json.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Env Config').first().json.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "jsonBody": "={{ {\n  strategy_id: $json.strategy_id,\n  stock_code: $json.stock_code,\n  stock_name: $json.stock_name,\n  order_type: 'BUY',\n  order_price: $json.order_price,\n  quantity: $json.quantity,\n  status: 'PENDING',\n  auto_cancel_at: $json.auto_cancel_at,\n  cancel_after_minutes: 30,\n  original_order_price: $json.original_order_price,\n  kiwoom_order_no: $json.kiwoom_order_no,\n  created_at: 'now()'\n} }}"
+      },
+      "name": "Insert Order to DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1850,
+        200
+      ],
+      "id": "d961cae0-5c69-42a3-b339-738ff194f769"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json.SUPABASE_URL }}/rest/v1/trading_signals",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Env Config').first().json.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Env Config').first().json.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "strategy_id,stock_code,signal_type,created_at"
+            }
+          ]
+        },
+        "sendBody": true,
+        "jsonBody": "={{ {\n  strategy_id: $json.strategy_id,\n  stock_code: $json.stock_code,\n  stock_name: $json.stock_name,\n  signal_type: 'buy',\n  entry_price: $json.order_price,\n  order_id: $json.id,\n  signal_status: 'ORDERED',\n  created_at: 'now()'\n} }}"
+      },
+      "name": "Update Trading Signal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2050,
+        200
+      ],
+      "id": "2a1e85f4-71fb-4f00-b9bf-76eba87e4eed"
+    },
+    {
+      "parameters": {},
+      "name": "No Stocks to Order",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        850,
+        500
+      ],
+      "id": "29dd7237-070a-46d4-acdf-4e7e664514d5"
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [
+        [
+          {
+            "node": "Env Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Env Config": {
+      "main": [
+        [
+          {
+            "node": "Get Buy Candidates (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Buy Candidates (RPC)": {
+      "main": [
+        [
+          {
+            "node": "If Has Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Results": {
+      "main": [
+        [
+          {
+            "node": "Split Stocks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Stocks to Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Stocks": {
+      "main": [
+        [
+          {
+            "node": "Get Account Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account Balance": {
+      "main": [
+        [
+          {
+            "node": "Calculate Order Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Order Details": {
+      "main": [
+        [
+          {
+            "node": "Send Order to Kiwoom",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Order to Kiwoom": {
+      "main": [
+        [
+          {
+            "node": "Insert Order to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Order to DB": {
+      "main": [
+        [
+          {
+            "node": "Update Trading Signal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "ad0e289b-60fb-4725-9549-650f9026e25d"
+  }
+}

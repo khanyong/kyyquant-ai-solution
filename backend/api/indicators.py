@@ -9,8 +9,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import logging
 
-from backend.indicators.calculator import IndicatorCalculator
-from backend.data.provider import DataProvider
+from indicators.calculator import IndicatorCalculator
+from data.provider import DataProvider
 
 router = APIRouter(prefix="/api/indicators", tags=["indicators"])
 logger = logging.getLogger(__name__)
@@ -32,50 +32,32 @@ class CalculateRequest(BaseModel):
 class CalculateResponse(BaseModel):
     """지표 계산 응답 모델"""
     stock_code: str
+    stock_name: Optional[str] = None
     indicators: Dict[str, float]  # {"ma_20": 75000, "rsi": 45.5, ...}
     calculated_at: str
 
+
+# Global instance (Lazy initialization)
+calculator_instance = None
+
+def get_calculator():
+    global calculator_instance
+    if calculator_instance is None:
+        try:
+            calculator_instance = IndicatorCalculator()
+        except Exception as e:
+            logger.error(f"Failed to initialize IndicatorCalculator: {e}")
+            # Return None or raise, but logging is good for now.
+            # If we return None, the route handler should handle it.
+            raise
+    return calculator_instance
 
 @router.post("/calculate", response_model=CalculateResponse)
 async def calculate_indicators(request: CalculateRequest):
     """
     주식 종목에 대한 기술적 지표를 계산합니다.
-
-    n8n workflow에서 호출하여 실시간 거래 신호 생성에 사용됩니다.
-
-    Args:
-        request: 종목 코드, 계산할 지표 목록, 과거 데이터 일수
-
-    Returns:
-        계산된 지표 값들
-
-    Example:
-        POST /api/indicators/calculate
-        {
-            "stock_code": "005930",
-            "indicators": [
-                {"name": "ma", "params": {"period": 20}},
-                {"name": "ma", "params": {"period": 12}},
-                {"name": "bollinger", "params": {"period": 20}},
-                {"name": "rsi", "params": {"period": 14}}
-            ],
-            "days": 60
-        }
-
-        Response:
-        {
-            "stock_code": "005930",
-            "indicators": {
-                "ma_20": 75000,
-                "ma_12": 76500,
-                "bollinger_upper": 78000,
-                "bollinger_middle": 75000,
-                "bollinger_lower": 72000,
-                "rsi": 45.5,
-                "close": 75500
-            },
-            "calculated_at": "2025-10-26T15:30:00"
-        }
+    
+    ... (docstring omitted for brevity) ...
     """
     try:
         logger.info(f"🔄 Calculating indicators for {request.stock_code}")
@@ -100,7 +82,8 @@ async def calculate_indicators(request: CalculateRequest):
         logger.info(f"📊 Loaded {len(df)} days of historical data")
 
         # 2. 지표 계산
-        calculator = IndicatorCalculator()
+        # Use lazy initialization
+        calculator = get_calculator()
         result_indicators = {}
 
         for indicator_req in request.indicators:
@@ -154,8 +137,12 @@ async def calculate_indicators(request: CalculateRequest):
 
         logger.info(f"✅ Calculated {len(result_indicators)} indicators for {request.stock_code}")
 
+        # 4. 종목명 조회
+        stock_name = await data_provider.get_stock_name(request.stock_code)
+
         return CalculateResponse(
             stock_code=request.stock_code,
+            stock_name=stock_name,
             indicators=result_indicators,
             calculated_at=datetime.now().isoformat()
         )

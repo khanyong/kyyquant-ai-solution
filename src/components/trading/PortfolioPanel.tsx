@@ -67,12 +67,17 @@ const PortfolioPanel: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
+      console.log('Fetching portfolio for user:', user.id)
+
       // 계좌 잔고 조회
       const { data: balanceData, error: balanceError } = await supabase
         .from('kw_account_balance')
         .select('*')
         .eq('user_id', user.id)
         .single()
+
+      console.log('Balance Data:', balanceData)
+      console.log('Balance Error:', balanceError)
 
       if (balanceError && balanceError.code !== 'PGRST116') {
         throw balanceError

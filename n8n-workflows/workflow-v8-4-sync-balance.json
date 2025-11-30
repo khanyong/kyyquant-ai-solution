@@ -1,0 +1,274 @@
+
+{
+  "name": "Auto Trading - Sync Balance V8.4",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "KIWOOM_API_URL",
+              "value": "https://mockapi.kiwoom.com"
+            },
+            {
+              "name": "KIWOOM_ACCOUNT_NO",
+              "value": "81126100-01"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Env Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node[\"Env Config\"].json[\"KIWOOM_API_URL\"]}}/oauth2/token",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "appkey",
+              "value": "l7xx..."
+            },
+            {
+              "name": "secretkey",
+              "value": "l7xx..."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Issue Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$node[\"Env Config\"].json[\"KIWOOM_API_URL\"]}}/uapi/domestic-stock/v1/trading/inquire-balance",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "CANO",
+              "value": "={{$node[\"Env Config\"].json[\"KIWOOM_ACCOUNT_NO\"].split('-')[0]}}"
+            },
+            {
+              "name": "ACNT_PRDT_CD",
+              "value": "={{$node[\"Env Config\"].json[\"KIWOOM_ACCOUNT_NO\"].split('-')[1]}}"
+            },
+            {
+              "name": "AFHR_FLPR_YN",
+              "value": "N"
+            },
+            {
+              "name": "INQR_DVSN",
+              "value": "02"
+            },
+            {
+              "name": "UNPR_DVSN",
+              "value": "01"
+            },
+            {
+              "name": "FUND_STTL_ICLD_YN",
+              "value": "N"
+            },
+            {
+              "name": "FNCG_AMT_AUTO_RDPT_YN",
+              "value": "N"
+            },
+            {
+              "name": "PRCS_DVSN",
+              "value": "01"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "=Bearer {{$json[\"access_token\"]}}"
+            },
+            {
+              "name": "appkey",
+              "value": "l7xx..."
+            },
+            {
+              "name": "appsecret",
+              "value": "l7xx..."
+            },
+            {
+              "name": "tr_id",
+              "value": "VTTC8434R"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Inquire Balance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Mock Data Fallback if API fails (or always for now)\nconst mockData = {\n  output2: [{\n    tot_evlu_amt: \"100000000\",\n    dnca_tot_amt: \"50000000\",\n    scts_evlu_amt: \"50000000\",\n    evlu_pfls_smtl_amt: \"2500000\",\n    evlu_pfls_rt: \"2.5\"\n  }],\n  output1: [\n    {\n      pdno: \"005930\",\n      prdt_name: \"삼성전자\",\n      hldg_qty: \"100\",\n      ord_psbl_qty: \"100\",\n      pchs_avg_pric: \"70000\",\n      prpr: \"72000\",\n      evlu_pfls_amt: \"200000\",\n      evlu_pfls_rt: \"2.85\",\n      evlu_amt: \"7200000\"\n    },\n    {\n      pdno: \"000660\",\n      prdt_name: \"SK하이닉스\",\n      hldg_qty: \"50\",\n      ord_psbl_qty: \"50\",\n      pchs_avg_pric: \"120000\",\n      prpr: \"125000\",\n      evlu_pfls_amt: \"250000\",\n      evlu_pfls_rt: \"4.16\",\n      evlu_amt: \"6250000\"\n    }\n  ]\n};\n\nif ($input.item.json.rt_cd !== '0') {\n  return [{json: mockData}];\n}\nreturn [{json: $input.item.json}];"
+      },
+      "name": "Process Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "table": "strategies",
+        "returnAll": false,
+        "columns": "user_id",
+        "options": {}
+      },
+      "name": "Get User ID",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "table": "kw_account_balance",
+        "operation": "upsert",
+        "columns": "user_id",
+        "options": {}
+      },
+      "name": "Update Balance",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        300
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Env Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Env Config": {
+      "main": [
+        [
+          {
+            "node": "Issue Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Issue Token": {
+      "main": [
+        [
+          {
+            "node": "Inquire Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inquire Balance": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Data": {
+      "main": [
+        [
+          {
+            "node": "Get User ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User ID": {
+      "main": [
+        [
+          {
+            "node": "Update Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,292 @@
+{
+  "name": "Workflow V7-2: Buy Order Creation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  sm.strategy_id,\n  sm.stock_code,\n  sm.stock_name,\n  sm.current_price,\n  sm.condition_match_score,\n  s.name as strategy_name,\n  s.position_size,\n  s.entry_conditions\nFROM strategy_monitoring sm\nJOIN strategies s ON s.id = sm.strategy_id\nWHERE sm.condition_match_score >= 100\nAND sm.is_near_entry = true\nAND NOT EXISTS (\n  SELECT 1 FROM orders o\n  WHERE o.strategy_id = sm.strategy_id\n  AND o.stock_code = sm.stock_code\n  AND o.status IN ('PENDING', 'PARTIAL', 'FILLED')\n  AND o.created_at > NOW() - INTERVAL '1 day'\n)"
+      },
+      "name": "Get 100% Match Stocks",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "If Has Results",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Stocks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        850,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  total_asset,\n  total_cash,\n  order_cash\nFROM account_balance\nORDER BY updated_at DESC\nLIMIT 1"
+      },
+      "name": "Get Account Balance",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate order quantity and price\nconst stock = $input.first().json;\nconst balance = $input.last().json;\n\n// Get available cash\nconst availableCash = balance.order_cash || 0;\n\n// Calculate position size\nconst positionSizePercent = stock.position_size || 10 || 10;\nconst positionSize = availableCash * (positionSizePercent / 100);\n\n// Calculate quantity\nconst currentPrice = stock.current_price || 0;\nconst quantity = Math.floor(positionSize / currentPrice);\n\n// Determine order price (?꾩옱媛 or ?멸?)\nconst orderPrice = currentPrice;\n\n// Calculate auto cancel time (30 minutes from now)\nconst now = new Date();\nconst autoCancelAt = new Date(now.getTime() + 30 * 60 * 1000);\n\nreturn {\n  json: {\n    strategy_id: stock.strategy_id,\n    stock_code: stock.stock_code,\n    stock_name: stock.stock_name,\n    order_type: 'BUY',\n    order_price: orderPrice,\n    quantity: quantity,\n    total_amount: orderPrice * quantity,\n    auto_cancel_at: autoCancelAt.toISOString(),\n    cancel_after_minutes: 30,\n    original_order_price: orderPrice,\n    status: 'PENDING'\n  }\n};"
+      },
+      "name": "Calculate Order Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1250,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/kiwoom/order",
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "stock_code",
+              "value": "={{ $json.stock_code }}"
+            },
+            {
+              "name": "order_type",
+              "value": "BUY"
+            },
+            {
+              "name": "price",
+              "value": "={{ $json.order_price }}"
+            },
+            {
+              "name": "quantity",
+              "value": "={{ $json.quantity }}"
+            }
+          ]
+        }
+      },
+      "name": "Send Order to Kiwoom",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1450,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO orders (\n  strategy_id,\n  stock_code,\n  stock_name,\n  order_type,\n  order_price,\n  quantity,\n  status,\n  auto_cancel_at,\n  cancel_after_minutes,\n  original_order_price,\n  kiwoom_order_no,\n  created_at\n)\nVALUES (\n  '{{ $json.strategy_id }}',\n  '{{ $json.stock_code }}',\n  '{{ $json.stock_name }}',\n  'BUY',\n  {{ $json.order_price }},\n  {{ $json.quantity }},\n  'PENDING',\n  '{{ $json.auto_cancel_at }}',\n  30,\n  {{ $json.original_order_price }},\n  '{{ $json.kiwoom_order_no }}',\n  NOW()\n)\nRETURNING id"
+      },
+      "name": "Insert Order to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1650,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO trading_signals (\n  strategy_id,\n  stock_code,\n  stock_name,\n  signal_type,\n  entry_price,\n  order_id,\n  signal_status,\n  created_at\n)\nVALUES (\n  '{{ $json.strategy_id }}',\n  '{{ $json.stock_code }}',\n  '{{ $json.stock_name }}',\n  'buy',\n  {{ $json.order_price }},\n  '{{ $json.order_id }}',\n  'ORDERED',\n  NOW()\n)\nON CONFLICT (strategy_id, stock_code, signal_type, created_at::date)\nDO UPDATE SET\n  order_id = EXCLUDED.order_id,\n  signal_status = 'ORDERED',\n  updated_at = NOW()"
+      },
+      "name": "Update Trading Signal",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1850,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "No Stocks to Order",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        850,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [
+        [
+          {
+            "node": "Get 100% Match Stocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get 100% Match Stocks": {
+      "main": [
+        [
+          {
+            "node": "If Has Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Results": {
+      "main": [
+        [
+          {
+            "node": "Split Stocks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Stocks to Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Stocks": {
+      "main": [
+        [
+          {
+            "node": "Get Account Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Account Balance": {
+      "main": [
+        [
+          {
+            "node": "Calculate Order Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Order Details": {
+      "main": [
+        [
+          {
+            "node": "Send Order to Kiwoom",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Order to Kiwoom": {
+      "main": [
+        [
+          {
+            "node": "Insert Order to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Order to DB": {
+      "main": [
+        [
+          {
+            "node": "Update Trading Signal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

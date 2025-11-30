@@ -6,6 +6,7 @@ import App from './AppWithRouter'
 import { store } from './store'
 import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
+import './i18n/config'
 
 const darkTheme = createTheme({
   palette: {

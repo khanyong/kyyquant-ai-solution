@@ -1,21 +1,22 @@
 import React, { useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { 
-  Container, 
-  Grid, 
-  Paper, 
-  Box, 
-  Typography, 
+import { useTranslation } from 'react-i18next'
+import {
+  Container,
+  Grid,
+  Paper,
+  Box,
+  Typography,
   Alert,
   Tab,
   Tabs,
   Chip,
   Stack
 } from '@mui/material'
-import { 
-  Code, 
-  ShowChart, 
-  Assessment, 
+import {
+  Code,
+  ShowChart,
+  Assessment,
   Monitor,
   Speed,
   Settings as SettingsIcon,
@@ -83,6 +84,7 @@ function TabPanel(props: TabPanelProps) {
 function MainApp() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const { t } = useTranslation()
   const { user: authUser, role } = useAuth()
   const { isConnected, user } = useAppSelector(state => state.auth)
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
@@ -184,7 +186,7 @@ function MainApp() {
           <Container maxWidth="xl" sx={{ mt: 3, mb: 3, flexGrow: 1 }}>
             {serverStatus === 'offline' && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                데모 모드: 백엔드 서버를 사용할 수 없어 모의 데이터를 사용합니다.
+                {t('common.demo_mode')}
               </Alert>
             )}
 
@@ -242,9 +244,9 @@ function MainApp() {
                   }
                 }}
               >
-                <Tab 
-                  icon={<Announcement />} 
-                  label="커뮤니티" 
+                <Tab
+                  icon={<Announcement />}
+                  label={t('tabs.community')}
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -255,7 +257,7 @@ function MainApp() {
                 />
                 <Tab
                   icon={<Code />}
-                  label="전략 빌더"
+                  label={t('tabs.strategy_builder')}
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -268,7 +270,7 @@ function MainApp() {
                   icon={<SettingsIcon />}
                   label={
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <span>투자 설정</span>
+                      <span>{t('tabs.investment_settings')}</span>
                     </Stack>
                   }
                   sx={{
@@ -281,7 +283,7 @@ function MainApp() {
                 />
                 <Tab
                   icon={<Assessment />}
-                  label="백테스팅"
+                  label={t('tabs.backtesting')}
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -290,9 +292,9 @@ function MainApp() {
                     }
                   }}
                 />
-                <Tab 
-                  icon={<Monitor />} 
-                  label="실시간 신호" 
+                <Tab
+                  icon={<Monitor />}
+                  label={t('tabs.realtime_signals')}
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -303,7 +305,7 @@ function MainApp() {
                 />
                 <Tab
                   icon={<TrendingUp />}
-                  label="자동매매"
+                  label={t('tabs.auto_trading')}
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -314,7 +316,7 @@ function MainApp() {
                 />
                 <Tab
                   icon={<ShowChart />}
-                  label="성과 분석"
+                  label={t('tabs.performance')}
                   sx={{
                     '&.Mui-selected': {
                       '& .MuiSvgIcon-root': {
@@ -324,9 +326,9 @@ function MainApp() {
                   }}
                 />
                 {isAdmin && (
-                  <Tab 
-                    icon={<AdminPanelSettings />} 
-                    label="관리자" 
+                  <Tab
+                    icon={<AdminPanelSettings />}
+                    label={t('tabs.admin')}
                     sx={{
                       '&.Mui-selected': {
                         '& .MuiSvgIcon-root': {
@@ -377,24 +379,24 @@ function MainApp() {
                     <Paper sx={{ p: 3 }}>
                       <Alert severity="warning" sx={{ mb: 2 }}>
                         <Typography variant="h6" gutterBottom>
-                          🔒 프리미엄 회원 전용 기능
+                          {t('auto_trading.premium_only')}
                         </Typography>
                         <Typography variant="body2" sx={{ mb: 2 }}>
-                          자동매매 기능은 프리미엄 회원만 이용하실 수 있습니다.
+                          {t('auto_trading.premium_description')}
                         </Typography>
                         <Typography variant="body2">
-                          • 24/7 자동 매매 실행<br/>
-                          • 실시간 신호 모니터링<br/>
-                          • 다중 전략 동시 운영<br/>
-                          • 투자유니버스 자동 필터링
+                          • {t('auto_trading.feature_247')}<br/>
+                          • {t('auto_trading.feature_monitoring')}<br/>
+                          • {t('auto_trading.feature_multi_strategy')}<br/>
+                          • {t('auto_trading.feature_universe')}
                         </Typography>
                       </Alert>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
-                          프리미엄 플랜으로 업그레이드하여 자동매매를 시작하세요
+                          {t('auto_trading.upgrade_message')}
                         </Typography>
                         <Chip
-                          label="프리미엄 플랜 보기"
+                          label={t('auto_trading.view_premium')}
                           color="primary"
                           onClick={() => navigate('/pricing')}
                           sx={{ mt: 2, cursor: 'pointer' }}

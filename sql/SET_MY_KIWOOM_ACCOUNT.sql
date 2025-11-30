@@ -13,10 +13,10 @@ SELECT
 FROM profiles
 WHERE id = 'f912da32-897f-4dbb-9242-3a438e9733a8';
 
--- 계좌번호 설정
+-- 계좌번호 설정 (아래 계좌번호를 실제 키움 모의투자 계좌로 변경하세요)
 UPDATE profiles
 SET
-  kiwoom_account = '8112-5100',
+  kiwoom_account = '81101350-01'
   updated_at = NOW()
 WHERE id = 'f912da32-897f-4dbb-9242-3a438e9733a8';
 

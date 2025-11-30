@@ -1,0 +1,299 @@
+{
+  "name": "Workflow V8-3 Fixed: Auto Cancel Orders",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [0, 400],
+      "id": "trigger-node"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "={{$env.SUPABASE_URL || 'https://hznkyaomtrpzcayayayh.supabase.co'}}"
+            },
+            {
+              "name": "SUPABASE_SERVICE_ROLE_KEY",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA"
+            },
+            {
+              "name": "KIWOOM_ACCOUNT_NO",
+              "value": "50150923-01"
+            },
+            {
+              "name": "DEBUG_INFO",
+              "value": "v8-3-fixed: Hardcoded Keys + Mock API + Supabase REST"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Env Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "id": "env-config"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$('Env Config').first().json[\"KIWOOM_APP_KEY\"]}}\",\n  \"secretkey\": \"{{$('Env Config').first().json[\"KIWOOM_APP_SECRET\"]}}\"\n}",
+        "options": {}
+      },
+      "name": "Kiwoom Token Issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 400],
+      "id": "token-issue"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/orders?select=id,strategy_id,stock_code,stock_name,order_type,order_price,quantity,kiwoom_order_no,auto_cancel_at,created_at&status=in.(PENDING,PARTIAL)&auto_cancel_at=lte.now()",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Orders to Cancel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 400],
+      "id": "get-orders"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Orders",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [800, 400],
+      "id": "split-orders"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/trading/order-rvsecncl",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "={{'Bearer ' + $('Kiwoom Token Issue').first().json.access_token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$('Env Config').first().json[\"KIWOOM_APP_KEY\"]}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$('Env Config').first().json[\"KIWOOM_APP_SECRET\"]}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "VTTC0803U"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"CANO\": \"{{$('Env Config').first().json.KIWOOM_ACCOUNT_NO.split('-')[0]}}\",\n  \"ACNT_PRDT_CD\": \"{{$('Env Config').first().json.KIWOOM_ACCOUNT_NO.split('-')[1]}}\",\n  \"KRX_FWDG_ORD_ORGNO\": \"{{$json.kiwoom_order_no}}\",\n  \"ORGN_ODNO\": \"{{$json.kiwoom_order_no}}\",\n  \"ORD_DVSN\": \"00\",\n  \"RVSE_CNCL_DVSN_CD\": \"02\",\n  \"ORD_QTY\": \"0\",\n  \"ORD_UNPR\": \"0\",\n  \"QTY_ALL_ORD_YN\": \"Y\"\n}",
+        "options": {}
+      },
+      "name": "Cancel Order via Kiwoom",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 400],
+      "id": "cancel-order"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determine cancellation reason\nconst order = $('Split Orders').first().json;\nconst now = new Date();\nconst createdAt = new Date(order.created_at);\nconst minutesElapsed = (now - createdAt) / 1000 / 60;\nconst cancelReason = `자동 취소 (시간 초과: ${Math.floor(minutesElapsed)}분 경과)`;\n\nreturn {\n  json: {\n    ...order,\n    cancellation_reason: cancelReason,\n    cancelled_at: now.toISOString()\n  }\n};"
+      },
+      "name": "Set Cancel Reason",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 400],
+      "id": "set-reason"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/orders?id=eq.{{$json.id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"CANCELLED\",\n  \"cancellation_reason\": \"{{ $json.cancellation_reason }}\",\n  \"updated_at\": \"now()\"\n}",
+        "options": {}
+      },
+      "name": "Update Order Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1400, 400],
+      "id": "update-order"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/trading_signals?order_id=eq.{{$json.id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"signal_status\": \"CANCELLED\",\n  \"updated_at\": \"now()\"\n}",
+        "options": {}
+      },
+      "name": "Update Signal Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 400],
+      "id": "update-signal"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/strategy_monitoring?strategy_id=eq.{{$json.strategy_id}}&stock_code=eq.{{$json.stock_code}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Remove from Monitoring",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1800, 400],
+      "id": "remove-monitoring"
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [[{"node": "Env Config", "type": "main", "index": 0}]]
+    },
+    "Env Config": {
+      "main": [[{"node": "Kiwoom Token Issue", "type": "main", "index": 0}]]
+    },
+    "Kiwoom Token Issue": {
+      "main": [[{"node": "Get Orders to Cancel", "type": "main", "index": 0}]]
+    },
+    "Get Orders to Cancel": {
+      "main": [[{"node": "Split Orders", "type": "main", "index": 0}]]
+    },
+    "Split Orders": {
+      "main": [[{"node": "Cancel Order via Kiwoom", "type": "main", "index": 0}]]
+    },
+    "Cancel Order via Kiwoom": {
+      "main": [[{"node": "Set Cancel Reason", "type": "main", "index": 0}]]
+    },
+    "Set Cancel Reason": {
+      "main": [[{"node": "Update Order Status", "type": "main", "index": 0}]]
+    },
+    "Update Order Status": {
+      "main": [[{"node": "Update Signal Status", "type": "main", "index": 0}]]
+    },
+    "Update Signal Status": {
+      "main": [[{"node": "Remove from Monitoring", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

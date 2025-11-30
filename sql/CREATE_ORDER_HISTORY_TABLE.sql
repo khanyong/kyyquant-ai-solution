@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS order_history (
 CREATE INDEX IF NOT EXISTS idx_order_history_created
   ON order_history(created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_order_history_stock
+CREATE INDEX IF NOT EXISTS idx_order_history_stock                        
   ON order_history(stock_code, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_order_history_strategy

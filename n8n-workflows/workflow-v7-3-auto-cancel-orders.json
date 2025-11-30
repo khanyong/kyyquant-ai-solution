@@ -96,7 +96,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Determine cancellation reason\nconst minutesElapsed = $json.minutes_elapsed || 0;\nconst cancelReason = `자동 취소 (시간 초과: ${Math.floor(minutesElapsed)}분 경과)`;\n\nreturn {\n  json: {\n    ...$json,\n    cancellation_reason: cancelReason,\n    cancelled_at: new Date().toISOString()\n  }\n};"
+        "jsCode": "// Determine cancellation reason\nconst minutesElapsed = $json.minutes_elapsed || 0;\nconst cancelReason = `?�동 취소 (?�간 초과: ${Math.floor(minutesElapsed)}�?경과)`;\n\nreturn {\n  json: {\n    ...$json,\n    cancellation_reason: cancelReason,\n    cancelled_at: new Date().toISOString()\n  }\n};"
       },
       "name": "Set Cancel Reason",
       "type": "n8n-nodes-base.code",

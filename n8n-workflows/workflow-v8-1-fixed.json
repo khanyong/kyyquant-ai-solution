@@ -1,0 +1,488 @@
+{
+  "name": "Workflow V8-1 Fixed: Backend API",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        400
+      ],
+      "id": "7c0bf3f2-e6e6-4159-98d6-0368df9fa887"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "={{$env.SUPABASE_URL || 'https://hznkyaomtrpzcayayayh.supabase.co'}}"
+            },
+            {
+              "name": "SUPABASE_SERVICE_ROLE_KEY",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "BACKEND_API_URL",
+              "value": "http://192.168.50.218:8001"
+            },
+            {
+              "name": "DEBUG_INFO",
+              "value": "v8-1-fixed: Backend API Integration"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Env Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "id": "903b9de0-58d5-46f7-8d1e-e9be5f271464"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json[\"SUPABASE_URL\"] + '/rest/v1/rpc/get_active_strategies_with_universe' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {}
+      },
+      "name": "Get Active Strategies (RPC)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        400
+      ],
+      "id": "1add3824-4759-4d96-908e-188915d76949"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare monitoring tasks and required indicators\nconst strategy = $input.item.json;\n\n// Use filtered_stocks from RPC result\nlet universe = [];\nif (strategy.filtered_stocks) {\n  if (Array.isArray(strategy.filtered_stocks)) {\n    universe = strategy.filtered_stocks.filter(code => code && typeof code === 'string');\n  } else if (typeof strategy.filtered_stocks === 'object') {\n    universe = Object.values(strategy.filtered_stocks).filter(code => code && typeof code === 'string');\n  }\n}\n\n// Standard set of indicators to request from backend\n// We request ALL common indicators to ensure we cover most strategy conditions without complex parsing\nconst requiredIndicators = [\n  { name: \"ma\", params: { period: 5 } },\n  { name: \"ma\", params: { period: 10 } },\n  { name: \"ma\", params: { period: 20 } },\n  { name: \"ma\", params: { period: 60 } },\n  { name: \"ma\", params: { period: 120 } },\n  { name: \"rsi\", params: { period: 14 } },\n  { name: \"bollinger\", params: { period: 20, std_dev: 2 } },\n  { name: \"stochastic\", params: { period: 14 } },\n  { name: \"macd\", params: { fast: 12, slow: 26, signal: 9 } }\n];\n\nconst outputs = [];\nconst strategyId = strategy.strategy_id || strategy.id;\nconst strategyName = strategy.strategy_name || strategy.name;\n\n// 1. Entry monitoring: all universe stocks\nif (strategy.entry_conditions && universe.length > 0) {\n  universe.forEach(stock_code => {\n    outputs.push({\n      json: {\n        strategy_id: strategyId,\n        user_id: strategy.user_id,\n        strategy_name: strategyName,\n        stock_code: stock_code,\n        monitoring_type: 'ENTRY',\n        conditions: strategy.entry_conditions,\n        position_size: strategy.position_size,\n        required_indicators: requiredIndicators\n      }\n    });\n  });\n}\n\n// 2. Exit monitoring: only held stocks\nif (strategy.exit_conditions) {\n  outputs.push({\n    json: {\n      strategy_id: strategyId,\n      user_id: strategy.user_id,\n      strategy_name: strategyName,\n      monitoring_type: 'EXIT_QUERY',\n      conditions: strategy.exit_conditions,\n      position_size: strategy.position_size,\n      required_indicators: requiredIndicators\n    }\n  });\n}\n\nreturn outputs;"
+      },
+      "name": "Prepare Monitoring Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        400
+      ],
+      "id": "9a28ab0c-46cb-41d0-a47a-51c84090e379"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.monitoring_type === 'EXIT_QUERY');"
+      },
+      "name": "Filter Exit Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ],
+      "id": "524686d9-fbf4-473f-9a68-87d0ce04b064"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.monitoring_type !== 'EXIT_QUERY');"
+      },
+      "name": "Filter Entry Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        500
+      ],
+      "id": "abeb93a2-c32d-45e0-81ee-b49e45b42af6"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/kw_portfolio?select=stock_code&user_id=eq.{{$json.user_id}}&quantity=gt.0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {
+          "alwaysOutputData": true,
+          "continueOnFail": true
+        },
+        "onError": "continueRegularOutput"
+      },
+      "name": "Get Held Stocks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1000,
+        300
+      ],
+      "id": "ee8041af-b6ab-4e59-a09e-d5076ae0e178"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert held stocks to exit monitoring tasks\nconst strategy = $('If Exit Query').first().json;\n// Filter out items without stock_code (e.g. from Always Output Data)\nconst heldStocks = $input.all().map(item => item.json).filter(s => s.stock_code);\n\nif (!heldStocks || heldStocks.length === 0) {\n  // Return a SKIP item to ensure flow continues to Merge\n  return [{ json: { monitoring_type: 'SKIP' } }];\n}\n\n// Deduplicate stock codes\nconst uniqueStockCodes = [...new Set(heldStocks.map(s => s.stock_code))];\n\nreturn uniqueStockCodes.map(stockCode => ({\n  json: {\n    strategy_id: strategy.strategy_id,\n    user_id: strategy.user_id,\n    strategy_name: strategy.strategy_name,\n    stock_code: stockCode,\n    monitoring_type: 'EXIT',\n    conditions: strategy.conditions,\n    position_size: strategy.position_size,\n    required_indicators: strategy.required_indicators\n  }\n}));"
+      },
+      "name": "Create Exit Monitoring Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ],
+      "id": "1c092f4d-2687-4429-ac30-6ab6d6a42a64"
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "name": "Merge Tasks",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        500
+      ],
+      "id": "f1e2d3c4-b5a6-4789-9012-34567890abcd"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.monitoring_type }}",
+              "operation": "notEqual",
+              "value2": "SKIP"
+            }
+          ]
+        }
+      },
+      "name": "If Valid Task",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        500
+      ],
+      "id": "0df81b66-f3b8-428f-9641-7996886a8724"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json[\"BACKEND_API_URL\"] + '/api/indicators/calculate' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stock_code\": \"{{ $json.stock_code }}\",\n  \"indicators\": {{ JSON.stringify($json.required_indicators) }},\n  \"days\": 100\n}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "name": "Calculate Indicators (Backend)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1400,
+        500
+      ],
+      "id": "321cca76-ed08-44eb-b6b8-477372c8c8f7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate condition score using Backend API Data\nconst taskData = $('If Valid Task').first().json;\nconst monitoringType = taskData.monitoring_type;\nconst conditions = taskData.conditions;\n\n// Backend API Response\nconst apiResponse = $input.item.json;\nconst indicators = apiResponse.indicators || {};\n\n// Normalize Indicator Keys for easier matching\n// e.g. 'stochastic_k' -> 'stoch_k', 'ma_20' -> 'ma20'\nconst marketData = { ...indicators };\n\n// Add aliases for common strategy variable names\nif (indicators.stochastic_k !== undefined) marketData.stoch_k = indicators.stochastic_k;\nif (indicators.stochastic_d !== undefined) marketData.stoch_d = indicators.stochastic_d;\nif (indicators.rsi !== undefined) marketData.rsi_14 = indicators.rsi;\nif (indicators.close !== undefined) marketData.current_price = indicators.close;\n\n// Parse conditions\nconst conditionsObj = typeof conditions === 'string' ? JSON.parse(conditions) : conditions;\nconst conditionArray = monitoringType === 'ENTRY' \n  ? (conditionsObj?.buy || []) \n  : (conditionsObj?.sell || []);\n\nif (!Array.isArray(conditionArray) || conditionArray.length === 0) {\n  return {\n    json: {\n      strategy_id: taskData.strategy_id,\n      stock_code: taskData.stock_code,\n      stock_name: taskData.stock_name || taskData.stock_code,\n      current_price: marketData.close || 0,\n      monitoring_type: monitoringType,\n      condition_match_score: 0,\n      conditions_met: {},\n      is_near_condition: false,\n      is_held: monitoringType === 'EXIT',\n      debug_indicators: indicators\n    }\n  };\n}\n\n// Helper function\nfunction getNestedValue(obj, path) {\n  if (!path || typeof path !== 'string') return path;\n  // Try direct match first\n  if (obj[path] !== undefined) return obj[path];\n  // Try nested\n  return path.split('.').reduce((curr, key) => curr?.[key], obj) ?? 0;\n}\n\n// Evaluate conditions\nconst conditionsMet = {};\nconst scores = [];\n\nconditionArray.forEach((condition, index) => {\n  const leftField = condition.left;\n  const rightField = condition.right;\n  \n  const leftValue = typeof leftField === 'string' \n    ? (getNestedValue(marketData, leftField) || 0)\n    : leftField;\n  \n  const rightValue = typeof rightField === 'string'\n    ? (getNestedValue(marketData, rightField) || 0) \n    : (rightField || 0);\n  \n  const operator = condition.operator;\n  \n  let met = false;\n  let progress = 0;\n  \n  switch (operator) {\n    case '>':\n      met = leftValue > rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.min((leftValue / rightValue) * 100, 99);\n      }\n      break;\n    case '>=':\n      met = leftValue >= rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.min((leftValue / rightValue) * 100, 99);\n      }\n      break;\n    case '<':\n      met = leftValue < rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(100 - ((leftValue - rightValue) / rightValue * 100), 0);\n      }\n      break;\n    case '<=':\n      met = leftValue <= rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(100 - ((leftValue - rightValue) / rightValue * 100), 0);\n      }\n      break;\n    case '==':\n    case '=':\n      const diff = Math.abs(leftValue - rightValue);\n      met = diff < 0.01;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(0, 100 - (diff / Math.abs(rightValue) * 100));\n      }\n      break;\n    default:\n      progress = 0;\n  }\n  \n  conditionsMet[`condition_${index}`] = {\n    field: leftField,\n    required: `${leftField} ${operator} ${rightField}`,\n    current: `${Number(leftValue).toFixed(2)} ${operator} ${Number(rightValue).toFixed(2)}`,\n    met: met,\n    progress: progress.toFixed(2)\n  };\n  \n  scores.push(progress);\n});\n\nconst avgScore = scores.length > 0 \n  ? scores.reduce((a, b) => a + b, 0) / scores.length \n  : 0;\n\nreturn {\n  json: {\n    strategy_id: taskData.strategy_id,\n    stock_code: taskData.stock_code,\n    stock_name: taskData.stock_name || taskData.stock_code,\n    current_price: marketData.close || 0,\n    monitoring_type: monitoringType,\n    condition_match_score: parseFloat(avgScore.toFixed(2)),\n    conditions_met: conditionsMet,\n    is_near_condition: avgScore >= 80,\n    is_held: monitoringType === 'EXIT',\n    debug_indicators: indicators\n  }\n};"
+      },
+      "name": "Calculate Condition Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        500
+      ],
+      "id": "137a3562-8061-4469-831a-8e89d92e782b"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.condition_match_score }}",
+              "operation": "largerEqual",
+              "value2": 80
+            }
+          ]
+        }
+      },
+      "name": "If Score >= 80",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        500
+      ],
+      "id": "150e41dc-236f-4d98-a007-327873cf2df7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/strategy_monitoring?on_conflict=strategy_id,stock_code",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates, return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  strategy_id: $json.strategy_id,\n  stock_code: $json.stock_code,\n  stock_name: $json.stock_name,\n  current_price: $json.current_price,\n  condition_match_score: $json.monitoring_type === 'ENTRY' ? $json.condition_match_score : null,\n  conditions_met: $json.monitoring_type === 'ENTRY' ? $json.conditions_met : null,\n  is_near_entry: $json.monitoring_type === 'ENTRY' ? $json.is_near_condition : null,\n  exit_condition_match_score: $json.monitoring_type === 'EXIT' ? $json.condition_match_score : null,\n  exit_conditions_met: $json.monitoring_type === 'EXIT' ? $json.conditions_met : null,\n  is_near_exit: $json.monitoring_type === 'EXIT' ? $json.is_near_condition : null,\n  is_held: $json.is_held,\n  updated_at: 'now()'\n} }}",
+        "options": {}
+      },
+      "name": "Upsert to Strategy Monitoring",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2000,
+        400
+      ],
+      "id": "75949d7c-320b-4b3c-a8d0-020bfd54ef2e"
+    },
+    {
+      "parameters": {},
+      "name": "No Action",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        600
+      ],
+      "id": "d6dbbaf8-f5d6-4577-a755-918068bb830a"
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [
+        [
+          {
+            "node": "Env Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Env Config": {
+      "main": [
+        [
+          {
+            "node": "Get Active Strategies (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Strategies (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Prepare Monitoring Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Monitoring Tasks": {
+      "main": [
+        [
+          {
+            "node": "Filter Exit Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter Entry Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Exit Tasks": {
+      "main": [
+        [
+          {
+            "node": "Get Held Stocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Entry Tasks": {
+      "main": [
+        [
+          {
+            "node": "Merge Tasks",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Held Stocks": {
+      "main": [
+        [
+          {
+            "node": "Create Exit Monitoring Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Exit Monitoring Tasks": {
+      "main": [
+        [
+          {
+            "node": "Merge Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Tasks": {
+      "main": [
+        [
+          {
+            "node": "If Valid Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Valid Task": {
+      "main": [
+        [
+          {
+            "node": "Calculate Indicators (Backend)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Indicators (Backend)": {
+      "main": [
+        [
+          {
+            "node": "Calculate Condition Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Condition Score": {
+      "main": [
+        [
+          {
+            "node": "If Score >= 80",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Score >= 80": {
+      "main": [
+        [
+          {
+            "node": "Upsert to Strategy Monitoring",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "0023c700-675e-4d4d-ae38-c7fc94f421fc"
+  }
+}

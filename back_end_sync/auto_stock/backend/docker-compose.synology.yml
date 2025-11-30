@@ -1,0 +1,39 @@
+version: '3.3'  # 시놀로지는 3.3 버전이 안정적
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: auto-stock-backend:latest
+    container_name: auto-stock-backend
+    ports:
+      - "8080:8001"
+    environment:
+      # Supabase 설정
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      # 키움 API 설정
+      - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
+      - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}
+      - KIWOOM_ACCOUNT_NO=${KIWOOM_ACCOUNT_NO}
+      - KIWOOM_IS_DEMO=${KIWOOM_IS_DEMO}
+      # 프론트엔드 URL (CORS)
+      - FRONTEND_URL=${FRONTEND_URL}
+      # Python 설정
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Seoul
+      # 로깅
+      - LOG_LEVEL=INFO
+    volumes:
+      # 시놀로지 경로 매핑
+      - /volume1/docker/auto_stock:/app
+      - /volume1/docker/auto_stock/logs:/app/logs
+      - /volume1/docker/auto_stock/.env:/app/.env:ro  # 읽기 전용
+    restart: unless-stopped
+    networks:
+      - auto-stock-net
+
+networks:
+  auto-stock-net:
+    driver: bridge

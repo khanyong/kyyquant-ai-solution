@@ -32,15 +32,7 @@ import {
 } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 
-interface StrategySignal {
-  stock_code: string
-  stock_name: string
-  signal_type: 'buy' | 'sell'
-  current_price: number
-  change_rate: number
-  signal_strength?: number
-  created_at: string
-}
+
 
 interface Position {
   stock_code: string
@@ -74,12 +66,13 @@ export default function StrategyCard({
   onDelete
 }: StrategyCardProps) {
   const [expanded, setExpanded] = useState(false)
-  const [signals, setSignals] = useState<StrategySignal[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [loading, setLoading] = useState(true)
   const [showBuySignals, setShowBuySignals] = useState(false)
   const [showHoldings, setShowHoldings] = useState(false)
   const [showSellSignals, setShowSellSignals] = useState(false)
+
+  const [monitoringSignals, setMonitoringSignals] = useState<any[]>([])
 
   useEffect(() => {
     loadStrategyData()
@@ -89,15 +82,12 @@ export default function StrategyCard({
     try {
       setLoading(true)
 
-      // 포지션 조회 (실제 보유 종목) - 먼저 조회하여 보유 종목 코드 목록 생성
+      // 포지션 조회 (실제 보유 종목)
       const { data: positionData, error: positionError } = await supabase
         .from('positions')
         .select('*')
         .eq('strategy_id', strategyId)
         .eq('position_status', 'open')
-
-      // 보유 종목 코드 목록
-      const holdingStockCodes = new Set(positionData?.map((pos: any) => pos.stock_code) || [])
 
       if (!positionError && positionData) {
         // 현재가 정보와 조인하여 수익률 계산
@@ -128,25 +118,21 @@ export default function StrategyCard({
         setPositions(positionsWithPrice)
       }
 
-      // 시그널 조회 (최근 24시간)
-      const { data: signalData, error: signalError } = await supabase
-        .from('trading_signals')
+      // 모니터링 데이터 조회 (매수/매도 대기)
+      const { data: monitoringData, error: monitoringError } = await supabase
+        .from('strategy_monitoring')
         .select('*')
         .eq('strategy_id', strategyId)
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .order('created_at', { ascending: false })
-        .limit(10)
+        .or('is_near_entry.eq.true,is_near_exit.eq.true')
+        .order('updated_at', { ascending: false })
 
-      if (!signalError && signalData) {
-        // 매도 시그널은 보유 중인 종목에 대해서만 필터링
-        const filteredSignals = signalData.filter((signal: any) => {
-          if (signal.signal_type === 'sell') {
-            return holdingStockCodes.has(signal.stock_code)
-          }
-          return true // 매수 시그널은 모두 포함
-        })
-        setSignals(filteredSignals)
+      if (!monitoringError && monitoringData) {
+        setMonitoringSignals(monitoringData)
       }
+
+      // 기존 시그널 조회 (히스토리용, 혹은 제거 가능)
+      // ... (Keeping logic simple, focusing on monitoringData for status)
+
     } catch (error) {
       console.error('전략 데이터 로드 실패:', error)
     } finally {
@@ -168,8 +154,8 @@ export default function StrategyCard({
     return 'text.secondary'
   }
 
-  const buySignals = signals.filter(s => s.signal_type === 'buy')
-  const sellSignals = signals.filter(s => s.signal_type === 'sell')
+  const buySignals = monitoringSignals.filter(s => s.is_near_entry)
+  const sellSignals = monitoringSignals.filter(s => s.is_near_exit)
 
   const totalInvested = positions.reduce((sum, pos) => sum + (pos.avg_price * pos.quantity), 0)
   const totalValue = positions.reduce((sum, pos) => sum + (pos.current_price * pos.quantity), 0)
@@ -361,12 +347,12 @@ export default function StrategyCard({
                           <Typography variant="body2">
                             {formatCurrency(signal.current_price)}원
                           </Typography>
-                          <Typography
-                            variant="caption"
-                            color={getProfitColor(signal.change_rate)}
-                          >
-                            {formatPercent(signal.change_rate)}
-                          </Typography>
+                          <Chip
+                            label={`${signal.condition_match_score}점`}
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                          />
                         </Stack>
                       </Box>
                     ))}
@@ -477,6 +463,12 @@ export default function StrategyCard({
                                 {formatPercent(position.profit_rate)}
                               </Typography>
                             )}
+                            <Chip
+                              label={`${signal.exit_condition_match_score || signal.condition_match_score}점`}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
                           </Stack>
                         </Box>
                       )
@@ -620,64 +612,7 @@ export default function StrategyCard({
               <Alert severity="info">보유 중인 종목이 없습니다.</Alert>
             )}
 
-            {/* 최근 시그널 */}
-            {signals.length > 0 && (
-              <Box>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                  최근 시그널 (24시간)
-                </Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>종목명</TableCell>
-                        <TableCell>시그널</TableCell>
-                        <TableCell align="right">현재가</TableCell>
-                        <TableCell align="right">등락률</TableCell>
-                        <TableCell>발생시간</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {signals.map((signal, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight="medium">
-                              {signal.stock_name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {signal.stock_code}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={signal.signal_type === 'buy' ? '매수' : '매도'}
-                              size="small"
-                              color={signal.signal_type === 'buy' ? 'error' : 'primary'}
-                            />
-                          </TableCell>
-                          <TableCell align="right">
-                            {formatCurrency(signal.current_price)}원
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography
-                              variant="body2"
-                              color={getProfitColor(signal.change_rate)}
-                            >
-                              {formatPercent(signal.change_rate)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="caption">
-                              {new Date(signal.created_at).toLocaleString('ko-KR')}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            )}
+
           </Stack>
         </Collapse>
       </Stack>

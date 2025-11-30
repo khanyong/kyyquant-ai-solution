@@ -12,11 +12,7 @@
 > 🆕 지표 계산 API 엔드포인트
 
 ### 2. 수정된 파일
-
-**소스**: `d:\Dev\auto_stock\backend\main.py`
-**대상**: `\\eiNNNieSysNAS\docker\auto_stock\backend\main.py`
-
-> ✏️ indicators 라우터 등록 추가 (88-92번 라인)
+> 🚀 성능 최적화 (IndicatorCalculator 싱글톤 + 지연 초기화 적용)
 
 ---
 

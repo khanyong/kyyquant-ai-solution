@@ -1,0 +1,359 @@
+{
+  "name": "Workflow V8-2 Fixed: Buy Order Creation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [0, 400],
+      "id": "trigger-node"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "={{$env.SUPABASE_URL || 'https://hznkyaomtrpzcayayayh.supabase.co'}}"
+            },
+            {
+              "name": "SUPABASE_SERVICE_ROLE_KEY",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA"
+            },
+            {
+              "name": "KIWOOM_ACCOUNT_NO",
+              "value": "50150923-01"
+            },
+            {
+              "name": "DEBUG_INFO",
+              "value": "v8-2-fixed: Hardcoded Keys + Mock API + Supabase REST"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Env Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "id": "env-config"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$('Env Config').first().json[\"KIWOOM_APP_KEY\"]}}\",\n  \"secretkey\": \"{{$('Env Config').first().json[\"KIWOOM_APP_SECRET\"]}}\"\n}",
+        "options": {}
+      },
+      "name": "Kiwoom Token Issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 400],
+      "id": "token-issue"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/strategy_monitoring?select=strategy_id,stock_code,stock_name,current_price,condition_match_score,strategies(name,position_size)&condition_match_score=gte.100&is_near_entry=is.true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get 100% Match Stocks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 400],
+      "id": "get-match-stocks"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Stocks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [800, 400],
+      "id": "split-stocks"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/orders?select=id&strategy_id=eq.{{$json.strategy_id}}&stock_code=eq.{{$json.stock_code}}&status=in.(PENDING,PARTIAL,FILLED)&created_at=gt.{{new Date(Date.now() - 86400000).toISOString()}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Check Pending Orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 400],
+      "id": "check-pending"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.length }}",
+              "operation": "equal",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "If No Pending Order",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 400],
+      "id": "if-no-pending"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/account_balance?select=total_asset,total_cash,order_cash&order=updated_at.desc&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Account Balance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1400, 300],
+      "id": "get-balance"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate order quantity and price\n// Input 1: Account Balance (from previous node)\n// Input 2: Stock Info (from Split Stocks)\nconst balance = $input.first().json;\nconst stock = $('Split Stocks').first().json;\n\n// Get available cash\nconst availableCash = balance.order_cash || 0;\n\n// Strategy info is nested in 'strategies' object due to join\nconst strategyInfo = stock.strategies || {};\nconst positionSizePercent = strategyInfo.position_size || 10;\n\n// Calculate position size\nconst positionSize = availableCash * (positionSizePercent / 100);\n\n// Calculate quantity\nconst currentPrice = stock.current_price || 0;\nconst quantity = currentPrice > 0 ? Math.floor(positionSize / currentPrice) : 0;\n\nif (quantity <= 0) {\n  return []; // Skip if quantity is 0\n}\n\n// Determine order price (Limit price = Current Price for now)\nconst orderPrice = currentPrice;\n\n// Calculate auto cancel time (30 minutes from now)\nconst now = new Date();\nconst autoCancelAt = new Date(now.getTime() + 30 * 60 * 1000);\n\nreturn {\n  json: {\n    strategy_id: stock.strategy_id,\n    stock_code: stock.stock_code,\n    stock_name: stock.stock_name,\n    strategy_name: strategyInfo.name,\n    order_type: 'BUY',\n    order_price: orderPrice,\n    quantity: quantity,\n    total_amount: orderPrice * quantity,\n    auto_cancel_at: autoCancelAt.toISOString(),\n    cancel_after_minutes: 30,\n    original_order_price: orderPrice,\n    status: 'PENDING'\n  }\n};"
+      },
+      "name": "Calculate Order Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300],
+      "id": "calc-order"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/trading/order-cash",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "={{'Bearer ' + $('Kiwoom Token Issue').first().json.access_token}}"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$('Env Config').first().json[\"KIWOOM_APP_KEY\"]}}"
+            },
+            {
+              "name": "appsecret",
+              "value": "={{$('Env Config').first().json[\"KIWOOM_APP_SECRET\"]}}"
+            },
+            {
+              "name": "tr_id",
+              "value": "VTTC0802U"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"CANO\": \"{{$('Env Config').first().json.KIWOOM_ACCOUNT_NO.split('-')[0]}}\",\n  \"ACNT_PRDT_CD\": \"{{$('Env Config').first().json.KIWOOM_ACCOUNT_NO.split('-')[1]}}\",\n  \"PDNO\": \"{{$json.stock_code}}\",\n  \"ORD_DVSN\": \"00\",\n  \"ORD_QTY\": \"{{$json.quantity}}\",\n  \"ORD_UNPR\": \"{{$json.order_price}}\"\n}",
+        "options": {}
+      },
+      "name": "Send Order to Kiwoom",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1800, 300],
+      "id": "send-order"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"strategy_id\": \"{{ $json.strategy_id }}\",\n  \"stock_code\": \"{{ $json.stock_code }}\",\n  \"stock_name\": \"{{ $json.stock_name }}\",\n  \"order_type\": \"BUY\",\n  \"order_price\": {{ $json.order_price }},\n  \"quantity\": {{ $json.quantity }},\n  \"status\": \"PENDING\",\n  \"auto_cancel_at\": \"{{ $json.auto_cancel_at }}\",\n  \"cancel_after_minutes\": 30,\n  \"original_order_price\": {{ $json.original_order_price }},\n  \"kiwoom_order_no\": \"{{ $json.ODNO || $json.output?.ODNO || 'UNKNOWN' }}\",\n  \"created_at\": \"now()\"\n}",
+        "options": {}
+      },
+      "name": "Insert Order to DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 300],
+      "id": "insert-order"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/trading_signals?on_conflict=strategy_id,stock_code,signal_type,created_at",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"strategy_id\": \"{{ $json.strategy_id }}\",\n  \"stock_code\": \"{{ $json.stock_code }}\",\n  \"stock_name\": \"{{ $json.stock_name }}\",\n  \"signal_type\": \"buy\",\n  \"entry_price\": {{ $json.order_price }},\n  \"order_id\": \"{{ $json.id }}\",\n  \"signal_status\": \"ORDERED\",\n  \"created_at\": \"now()\"\n}",
+        "options": {}
+      },
+      "name": "Update Trading Signal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2200, 300],
+      "id": "update-signal"
+    },
+    {
+      "parameters": {},
+      "name": "No Action",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1400, 500],
+      "id": "no-op"
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [[{"node": "Env Config", "type": "main", "index": 0}]]
+    },
+    "Env Config": {
+      "main": [[{"node": "Kiwoom Token Issue", "type": "main", "index": 0}]]
+    },
+    "Kiwoom Token Issue": {
+      "main": [[{"node": "Get 100% Match Stocks", "type": "main", "index": 0}]]
+    },
+    "Get 100% Match Stocks": {
+      "main": [[{"node": "Split Stocks", "type": "main", "index": 0}]]
+    },
+    "Split Stocks": {
+      "main": [[{"node": "Check Pending Orders", "type": "main", "index": 0}]]
+    },
+    "Check Pending Orders": {
+      "main": [[{"node": "If No Pending Order", "type": "main", "index": 0}]]
+    },
+    "If No Pending Order": {
+      "main": [
+        [{"node": "Get Account Balance", "type": "main", "index": 0}],
+        [{"node": "No Action", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Account Balance": {
+      "main": [[{"node": "Calculate Order Details", "type": "main", "index": 0}]]
+    },
+    "Calculate Order Details": {
+      "main": [[{"node": "Send Order to Kiwoom", "type": "main", "index": 0}]]
+    },
+    "Send Order to Kiwoom": {
+      "main": [[{"node": "Insert Order to DB", "type": "main", "index": 0}]]
+    },
+    "Insert Order to DB": {
+      "main": [[{"node": "Update Trading Signal", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -107,3 +107,8 @@ backend/update_log.txt
 backend/backend_log.txt
 **/*_backup.py
 **/*_backup.sql
+
+# Large files
+back_end_sync/n8n/data/
+backend/database.sqlite
+backend/bash.journal

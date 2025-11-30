@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: n8n-nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "5679:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - n8n
+    network_mode: bridge
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-1
+    restart: unless-stopped
+    expose:
+      - "5678"
+    environment:
+      # 기본 인증 비활성화
+      - N8N_BASIC_AUTH_ACTIVE=false
+
+      # 호스트 및 프로토콜 설정
+      - N8N_HOST=192.168.50.150
+      - N8N_PROTOCOL=http
+      - N8N_PORT=5679
+
+      # CORS 설정 (nginx가 처리하므로 불필요하지만 유지)
+      - N8N_CORS_ORIGIN=*
+      - N8N_SECURE_COOKIE=false
+
+      # Webhook URL
+      - WEBHOOK_URL=https://workflow.bll-pro.com/
+      - VUE_APP_URL_BASE_API=https://workflow.bll-pro.com/
+
+      # 타임존
+      - TZ=Asia/Seoul
+      - N8N_TIMEZONE=Asia/Seoul
+
+      # 성능 설정
+      - N8N_UPLOAD_MAX_SIZE=500MB
+      - N8N_HTTP_TIMEOUT=300000
+      - N8N_MEMORY_LIMIT=2GB
+
+      # 기능 활성화
+      - N8N_SCHEDULER_ENABLED=true
+      - N8N_RUNNERS_ENABLED=true
+
+      # 보안
+      - N8N_ENCRYPTION_KEY=gshg7fhj3784ghfjdhg34589gdhjg456
+
+    volumes:
+      - /volume1/docker/n8n/data:/home/node/.n8n
+
+    network_mode: bridge

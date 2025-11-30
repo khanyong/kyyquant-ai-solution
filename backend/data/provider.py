@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import os
 from supabase import create_client
+import asyncio
 
 class DataProvider:
     """데이터 제공자"""
@@ -58,9 +59,10 @@ class DataProvider:
                 print(f"[DataProvider] Fetching data for {stock_code} from {start_date} to {end_date}")
 
                 # kw_price_daily 테이블 사용 - 올바른 컬럼명 사용
-                response = self.supabase.table('kw_price_daily').select('*').eq(
-                    'stock_code', stock_code  # 올바른 컬럼명
-                ).gte('trade_date', start_date).lte('trade_date', end_date).order('trade_date').execute()
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(None, lambda: self.supabase.table('kw_price_daily').select('*').eq(
+                    'stock_code', stock_code
+                ).gte('trade_date', start_date).lte('trade_date', end_date).order('trade_date').execute())
 
                 if response.data and len(response.data) > 0:
                     print(f"[DataProvider] Found {len(response.data)} rows for {stock_code}")
@@ -231,3 +233,33 @@ class DataProvider:
             'change_rate': 1.0,
             'volume': 1000000
         }
+
+    async def get_stock_name(self, stock_code: str) -> str:
+        """
+        종목명 조회
+        
+        Args:
+            stock_code: 종목 코드
+            
+        Returns:
+            종목명 (없으면 stock_code 반환)
+        """
+        if self.supabase:
+            try:
+                # stocks 테이블 또는 kw_stock_master 테이블 조회
+                # get_stock_list에서 stocks를 사용하므로 우선 시도
+                response = self.supabase.table('stocks').select('name').eq('code', stock_code).execute()
+                if response.data and len(response.data) > 0:
+                    return response.data[0]['name']
+                    
+            except Exception as e:
+                print(f"[DataProvider] Failed to fetch stock name from stocks table: {e}")
+                
+        # Mock data or fallback
+        mock_names = {
+            '005930': '삼성전자',
+            '000660': 'SK하이닉스',
+            '035720': '카카오',
+            '035420': 'NAVER'
+        }
+        return mock_names.get(stock_code, stock_code)

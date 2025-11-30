@@ -1,0 +1,223 @@
+{
+  "name": "Workflow V8-1 Enhanced: Entry + Exit Condition Monitoring",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/1 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 1 Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  s.id as strategy_id,\n  s.user_id,\n  s.name as strategy_name,\n  s.entry_conditions,\n  s.exit_conditions,\n  s.universe,\n  s.position_size\nFROM strategies s\nWHERE s.is_active = true\nAND s.auto_trade_enabled = true\nAND (s.entry_conditions IS NOT NULL OR s.exit_conditions IS NOT NULL)"
+      },
+      "name": "Get Active Strategies",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 400],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Strategies",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare two outputs: entry monitoring stocks and exit monitoring stocks\nconst strategy = $input.item.json;\nconst universe = Array.isArray(strategy.universe) && strategy.universe.length > 0 \n  ? strategy.universe \n  : [];\n\nconst outputs = [];\n\n// 1. Entry monitoring: all universe stocks\nif (strategy.entry_conditions && universe.length > 0) {\n  universe.forEach(stock_code => {\n    outputs.push({\n      json: {\n        strategy_id: strategy.strategy_id,\n        user_id: strategy.user_id,\n        strategy_name: strategy.strategy_name,\n        stock_code: stock_code,\n        monitoring_type: 'ENTRY',\n        conditions: strategy.entry_conditions,\n        position_size: strategy.position_size\n      }\n    });\n  });\n}\n\n// 2. Exit monitoring: only held stocks\nif (strategy.exit_conditions) {\n  // Note: We'll query portfolio in the next node\n  outputs.push({\n    json: {\n      strategy_id: strategy.strategy_id,\n      user_id: strategy.user_id,\n      strategy_name: strategy.strategy_name,\n      monitoring_type: 'EXIT_QUERY',\n      conditions: strategy.exit_conditions,\n      position_size: strategy.position_size\n    }\n  });\n}\n\nreturn outputs;"
+      },
+      "name": "Prepare Monitoring Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.monitoring_type }}",
+              "operation": "equals",
+              "value2": "EXIT_QUERY"
+            }
+          ]
+        }
+      },
+      "name": "If Exit Query",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT DISTINCT stock_code\nFROM kw_portfolio\nWHERE user_id = '{{ $json.user_id }}'\nAND quantity > 0"
+      },
+      "name": "Get Held Stocks",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert held stocks to exit monitoring tasks\nconst strategy = $input.first().json;\nconst heldStocks = $input.last().json;\n\nif (!Array.isArray(heldStocks) || heldStocks.length === 0) {\n  return [];\n}\n\nreturn heldStocks.map(stock => ({\n  json: {\n    strategy_id: strategy.strategy_id,\n    user_id: strategy.user_id,\n    strategy_name: strategy.strategy_name,\n    stock_code: stock.stock_code,\n    monitoring_type: 'EXIT',\n    conditions: strategy.conditions,\n    position_size: strategy.position_size\n  }\n}));"
+      },
+      "name": "Create Exit Monitoring Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Monitoring Tasks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/kiwoom/market-data",
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "stock_code",
+              "value": "={{ $json.stock_code }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Market Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1450, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate condition score for ENTRY or EXIT\nconst monitoringType = $input.item.json.monitoring_type;\nconst conditions = $input.item.json.conditions;\nconst marketData = $input.item.json.market_data || {};\n\n// Parse conditions\nconst conditionsObj = typeof conditions === 'string' ? JSON.parse(conditions) : conditions;\nconst conditionArray = monitoringType === 'ENTRY' \n  ? (conditionsObj?.buy || []) \n  : (conditionsObj?.sell || []);\n\nif (!Array.isArray(conditionArray) || conditionArray.length === 0) {\n  return {\n    json: {\n      strategy_id: $input.item.json.strategy_id,\n      stock_code: $input.item.json.stock_code,\n      stock_name: marketData.stock_name || '',\n      current_price: marketData.current_price || 0,\n      monitoring_type: monitoringType,\n      condition_match_score: 0,\n      conditions_met: {},\n      is_near_condition: false,\n      is_held: monitoringType === 'EXIT'\n    }\n  };\n}\n\n// Helper function\nfunction getNestedValue(obj, path) {\n  if (!path || typeof path !== 'string') return path;\n  return path.split('.').reduce((curr, key) => curr?.[key], obj) ?? 0;\n}\n\n// Evaluate conditions\nconst conditionsMet = {};\nconst scores = [];\n\nconditionArray.forEach((condition, index) => {\n  const leftField = condition.left;\n  const rightField = condition.right;\n  \n  const leftValue = typeof leftField === 'string' \n    ? (getNestedValue(marketData, leftField) || marketData[leftField] || 0)\n    : leftField;\n  \n  const rightValue = typeof rightField === 'string'\n    ? (getNestedValue(marketData, rightField) || marketData[rightField] || 0) \n    : (rightField || 0);\n  \n  const operator = condition.operator;\n  \n  let met = false;\n  let progress = 0;\n  \n  switch (operator) {\n    case '>':\n      met = leftValue > rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.min((leftValue / rightValue) * 100, 99);\n      }\n      break;\n    case '>=':\n      met = leftValue >= rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.min((leftValue / rightValue) * 100, 99);\n      }\n      break;\n    case '<':\n      met = leftValue < rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(100 - ((leftValue - rightValue) / rightValue * 100), 0);\n      }\n      break;\n    case '<=':\n      met = leftValue <= rightValue;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(100 - ((leftValue - rightValue) / rightValue * 100), 0);\n      }\n      break;\n    case '==':\n    case '=':\n      const diff = Math.abs(leftValue - rightValue);\n      met = diff < 0.01;\n      if (rightValue !== 0) {\n        progress = met ? 100 : Math.max(0, 100 - (diff / Math.abs(rightValue) * 100));\n      }\n      break;\n    default:\n      progress = 0;\n  }\n  \n  conditionsMet[`condition_${index}`] = {\n    field: leftField,\n    required: `${leftField} ${operator} ${rightField}`,\n    current: `${leftValue.toFixed(2)} ${operator} ${rightValue}`,\n    met: met,\n    progress: progress.toFixed(2)\n  };\n  \n  scores.push(progress);\n});\n\nconst avgScore = scores.length > 0 \n  ? scores.reduce((a, b) => a + b, 0) / scores.length \n  : 0;\n\nreturn {\n  json: {\n    strategy_id: $input.item.json.strategy_id,\n    stock_code: $input.item.json.stock_code,\n    stock_name: marketData.stock_name || '',\n    current_price: marketData.current_price || 0,\n    monitoring_type: monitoringType,\n    condition_match_score: parseFloat(avgScore.toFixed(2)),\n    conditions_met: conditionsMet,\n    is_near_condition: avgScore >= 80,\n    is_held: monitoringType === 'EXIT'\n  }\n};"
+      },
+      "name": "Calculate Condition Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.condition_match_score }}",
+              "operation": "largerEqual",
+              "value2": 80
+            }
+          ]
+        }
+      },
+      "name": "If Score >= 80",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1850, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO strategy_monitoring (\n  strategy_id,\n  stock_code,\n  stock_name,\n  current_price,\n  condition_match_score,\n  conditions_met,\n  is_near_entry,\n  exit_condition_match_score,\n  exit_conditions_met,\n  is_near_exit,\n  is_held,\n  updated_at\n)\nVALUES (\n  '{{ $json.strategy_id }}',\n  '{{ $json.stock_code }}',\n  '{{ $json.stock_name }}',\n  {{ $json.current_price }},\n  {{ $json.monitoring_type === 'ENTRY' ? $json.condition_match_score : 'condition_match_score' }},\n  {{ $json.monitoring_type === 'ENTRY' ? \"'\" + JSON.stringify($json.conditions_met) + \"'::jsonb\" : 'conditions_met' }},\n  {{ $json.monitoring_type === 'ENTRY' ? $json.is_near_condition : 'is_near_entry' }},\n  {{ $json.monitoring_type === 'EXIT' ? $json.condition_match_score : 'exit_condition_match_score' }},\n  {{ $json.monitoring_type === 'EXIT' ? \"'\" + JSON.stringify($json.conditions_met) + \"'::jsonb\" : 'exit_conditions_met' }},\n  {{ $json.monitoring_type === 'EXIT' ? $json.is_near_condition : 'is_near_exit' }},\n  {{ $json.is_held }},\n  NOW()\n)\nON CONFLICT (strategy_id, stock_code)\nDO UPDATE SET\n  stock_name = EXCLUDED.stock_name,\n  current_price = EXCLUDED.current_price,\n  condition_match_score = CASE WHEN '{{ $json.monitoring_type }}' = 'ENTRY' THEN EXCLUDED.condition_match_score ELSE strategy_monitoring.condition_match_score END,\n  conditions_met = CASE WHEN '{{ $json.monitoring_type }}' = 'ENTRY' THEN EXCLUDED.conditions_met ELSE strategy_monitoring.conditions_met END,\n  is_near_entry = CASE WHEN '{{ $json.monitoring_type }}' = 'ENTRY' THEN EXCLUDED.is_near_entry ELSE strategy_monitoring.is_near_entry END,\n  exit_condition_match_score = CASE WHEN '{{ $json.monitoring_type }}' = 'EXIT' THEN EXCLUDED.exit_condition_match_score ELSE strategy_monitoring.exit_condition_match_score END,\n  exit_conditions_met = CASE WHEN '{{ $json.monitoring_type }}' = 'EXIT' THEN EXCLUDED.exit_conditions_met ELSE strategy_monitoring.exit_conditions_met END,\n  is_near_exit = CASE WHEN '{{ $json.monitoring_type }}' = 'EXIT' THEN EXCLUDED.is_near_exit ELSE strategy_monitoring.is_near_exit END,\n  is_held = EXCLUDED.is_held,\n  updated_at = NOW()"
+      },
+      "name": "Upsert to Strategy Monitoring",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2050, 400],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "No Action",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2050, 600]
+    }
+  ],
+  "connections": {
+    "Every 1 Minute": {
+      "main": [[{"node": "Get Active Strategies", "type": "main", "index": 0}]]
+    },
+    "Get Active Strategies": {
+      "main": [[{"node": "Split Strategies", "type": "main", "index": 0}]]
+    },
+    "Split Strategies": {
+      "main": [[{"node": "Prepare Monitoring Tasks", "type": "main", "index": 0}]]
+    },
+    "Prepare Monitoring Tasks": {
+      "main": [[{"node": "If Exit Query", "type": "main", "index": 0}]]
+    },
+    "If Exit Query": {
+      "main": [
+        [{"node": "Get Held Stocks", "type": "main", "index": 0}],
+        [{"node": "Split Monitoring Tasks", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Held Stocks": {
+      "main": [[{"node": "Create Exit Monitoring Tasks", "type": "main", "index": 0}]]
+    },
+    "Create Exit Monitoring Tasks": {
+      "main": [[{"node": "Split Monitoring Tasks", "type": "main", "index": 0}]]
+    },
+    "Split Monitoring Tasks": {
+      "main": [[{"node": "Get Market Data", "type": "main", "index": 0}]]
+    },
+    "Get Market Data": {
+      "main": [[{"node": "Calculate Condition Score", "type": "main", "index": 0}]]
+    },
+    "Calculate Condition Score": {
+      "main": [[{"node": "If Score >= 80", "type": "main", "index": 0}]]
+    },
+    "If Score >= 80": {
+      "main": [
+        [{"node": "Upsert to Strategy Monitoring", "type": "main", "index": 0}],
+        [{"node": "No Action", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

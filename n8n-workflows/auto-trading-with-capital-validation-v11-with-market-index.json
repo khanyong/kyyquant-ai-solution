@@ -520,6 +520,7 @@
         "method": "GET",
         "url": "https://mockapi.kiwoom.com/uapi/domestic-stock/v1/quotations/inquire-index-price",
         "sendHeaders": true,
+
         "headerParameters": {
           "parameters": [
             {
