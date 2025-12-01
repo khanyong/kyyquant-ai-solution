@@ -246,14 +246,13 @@ class DataProvider:
         """
         if self.supabase:
             try:
-                # stocks 테이블 또는 kw_stock_master 테이블 조회
-                # get_stock_list에서 stocks를 사용하므로 우선 시도
-                response = self.supabase.table('stocks').select('name').eq('code', stock_code).execute()
+                # kw_stock_master 테이블 조회
+                response = self.supabase.table('kw_stock_master').select('name').eq('code', stock_code).execute()
                 if response.data and len(response.data) > 0:
                     return response.data[0]['name']
                     
             except Exception as e:
-                print(f"[DataProvider] Failed to fetch stock name from stocks table: {e}")
+                print(f"[DataProvider] Failed to fetch stock name from kw_stock_master table: {e}")
                 
         # Mock data or fallback
         mock_names = {

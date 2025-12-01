@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-const envPath = path.resolve(__dirname, '.env');
+const envPath = path.resolve(__dirname, '../../.env');
 
 async function processLineByLine() {
     if (!fs.existsSync(envPath)) {

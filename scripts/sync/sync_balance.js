@@ -7,7 +7,7 @@ const readline = require('readline');
 // Polyfill fetch if needed (Node 18+ has it globally)
 const fetch = global.fetch || require('node-fetch');
 
-const envPath = path.resolve(__dirname, '.env');
+const envPath = path.resolve(__dirname, '../../.env');
 
 async function checkBalance() {
     // 1. Load Env

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 try {
-    const envPath = path.resolve(__dirname, '.env');
+    const envPath = path.resolve(__dirname, '../../.env');
     const content = fs.readFileSync(envPath, 'utf8');
     const lines = content.split('\n');
     lines.forEach(line => {

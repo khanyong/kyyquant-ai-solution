@@ -35,7 +35,7 @@
             },
             {
               "name": "BACKEND_API_URL",
-              "value": "http://192.168.50.218:8001"
+              "value": "http://auto-stock-backend:8001"
             }
           ]
         }
