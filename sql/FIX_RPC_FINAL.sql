@@ -1,17 +1,19 @@
--- RPC 함수 수정: filtered_stocks 포함하여 반환
+-- Fix RPC function: Include user_id AND allocated_capital/percent
+-- This combines the requirements from previous updates.
 
 DROP FUNCTION IF EXISTS public.get_active_strategies_with_universe();
 
 CREATE OR REPLACE FUNCTION public.get_active_strategies_with_universe()
 RETURNS TABLE (
   strategy_id uuid,
+  user_id uuid, -- Added back
   strategy_name text,
   entry_conditions jsonb,
   exit_conditions jsonb,
   filter_id uuid,
   filter_name text,
   stock_count int,
-  filtered_stocks jsonb,  -- 종목 코드 배열 (jsonb로 변경)
+  filtered_stocks jsonb,
   allocated_capital numeric,
   allocated_percent numeric
 )
@@ -23,13 +25,14 @@ BEGIN
   RETURN QUERY
   SELECT
     s.id as strategy_id,
+    s.user_id, -- Added back
     s.name::text as strategy_name,
     s.entry_conditions,
     s.exit_conditions,
     kif.id as filter_id,
     kif.name::text as filter_name,
     kif.filtered_stocks_count as stock_count,
-    kif.filtered_stocks as filtered_stocks,  -- 종목 코드 배열
+    kif.filtered_stocks as filtered_stocks,
     s.allocated_capital,
     s.allocated_percent
   FROM strategies s
@@ -44,6 +47,6 @@ BEGIN
 END;
 $$;
 
--- 권한 부여
+-- Grant permissions
 GRANT EXECUTE ON FUNCTION public.get_active_strategies_with_universe() TO anon;
 GRANT EXECUTE ON FUNCTION public.get_active_strategies_with_universe() TO authenticated;

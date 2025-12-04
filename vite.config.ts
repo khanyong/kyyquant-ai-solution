@@ -21,6 +21,11 @@ export default defineConfig({
         target: 'ws://localhost:8000',
         ws: true,
       },
+      '/n8n-api': {
+        target: 'http://192.168.50.150:5678',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/n8n-api/, '')
+      },
     },
   },
   build: {
@@ -58,5 +63,4 @@ export default defineConfig({
       }
     }
   },
-  
 })

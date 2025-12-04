@@ -1,0 +1,42 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 192.168.50.150:5678...
+* Established connection to 192.168.50.150 (192.168.50.150 port 5678) from 192.168.50.218 port 51237 
+* using HTTP/1.x
+> GET /api/v1/workflows HTTP/1.1
+
+> Host: 192.168.50.150:5678
+
+> User-Agent: curl/8.16.0
+
+> Accept: */*
+
+> X-N8N-API-KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzYzVlNWE1OC1iY2YwLTQ1MDgtYjliNy1jYmU1YwOTI1NDEzLCJleHAiOjE3NjYwMzQwMDB9.dtPVNTMJSlQd8EWM3C0GgQ473VEh2yAa9pJRhlrlZh8
+
+> 
+
+* Request completely sent off
+< HTTP/1.1 401 Unauthorized
+
+< Content-Type: application/json; charset=utf-8
+
+< Content-Length: 26
+
+< ETag: W/"1a-uFcJ9RiXMWeHF66JNghVckzTmcM"
+
+< Vary: Accept-Encoding
+
+< Date: Thu, 04 Dec 2025 02:48:42 GMT
+
+< Connection: keep-alive
+
+< Keep-Alive: timeout=5
+
+< 
+
+{ [26 bytes data]
+
+100    26  100    26    0     0   2156      0 --:--:-- --:--:-- --:--:--  2166
+* Connection #0 to host 192.168.50.150:5678 left intact
+{"message":"unauthorized"}

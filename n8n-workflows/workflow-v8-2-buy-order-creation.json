@@ -7,7 +7,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "*/1 * * * *"
+              "expression": "*/10 * * * *"
             }
           ]
         }
@@ -34,8 +34,12 @@
               "value": "your_service_role_key_here"
             },
             {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            },
+            {
               "name": "BACKEND_API_URL",
-              "value": "http://auto-stock-backend:8001"
+              "value": "http://host.docker.internal:8001"
             }
           ]
         }
@@ -58,11 +62,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{ $json.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "={{ $json.SUPABASE_ANON_KEY }}"
             },
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $json.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "={{ 'Bearer ' + $json.SUPABASE_ANON_KEY }}"
             }
           ]
         },
@@ -166,7 +170,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Calculate order quantity and price\nconst stock = $('Split Stocks').first().json;\nconst balance = $input.first().json;\n\n// Get available cash\nconst availableCash = balance.order_cash || 0;\n\n// Calculate position size\nconst positionSizePercent = stock.position_size || 10;\nconst positionSize = availableCash * (positionSizePercent / 100);\n\n// Calculate quantity\nconst currentPrice = stock.current_price || 0;\nconst quantity = Math.floor(positionSize / currentPrice);\n\n// Determine order price\nconst orderPrice = currentPrice;\n\n// Calculate auto cancel time (30 minutes from now)\nconst now = new Date();\nconst autoCancelAt = new Date(now.getTime() + 30 * 60 * 1000);\n\nreturn {\n  json: {\n    strategy_id: stock.strategy_id,\n    stock_code: stock.stock_code,\n    stock_name: stock.stock_name,\n    order_type: 'BUY',\n    order_price: orderPrice,\n    quantity: quantity,\n    total_amount: orderPrice * quantity,\n    auto_cancel_at: autoCancelAt.toISOString(),\n    cancel_after_minutes: 30,\n    original_order_price: orderPrice,\n    status: 'PENDING'\n  }\n};"
+        "jsCode": "// Calculate order quantity and price\nconst stock = $('Split Stocks').first().json;\nconst balance = $input.first().json;\n\n// 1. Strategy Limit (from RPC)\nconst strategyBudget = Number(stock.available_for_next_order) || 0;\n\n// 2. Account Limit (Actual Cash)\nconst accountCash = Number(balance.order_cash) || 0;\n\n// 3. Final Budget (Min of both)\nconst finalBudget = Math.min(strategyBudget, accountCash);\n\n// Calculate quantity\nconst currentPrice = stock.current_price || 0;\nlet quantity = 0;\n\nif (currentPrice > 0) {\n    quantity = Math.floor(finalBudget / currentPrice);\n}\n\n// Determine order price\nconst orderPrice = currentPrice;\n\n// Calculate auto cancel time (30 minutes from now)\nconst now = new Date();\nconst autoCancelAt = new Date(now.getTime() + 30 * 60 * 1000);\n\nreturn {\n  json: {\n    strategy_id: stock.strategy_id,\n    stock_code: stock.stock_code,\n    stock_name: stock.stock_name,\n    order_type: 'BUY',\n    order_price: orderPrice,\n    quantity: quantity,\n    total_amount: orderPrice * quantity,\n    auto_cancel_at: autoCancelAt.toISOString(),\n    cancel_after_minutes: 30,\n    original_order_price: orderPrice,\n    status: 'PENDING'\n  }\n};"
       },
       "name": "Calculate Order Details",
       "type": "n8n-nodes-base.code",

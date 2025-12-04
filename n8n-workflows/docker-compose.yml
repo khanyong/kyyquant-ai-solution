@@ -8,20 +8,38 @@ services:
       - "5678:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=your_password_here
-      - N8N_HOST=workflow.bll-pro.com
+      - N8N_BASIC_AUTH_USER=khanyong
+      - N8N_BASIC_AUTH_PASSWORD=NnovqpWXK3Ta2e2XD-mxKm
       - N8N_PORT=5678
-      - N8N_PROTOCOL=https
-      - WEBHOOK_URL=https://workflow.bll-pro.com
-      - N8N_ENCRYPTION_KEY=your_encryption_key
-      # CORS 설정 (프론트엔드에서 API 호출 허용)
-      - N8N_CORS_ORIGIN=http://localhost:3000,http://localhost:5173
+      - N8N_SECURE_COOKIE=false
+      - N8N_HOST=workflow.bll-pro.com
+      - WEBHOOK_URL=https://workflow.bll-pro.com/
+      - VUE_APP_URL_BASE_API=https://workflow.bll-pro.com/
+
+      # Timezone 설정
+      - TZ=Asia/Seoul
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - N8N_TIMEZONE=Asia/Seoul
+
+      # Security & Network
+      - N8N_TRUSTED_PROXIES=0.0.0.0/0
+
+      # Feature Flags
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_SCHEDULER_ENABLED=true
+
+      # CORS 설정
+      - N8N_CORS_ENABLED=true
+      - N8N_DEFAULT_CORS=true
+      - "N8N_CORS_ORIGIN=*"
+      - "N8N_CORS_ALLOW_ORIGIN=*"
+      - N8N_CORS_ALLOW_HEADERS=Content-Type,Authorization,X-N8N-API-KEY
 
       # Supabase 환경변수
       - SUPABASE_URL=https://hznkyaomtrpzcayayayh.supabase.co
       - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs
-      
+      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjU1MDAwOSwiZXhwIjoyMDcyMTI2MDA5fQ.KAF1lMwtH1VTknteieCmaolCTFkESgrzLJYuqiUlDrM
+
       # 키움 API 환경변수
       - KIWOOM_APP_KEY=iQ4uqUvLr7IAXTnOv1a7_156IHhIu9l8aiXiBDbSsSk
       - KIWOOM_APP_SECRET=9uBOq4tEp_DQO1-L6jBiGrFVD7yr-FeSZRQXFd2wmUA
@@ -30,10 +48,13 @@ services:
 
       # Task Runner Timeout 설정 (기본 300초 → 3600초)
       - N8N_RUNNERS_TASK_TIMEOUT=3600
-      
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     volumes:
-      - n8n_data:/home/node/.n8n
-      - ./n8n-workflows:/files
+      - ./data:/home/node/.n8n
+      - ./files:/files
 
 volumes:
   n8n_data:

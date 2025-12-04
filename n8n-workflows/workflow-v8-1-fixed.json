@@ -7,7 +7,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "*/1 * * * *"
+              "expression": "*/10 * * * *"
             }
           ]
         }
@@ -34,8 +34,12 @@
               "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
             },
             {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            },
+            {
               "name": "BACKEND_API_URL",
-              "value": "http://auto-stock-backend:8001"
+              "value": "http://host.docker.internal:8001"
             },
             {
               "name": "DEBUG_INFO",
@@ -63,11 +67,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+              "value": "={{$('Env Config').first().json[\"SUPABASE_ANON_KEY\"]}}"
             },
             {
               "name": "Authorization",
-              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_ANON_KEY\"]}}"
             }
           ]
         },
@@ -133,11 +137,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+              "value": "={{$('Env Config').first().json[\"SUPABASE_ANON_KEY\"]}}"
             },
             {
               "name": "Authorization",
-              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_ANON_KEY\"]}}"
             }
           ]
         },

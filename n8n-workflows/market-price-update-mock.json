@@ -1,0 +1,329 @@
+{
+  "name": "시장 현재가 업데이트 (모의투자용 v2)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "https://hznkyaomtrpzcayayayh.supabase.co"
+            },
+            {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bmt5YW9tdHJwemNheWF5YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NTAwMDksImV4cCI6MjA3MjEyNjAwOX0.obZl3gnWisI-Eg8zWzestO7z3IQpFi6kViEJprsaJbs"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "S0FEQ8I3UYwgcEPepJrfO6NteTCziz4540NljbYIASU"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "tBh2TG4i0nwvKMC5s_DCVSlnWec3pgvLEmxIqL2RDsA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "env-config",
+      "name": "환경변수 설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "appkey",
+              "value": "={{$node['환경변수 설정'].json.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "secretkey",
+              "value": "={{$node['환경변수 설정'].json.KIWOOM_APP_SECRET}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-token",
+      "name": "토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$node['환경변수 설정'].json.SUPABASE_URL}}/rest/v1/kw_stock_master",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "stock_code,stock_name"
+            },
+            {
+              "name": "order",
+              "value": "stock_code.asc"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$node['환경변수 설정'].json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$node['환경변수 설정'].json.SUPABASE_ANON_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-stocks",
+      "name": "주요 종목 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split",
+      "name": "종목별 처리",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/api/dostk/mrkcond",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"stk_cd\": \"{{$json.stock_code}}\" }",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$node['토큰 발급'].json.access_token}}"
+            },
+            {
+              "name": "api-id",
+              "value": "ka10004"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "cont-yn",
+              "value": "N"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-price",
+      "name": "키움 현재가 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const apiResponse = $input.item.json;\nconst stockCode = $('종목별 처리').item.json.stock_code;\n\n// v22/v44 로직 참조: 매도/매수 호가 평균을 현재가로 사용\nconst parsePrice = (price) => {\n  if (!price) return 0;\n  return parseFloat(String(price).replace(/[+\\-]/g, ''));\n};\n\nconst selPrice = parsePrice(apiResponse.sel_fpr_bid);\nconst buyPrice = parsePrice(apiResponse.buy_fpr_bid);\nconst currentPrice = (selPrice + buyPrice) / 2;\n\nreturn {\n  stock_code: stockCode,\n  current_price: currentPrice,\n  change_price: 0,\n  change_rate: 0,\n  volume: 0,\n  updated_at: new Date().toISOString()\n};"
+      },
+      "id": "parse-data",
+      "name": "데이터 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node['환경변수 설정'].json.SUPABASE_URL}}/rest/v1/kw_price_current",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stock_code\": \"{{$json.stock_code}}\",\n  \"current_price\": {{$json.current_price}},\n  \"updated_at\": \"{{$json.updated_at}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$node['환경변수 설정'].json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$node['환경변수 설정'].json.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "upsert",
+      "name": "Supabase UPSERT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "amount": 0.2,
+        "unit": "seconds"
+      },
+      "id": "wait",
+      "name": "API 호출 제한",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1850, 300]
+    }
+  ],
+  "connections": {
+    "1분마다 실행": {
+      "main": [
+        [
+          {
+            "node": "환경변수 설정",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "환경변수 설정": {
+      "main": [
+        [
+          {
+            "node": "토큰 발급",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "토큰 발급": {
+      "main": [
+        [
+          {
+            "node": "주요 종목 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "주요 종목 조회": {
+      "main": [
+        [
+          {
+            "node": "종목별 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "종목별 처리": {
+      "main": [
+        [
+          {
+            "node": "키움 현재가 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 현재가 조회": {
+      "main": [
+        [
+          {
+            "node": "데이터 파싱",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터 파싱": {
+      "main": [
+        [
+          {
+            "node": "Supabase UPSERT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase UPSERT": {
+      "main": [
+        [
+          {
+            "node": "API 호출 제한",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API 호출 제한": {
+      "main": [
+        [
+          {
+            "node": "종목별 처리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -7,7 +7,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "*/1 * * * *"
+              "expression": "*/10 * * * *"
             }
           ]
         }
@@ -29,6 +29,10 @@
             {
               "name": "SUPABASE_SERVICE_ROLE_KEY",
               "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
             },
             {
               "name": "KIWOOM_APP_KEY",
@@ -89,11 +93,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+              "value": "={{$('Env Config').first().json[\"SUPABASE_ANON_KEY\"]}}"
             },
             {
               "name": "Authorization",
-              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_ANON_KEY\"]}}"
             }
           ]
         },
