@@ -10,8 +10,7 @@ import {
   Chip,
   Avatar,
   alpha,
-  Button,
-  IconButton
+  Button
 } from '@mui/material'
 import {
   TrendingUp,
@@ -20,7 +19,8 @@ import {
   ThumbUp,
   ArrowForward,
   ShowChart,
-  Person
+  Person,
+  Wifi
 } from '@mui/icons-material'
 
 interface CommunityHighlightSectionProps {
@@ -28,47 +28,44 @@ interface CommunityHighlightSectionProps {
 }
 
 const CommunityHighlightSection: React.FC<CommunityHighlightSectionProps> = ({ onLoginClick }) => {
-  // Mock data - 실제로는 Supabase에서 가져올 데이터
+  // Mock data
   const highlightPosts = [
     {
       id: 1,
-      title: '모멘텀 + RSI 조합 전략으로 3개월 만에 45% 수익 달성',
-      author: '퀀트마스터',
-      avatar: null,
-      category: '전략 공유',
+      title: 'MOMENTUM_RSI_HYBRID_V3',
+      author: 'QUANT_MASTER',
+      category: 'STRATEGY',
       returnRate: 45.2,
-      period: '3개월',
+      period: '3M',
       views: 1240,
       likes: 89,
-      timeAgo: '2시간 전',
+      timeAgo: '2H_AGO',
       verified: true,
       color: '#4CAF50'
     },
     {
       id: 2,
-      title: 'PER/PBR 가치주 전략 백테스트 결과 (10년 데이터)',
-      author: '장기투자왕',
-      avatar: null,
-      category: '백테스트 결과',
+      title: 'VALUE_FACTOR_DEEP_TEST',
+      author: 'LTS_KING',
+      category: 'BACKTEST',
       returnRate: 128.5,
-      period: '10년',
+      period: '10Y',
       views: 2130,
       likes: 156,
-      timeAgo: '5시간 전',
+      timeAgo: '5H_AGO',
       verified: true,
       color: '#FF9800'
     },
     {
       id: 3,
-      title: '변동성 돌파 전략 최적화 - 승률 78% 달성',
-      author: '알고왕초보',
-      avatar: null,
-      category: '시장 분석',
+      title: 'VOLATILITY_BREAKOUT_OPT',
+      author: 'ALGO_NEWBIE',
+      category: 'ANALYSIS',
       returnRate: 32.8,
-      period: '2개월',
+      period: '2M',
       views: 856,
       likes: 67,
-      timeAgo: '1일 전',
+      timeAgo: '1D_AGO',
       verified: false,
       color: '#00BCD4'
     }
@@ -78,11 +75,11 @@ const CommunityHighlightSection: React.FC<CommunityHighlightSectionProps> = ({ o
   const [totalPosts, setTotalPosts] = useState(2456)
   const [totalStrategies, setTotalStrategies] = useState(892)
 
-  // 실시간 카운터 애니메이션
+  // Randomize stats slightly
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveUsers(prev => prev + Math.floor(Math.random() * 3))
-    }, 5000)
+      setActiveUsers(prev => prev + Math.floor(Math.random() * 3) - 1)
+    }, 3000)
 
     return () => clearInterval(interval)
   }, [])
@@ -91,61 +88,58 @@ const CommunityHighlightSection: React.FC<CommunityHighlightSectionProps> = ({ o
     <Box
       sx={{
         py: 12,
-        background: `linear-gradient(180deg, #1A1F3A 0%, #0A0E1A 100%)`,
+        bgcolor: '#050912',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        borderTop: `1px solid ${alpha('#00E5FF', 0.1)}`
       }}
     >
-      {/* Background Pattern */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '1000px',
-          height: '1000px',
-          background: 'radial-gradient(circle, rgba(0, 229, 255, 0.05) 0%, transparent 70%)',
-          pointerEvents: 'none'
-        }}
-      />
-
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         {/* Section Header */}
-        <Stack spacing={2} alignItems="center" textAlign="center" sx={{ mb: 8 }}>
-          <Typography
-            variant="overline"
+        <Stack spacing={2} alignItems="center" textAlign="center" sx={{ mb: 10 }}>
+          <Box
             sx={{
-              color: '#00E5FF',
-              fontWeight: 700,
-              letterSpacing: 2,
-              fontSize: '0.9rem'
+              border: '1px solid #00E5FF',
+              px: 2,
+              py: 0.5,
+              bgcolor: alpha('#00E5FF', 0.1)
             }}
           >
-            COMMUNITY HIGHLIGHTS
-          </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#00E5FF',
+                fontWeight: 700,
+                fontFamily: '"JetBrains Mono", monospace',
+                letterSpacing: 2
+              }}
+            >
+              NETWORK_STATUS
+            </Typography>
+          </Box>
           <Typography
             variant="h2"
             sx={{
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #00E5FF 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#fff',
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: -2
             }}
           >
-            실시간 커뮤니티 활동
+            LIVE DATA FEED
           </Typography>
           <Typography
             variant="h6"
             sx={{
               maxWidth: 700,
-              color: alpha('#FFFFFF', 0.7),
-              lineHeight: 1.8,
-              fontWeight: 300
+              color: '#8F9EB3',
+              lineHeight: 1.6,
+              fontWeight: 400,
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            전문 투자자들의 생생한 전략과 백테스트 결과를 확인하세요
+            Real-time transmission of strategies and backtest results from the grid.
           </Typography>
         </Stack>
 
@@ -153,114 +147,101 @@ const CommunityHighlightSection: React.FC<CommunityHighlightSectionProps> = ({ o
         <Grid container spacing={3} sx={{ mb: 8 }}>
           {[
             {
-              label: '현재 접속자',
+              label: 'ACTIVE_NODES',
               value: activeUsers,
-              suffix: '명',
-              icon: <Person />,
+              suffix: '',
+              icon: <Wifi />,
               color: '#00E5FF',
               pulse: true
             },
             {
-              label: '공유된 전략',
+              label: 'STRATEGIES_DEPLOYED',
               value: totalStrategies,
-              suffix: '개',
+              suffix: '',
               icon: <ShowChart />,
               color: '#4CAF50',
               pulse: false
             },
             {
-              label: '커뮤니티 게시글',
+              label: 'DATA_LOGS',
               value: totalPosts,
-              suffix: '개',
+              suffix: '',
               icon: <TrendingUp />,
               color: '#FFB800',
               pulse: false
             }
           ].map((stat, index) => (
             <Grid item xs={12} md={4} key={index}>
-              <Card
+              <Box
                 sx={{
-                  background: alpha('#1A1F3A', 0.6),
-                  backdropFilter: 'blur(20px)',
+                  bgcolor: '#050912',
                   border: `1px solid ${alpha(stat.color, 0.3)}`,
-                  borderRadius: 2,
+                  p: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 3,
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     borderColor: stat.color,
-                    transform: 'translateY(-4px)',
-                    boxShadow: `0 12px 40px ${alpha(stat.color, 0.3)}`
+                    boxShadow: `0 0 20px ${alpha(stat.color, 0.1)}`
                   }
                 }}
               >
-                <CardContent sx={{ p: 3 }}>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <Box
-                      sx={{
-                        p: 1.5,
-                        borderRadius: 2,
-                        background: alpha(stat.color, 0.1),
-                        border: `1px solid ${alpha(stat.color, 0.3)}`,
-                        color: stat.color,
-                        display: 'flex',
-                        position: 'relative'
-                      }}
-                    >
-                      {stat.icon}
-                      {stat.pulse && (
-                        <Box
-                          sx={{
-                            position: 'absolute',
-                            top: -2,
-                            right: -2,
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            background: '#4CAF50',
-                            animation: 'pulse 2s infinite',
-                            '@keyframes pulse': {
-                              '0%, 100%': {
-                                opacity: 1,
-                                transform: 'scale(1)'
-                              },
-                              '50%': {
-                                opacity: 0.5,
-                                transform: 'scale(1.2)'
-                              }
-                            }
-                          }}
-                        />
-                      )}
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Box sx={{ mb: 0.5 }}>
-                        <Typography
-                          component="span"
-                          variant="h4"
-                          sx={{
-                            fontWeight: 900,
-                            color: stat.color
-                          }}
-                        >
-                          {stat.value.toLocaleString()}
-                        </Typography>
-                        <Typography
-                          component="span"
-                          variant="h6"
-                          sx={{ ml: 0.5, color: alpha('#FFFFFF', 0.6) }}
-                        >
-                          {stat.suffix}
-                        </Typography>
-                      </Box>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: alpha('#FFFFFF', 0.7) }}
-                      >
-                        {stat.label}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
+                <Box
+                  sx={{
+                    p: 1.5,
+                    color: stat.color,
+                    bgcolor: alpha(stat.color, 0.1),
+                    border: `1px solid ${stat.color}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {stat.icon}
+                </Box>
+                <Box>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 700,
+                      color: '#fff',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      lineHeight: 1
+                    }}
+                  >
+                    {stat.value.toLocaleString()}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: '#5C6B7F',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      letterSpacing: 1
+                    }}
+                  >
+                    {stat.label}
+                  </Typography>
+                </Box>
+                {stat.pulse && (
+                  <Box
+                    sx={{
+                      ml: 'auto',
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      bgcolor: stat.color,
+                      boxShadow: `0 0 10px ${stat.color}`,
+                      animation: 'pulse 2s infinite',
+                      '@keyframes pulse': {
+                        '0%': { opacity: 1 },
+                        '50%': { opacity: 0.5 },
+                        '100%': { opacity: 1 }
+                      }
+                    }}
+                  />
+                )}
+              </Box>
             </Grid>
           ))}
         </Grid>
@@ -269,208 +250,146 @@ const CommunityHighlightSection: React.FC<CommunityHighlightSectionProps> = ({ o
         <Grid container spacing={3} sx={{ mb: 6 }}>
           {highlightPosts.map((post, index) => (
             <Grid item xs={12} md={4} key={post.id}>
-              <Card
+              <Box
                 sx={{
                   height: '100%',
-                  background: alpha('#0A0E1A', 0.6),
-                  backdropFilter: 'blur(20px)',
-                  border: `2px solid ${alpha(post.color, 0.3)}`,
-                  borderRadius: 3,
+                  bgcolor: '#0A0E1A',
+                  border: `1px solid ${alpha(post.color, 0.3)}`,
                   position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: 'all 0.3s ease',
                   cursor: 'pointer',
                   '&:hover': {
-                    transform: 'translateY(-8px)',
+                    transform: 'translateY(-5px)',
                     borderColor: post.color,
-                    boxShadow: `0 20px 60px ${alpha(post.color, 0.4)}`,
-                    '& .return-badge': {
-                      transform: 'scale(1.1)',
-                    }
+                    boxShadow: `0 0 20px ${alpha(post.color, 0.1)}`
                   }
                 }}
                 onClick={onLoginClick}
               >
-                {/* Top Bar */}
+                {/* Decorative Status Bar */}
                 <Box
                   sx={{
-                    height: 4,
-                    background: `linear-gradient(90deg, ${post.color} 0%, transparent 100%)`,
+                    height: 2,
+                    width: '100%',
+                    bgcolor: alpha(post.color, 0.5),
+                    boxShadow: `0 0 10px ${post.color}`
                   }}
                 />
 
                 <CardContent sx={{ p: 3 }}>
-                  {/* Category & Time */}
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                    <Chip
-                      label={post.category}
-                      size="small"
+                    <Typography
+                      variant="caption"
                       sx={{
-                        background: alpha(post.color, 0.1),
-                        border: `1px solid ${alpha(post.color, 0.3)}`,
                         color: post.color,
-                        fontWeight: 600,
-                        fontSize: '0.75rem'
+                        fontFamily: '"JetBrains Mono", monospace',
+                        border: `1px solid ${post.color}`,
+                        px: 1,
+                        py: 0.25
                       }}
-                    />
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <AccessTime sx={{ fontSize: 14, color: alpha('#FFFFFF', 0.5) }} />
-                      <Typography variant="caption" sx={{ color: alpha('#FFFFFF', 0.5) }}>
-                        {post.timeAgo}
-                      </Typography>
-                    </Stack>
+                    >
+                      {post.category}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: '#5C6B7F',
+                        fontFamily: '"JetBrains Mono", monospace'
+                      }}
+                    >
+                      {post.timeAgo}
+                    </Typography>
                   </Stack>
 
-                  {/* Title */}
                   <Typography
                     variant="h6"
                     sx={{
                       fontWeight: 700,
-                      color: '#FFFFFF',
+                      color: '#fff',
                       mb: 2,
-                      minHeight: 64,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '1rem',
+                      lineHeight: 1.4,
+                      minHeight: 50
                     }}
                   >
                     {post.title}
                   </Typography>
 
-                  {/* Return Rate Badge */}
-                  <Box
-                    className="return-badge"
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      px: 2,
-                      py: 1,
-                      mb: 3,
-                      borderRadius: 2,
-                      background: alpha(post.color, 0.15),
-                      border: `1px solid ${alpha(post.color, 0.4)}`,
-                      transition: 'transform 0.3s ease'
-                    }}
-                  >
-                    <TrendingUp sx={{ color: post.color, fontSize: 20 }} />
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        fontWeight: 900,
-                        color: post.color
-                      }}
-                    >
-                      +{post.returnRate}%
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: alpha('#FFFFFF', 0.7)
-                      }}
-                    >
-                      ({post.period})
-                    </Typography>
-                  </Box>
+                  {/* Metrics */}
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
+                    <Grid item xs={6}>
+                      <Box sx={{ p: 1, bgcolor: alpha(post.color, 0.1), borderLeft: `2px solid ${post.color}` }}>
+                        <Typography variant="caption" display="block" sx={{ color: '#5C6B7F', fontFamily: '"JetBrains Mono", monospace' }}>RETURN</Typography>
+                        <Typography variant="body1" sx={{ color: post.color, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace' }}>+{post.returnRate}%</Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{ p: 1, bgcolor: alpha('#fff', 0.05), borderLeft: `2px solid #5C6B7F` }}>
+                        <Typography variant="caption" display="block" sx={{ color: '#5C6B7F', fontFamily: '"JetBrains Mono", monospace' }}>PERIOD</Typography>
+                        <Typography variant="body1" sx={{ color: '#fff', fontWeight: 700, fontFamily: '"JetBrains Mono", monospace' }}>{post.period}</Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
 
-                  {/* Author & Stats */}
-                  <Stack spacing={2}>
-                    <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Stack direction="row" alignItems="center" spacing={1}>
                       <Avatar
                         sx={{
-                          width: 32,
-                          height: 32,
-                          background: alpha(post.color, 0.2),
-                          border: `2px solid ${alpha(post.color, 0.4)}`,
-                          color: post.color,
-                          fontSize: '0.9rem',
-                          fontWeight: 700
+                          width: 24,
+                          height: 24,
+                          bgcolor: post.color,
+                          color: '#000',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          fontFamily: '"JetBrains Mono", monospace'
                         }}
                       >
                         {post.author[0]}
                       </Avatar>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 600,
-                            color: '#FFFFFF'
-                          }}
-                        >
-                          {post.author}
-                          {post.verified && (
-                            <Chip
-                              label="인증"
-                              size="small"
-                              sx={{
-                                ml: 1,
-                                height: 18,
-                                fontSize: '0.65rem',
-                                background: alpha('#4CAF50', 0.2),
-                                color: '#4CAF50',
-                                border: `1px solid ${alpha('#4CAF50', 0.4)}`
-                              }}
-                            />
-                          )}
-                        </Typography>
-                      </Box>
+                      <Typography variant="caption" sx={{ color: '#8F9EB3', fontFamily: '"JetBrains Mono", monospace' }}>
+                        {post.author}
+                      </Typography>
                     </Stack>
-
-                    <Stack direction="row" spacing={3}>
+                    <Stack direction="row" spacing={2} sx={{ color: '#5C6B7F' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Visibility sx={{ fontSize: 16, color: alpha('#FFFFFF', 0.5) }} />
-                        <Typography variant="caption" sx={{ color: alpha('#FFFFFF', 0.7) }}>
-                          {post.views.toLocaleString()}
-                        </Typography>
+                        <Visibility sx={{ fontSize: 14 }} />
+                        <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{post.views}</Typography>
                       </Stack>
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <ThumbUp sx={{ fontSize: 16, color: alpha('#FFFFFF', 0.5) }} />
-                        <Typography variant="caption" sx={{ color: alpha('#FFFFFF', 0.7) }}>
-                          {post.likes}
-                        </Typography>
+                        <ThumbUp sx={{ fontSize: 14 }} />
+                        <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace' }}>{post.likes}</Typography>
                       </Stack>
                     </Stack>
                   </Stack>
                 </CardContent>
-              </Card>
+              </Box>
             </Grid>
           ))}
         </Grid>
 
-        {/* CTA */}
         <Box sx={{ textAlign: 'center' }}>
           <Button
-            variant="contained"
-            size="large"
+            variant="outlined"
             endIcon={<ArrowForward />}
             onClick={onLoginClick}
             sx={{
-              py: 2,
-              px: 5,
-              fontSize: '1.1rem',
+              py: 1.5,
+              px: 4,
+              borderRadius: 0,
+              fontFamily: '"JetBrains Mono", monospace',
               fontWeight: 700,
-              background: 'linear-gradient(135deg, #00E5FF 0%, #00B8D4 100%)',
-              boxShadow: `0 8px 32px ${alpha('#00E5FF', 0.4)}`,
+              color: '#00E5FF',
+              borderColor: '#00E5FF',
               '&:hover': {
-                background: 'linear-gradient(135deg, #00B8D4 0%, #0097A7 100%)',
-                boxShadow: `0 12px 48px ${alpha('#00E5FF', 0.6)}`,
-                transform: 'translateY(-2px)'
-              },
-              transition: 'all 0.3s ease'
+                bgcolor: alpha('#00E5FF', 0.1),
+                borderColor: '#00E5FF',
+                boxShadow: `0 0 20px ${alpha('#00E5FF', 0.3)}`
+              }
             }}
           >
-            커뮤니티 둘러보기
+            ACCESS_FULL_LOGS
           </Button>
-          <Typography
-            variant="body2"
-            sx={{
-              mt: 2,
-              color: alpha('#FFFFFF', 0.6)
-            }}
-          >
-            로그인하고 더 많은 전략과 인사이트를 확인하세요
-          </Typography>
         </Box>
       </Container>
     </Box>

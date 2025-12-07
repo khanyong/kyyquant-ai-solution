@@ -18,7 +18,8 @@ import {
   Twitter,
   Instagram,
   YouTube,
-  GitHub
+  GitHub,
+  Terminal
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 
@@ -27,39 +28,56 @@ const FooterSection: React.FC = () => {
   return (
     <Box
       sx={{
-        background: `linear-gradient(180deg, #0A0E1A 0%, #000000 100%)`,
-        borderTop: `1px solid ${alpha('#FFB800', 0.2)}`,
-        pt: 8,
-        pb: 4
+        bgcolor: '#020408',
+        borderTop: '1px solid #1E2732',
+        pt: 10,
+        pb: 4,
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
+      {/* Decorative Top Line */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: 1,
+          background: 'linear-gradient(90deg, transparent, #00E5FF, transparent)'
+        }}
+      />
+
       <Container maxWidth="lg">
         <Grid container spacing={6}>
           {/* Company Info */}
           <Grid item xs={12} md={4}>
             <Stack spacing={3}>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 800,
-                  background: 'linear-gradient(135deg, #FFB800 0%, #FFFFFF 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                KyyQuant
-              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Terminal sx={{ color: '#00E5FF' }} />
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 800,
+                    color: '#fff',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    letterSpacing: -1
+                  }}
+                >
+                  KYY_QUANT
+                </Typography>
+              </Stack>
+
               <Typography
                 variant="body2"
                 sx={{
-                  color: alpha('#FFFFFF', 0.7),
-                  lineHeight: 1.8
+                  color: '#8F9EB3',
+                  lineHeight: 1.8,
+                  fontFamily: '"JetBrains Mono", monospace'
                 }}
               >
-                AI 기반 퀀트 투자 플랫폼으로
-                개인 투자자의 성공적인 투자를 지원합니다.
-                데이터와 알고리즘으로 더 나은 투자 결정을 내리세요.
+                Advanced algorithmic trading infrastructure for the modern era.
+                Replacing emotion with execution.
               </Typography>
 
               {/* Social Links */}
@@ -75,12 +93,13 @@ const FooterSection: React.FC = () => {
                     key={index}
                     href={social.url}
                     sx={{
-                      color: alpha('#FFFFFF', 0.6),
-                      border: `1px solid ${alpha('#FFFFFF', 0.2)}`,
+                      color: '#5C6B7F',
+                      border: '1px solid #1E2732',
+                      borderRadius: 0,
                       '&:hover': {
-                        color: '#FFB800',
-                        borderColor: '#FFB800',
-                        background: alpha('#FFB800', 0.1)
+                        color: '#00E5FF',
+                        borderColor: '#00E5FF',
+                        bgcolor: alpha('#00E5FF', 0.1)
                       }
                     }}
                   >
@@ -97,36 +116,38 @@ const FooterSection: React.FC = () => {
               variant="h6"
               sx={{
                 fontWeight: 700,
-                color: '#FFFFFF',
-                mb: 3
+                color: '#fff',
+                mb: 3,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '1rem'
               }}
             >
-              서비스
+              MODULES
             </Typography>
             <Stack spacing={2}>
               {[
-                { label: '전체 서비스', path: '/services' },
-                { label: '전략 마켓플레이스', path: '/services' },
-                { label: '전략 빌더', path: '/services' },
-                { label: '백테스팅', path: '/services' },
-                { label: '자동매매', path: '/services' }
+                { label: 'MARKETPLACE', path: '/services' },
+                { label: 'STRATEGY_BUILDER', path: '/services' },
+                { label: 'BACKTEST_ENGINE', path: '/services' },
+                { label: 'AUTO_EXECUTION', path: '/services' }
               ].map((item, index) => (
                 <Link
                   key={index}
                   onClick={() => navigate(item.path)}
                   underline="none"
                   sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    fontSize: '0.9rem',
+                    color: '#8F9EB3',
+                    fontSize: '0.85rem',
                     cursor: 'pointer',
+                    fontFamily: '"JetBrains Mono", monospace',
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      color: '#FFB800',
-                      transform: 'translateX(5px)'
+                      color: '#00E5FF',
+                      pl: 1
                     }
                   }}
                 >
-                  {item.label}
+                  {'>'} {item.label}
                 </Link>
               ))}
             </Stack>
@@ -137,36 +158,38 @@ const FooterSection: React.FC = () => {
               variant="h6"
               sx={{
                 fontWeight: 700,
-                color: '#FFFFFF',
-                mb: 3
+                color: '#fff',
+                mb: 3,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '1rem'
               }}
             >
-              커뮤니티
+              COMMUNITY
             </Typography>
             <Stack spacing={2}>
               {[
-                { label: '공지사항', requireLogin: true },
-                { label: '자유게시판', requireLogin: true },
-                { label: 'Q&A', requireLogin: true },
-                { label: '전략 공유', requireLogin: true },
-                { label: '백테스트 결과', requireLogin: true }
+                { label: 'ANNOUNCEMENTS', requireLogin: true },
+                { label: 'FORUM', requireLogin: true },
+                { label: 'DEV_DOCS', requireLogin: true },
+                { label: 'API_STATUS', requireLogin: true }
               ].map((item, index) => (
                 <Link
                   key={index}
                   onClick={() => navigate('/')}
                   underline="none"
                   sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    fontSize: '0.9rem',
+                    color: '#8F9EB3',
+                    fontSize: '0.85rem',
                     cursor: 'pointer',
+                    fontFamily: '"JetBrains Mono", monospace',
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      color: '#FFB800',
-                      transform: 'translateX(5px)'
+                      color: '#00E5FF',
+                      pl: 1
                     }
                   }}
                 >
-                  {item.label}
+                  {'>'} {item.label}
                 </Link>
               ))}
             </Stack>
@@ -177,76 +200,38 @@ const FooterSection: React.FC = () => {
               variant="h6"
               sx={{
                 fontWeight: 700,
-                color: '#FFFFFF',
-                mb: 3
+                color: '#fff',
+                mb: 3,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '1rem'
               }}
             >
-              회사
+              ENTITY
             </Typography>
             <Stack spacing={2}>
               {[
-                { label: '회사 소개', path: '/about' },
-                { label: '팀 소개', path: '/about' },
-                { label: '채용', path: '/about' },
-                { label: '파트너십', path: '/contact' },
-                { label: '블로그', path: '/about' }
+                { label: 'ABOUT_US', path: '/about' },
+                { label: 'CAREERS', path: '/about' },
+                { label: 'PARTNERS', path: '/contact' },
+                { label: 'CONTACT_UPLINK', path: '/contact' }
               ].map((item, index) => (
                 <Link
                   key={index}
                   onClick={() => navigate(item.path)}
                   underline="none"
                   sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    fontSize: '0.9rem',
+                    color: '#8F9EB3',
+                    fontSize: '0.85rem',
                     cursor: 'pointer',
+                    fontFamily: '"JetBrains Mono", monospace',
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      color: '#FFB800',
-                      transform: 'translateX(5px)'
+                      color: '#00E5FF',
+                      pl: 1
                     }
                   }}
                 >
-                  {item.label}
-                </Link>
-              ))}
-            </Stack>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={2}>
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 700,
-                color: '#FFFFFF',
-                mb: 3
-              }}
-            >
-              지원
-            </Typography>
-            <Stack spacing={2}>
-              {[
-                { label: '고객센터', path: '/contact' },
-                { label: 'FAQ', path: '/contact' },
-                { label: '이용가이드', path: '/services' },
-                { label: '문의하기', path: '/contact' },
-                { label: 'API 문서', path: '/services' }
-              ].map((item, index) => (
-                <Link
-                  key={index}
-                  onClick={() => navigate(item.path)}
-                  underline="none"
-                  sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      color: '#FFB800',
-                      transform: 'translateX(5px)'
-                    }
-                  }}
-                >
-                  {item.label}
+                  {'>'} {item.label}
                 </Link>
               ))}
             </Stack>
@@ -258,56 +243,61 @@ const FooterSection: React.FC = () => {
               variant="h6"
               sx={{
                 fontWeight: 700,
-                color: '#FFFFFF',
-                mb: 3
+                color: '#fff',
+                mb: 3,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '1rem'
               }}
             >
-              연락처
+              UPLINK
             </Typography>
             <Stack spacing={2}>
               <Stack direction="row" spacing={1} alignItems="flex-start">
-                <Email sx={{ fontSize: 20, color: '#FFB800', mt: 0.3 }} />
+                <Email sx={{ fontSize: 16, color: '#FFB800', mt: 0.5 }} />
                 <Typography
                   variant="body2"
                   sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    fontSize: '0.9rem'
+                    color: '#8F9EB3',
+                    fontSize: '0.85rem',
+                    fontFamily: '"JetBrains Mono", monospace'
                   }}
                 >
                   support@kyyquant.com
                 </Typography>
               </Stack>
               <Stack direction="row" spacing={1} alignItems="flex-start">
-                <Phone sx={{ fontSize: 20, color: '#FFB800', mt: 0.3 }} />
+                <Phone sx={{ fontSize: 16, color: '#FFB800', mt: 0.5 }} />
                 <Typography
                   variant="body2"
                   sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    fontSize: '0.9rem'
+                    color: '#8F9EB3',
+                    fontSize: '0.85rem',
+                    fontFamily: '"JetBrains Mono", monospace'
                   }}
                 >
                   02-1234-5678
                 </Typography>
               </Stack>
               <Stack direction="row" spacing={1} alignItems="flex-start">
-                <LocationOn sx={{ fontSize: 20, color: '#FFB800', mt: 0.3 }} />
+                <LocationOn sx={{ fontSize: 16, color: '#FFB800', mt: 0.5 }} />
                 <Typography
                   variant="body2"
                   sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    fontSize: '0.9rem'
+                    color: '#8F9EB3',
+                    fontSize: '0.85rem',
+                    fontFamily: '"JetBrains Mono", monospace'
                   }}
                 >
-                  서울시 강남구
+                  SEOUL_HQ
                   <br />
-                  테헤란로 123
+                  123 Teheran-ro
                 </Typography>
               </Stack>
             </Stack>
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: 6, borderColor: alpha('#FFFFFF', 0.1) }} />
+        <Divider sx={{ my: 6, borderColor: '#1E2732' }} />
 
         {/* Bottom Section */}
         <Grid container spacing={3} alignItems="center">
@@ -323,34 +313,25 @@ const FooterSection: React.FC = () => {
                 href="#"
                 underline="none"
                 sx={{
-                  color: alpha('#FFFFFF', 0.6),
-                  fontSize: '0.85rem',
-                  '&:hover': { color: '#FFB800' }
+                  color: '#5C6B7F',
+                  fontSize: '0.75rem',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  '&:hover': { color: '#fff' }
                 }}
               >
-                이용약관
+                TERMS_OF_SERVICE
               </Link>
               <Link
                 href="#"
                 underline="none"
                 sx={{
-                  color: alpha('#FFFFFF', 0.6),
-                  fontSize: '0.85rem',
-                  '&:hover': { color: '#FFB800' }
+                  color: '#5C6B7F',
+                  fontSize: '0.75rem',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  '&:hover': { color: '#fff' }
                 }}
               >
-                개인정보처리방침
-              </Link>
-              <Link
-                href="#"
-                underline="none"
-                sx={{
-                  color: alpha('#FFFFFF', 0.6),
-                  fontSize: '0.85rem',
-                  '&:hover': { color: '#FFB800' }
-                }}
-              >
-                법적고지
+                PRIVACY_PROTOCOL
               </Link>
             </Stack>
           </Grid>
@@ -358,57 +339,32 @@ const FooterSection: React.FC = () => {
             <Typography
               variant="body2"
               sx={{
-                color: alpha('#FFFFFF', 0.5),
-                fontSize: '0.85rem',
+                color: '#5C6B7F',
+                fontSize: '0.75rem',
+                fontFamily: '"JetBrains Mono", monospace',
                 textAlign: { xs: 'center', md: 'right' }
               }}
             >
-              © 2024 KyyQuant AI Solution. All rights reserved.
+              © 2024 KYYQUANT. SYSTEMS OPERATIONAL.
             </Typography>
           </Grid>
         </Grid>
 
-        {/* Company Details */}
-        <Box
-          sx={{
-            mt: 4,
-            p: 3,
-            borderRadius: 2,
-            background: alpha('#1A1F3A', 0.3),
-            border: `1px solid ${alpha('#FFFFFF', 0.05)}`
-          }}
-        >
-          <Typography
-            variant="body2"
-            sx={{
-              color: alpha('#FFFFFF', 0.5),
-              fontSize: '0.8rem',
-              lineHeight: 1.8,
-              textAlign: 'center'
-            }}
-          >
-            상호: KyyQuant AI Solution | 대표자: 홍길동 | 사업자등록번호: 123-45-67890
-            <br />
-            주소: 서울시 강남구 테헤란로 123 | 통신판매업신고: 2024-서울강남-12345
-            <br />
-            고객센터: 02-1234-5678 | 이메일: support@kyyquant.com
-          </Typography>
-        </Box>
-
         {/* Disclaimer */}
-        <Box sx={{ mt: 4 }}>
+        <Box sx={{ mt: 4, pt: 4, borderTop: '1px solid #1E2732' }}>
           <Typography
             variant="caption"
             sx={{
-              color: alpha('#FFFFFF', 0.4),
-              fontSize: '0.75rem',
+              color: '#455060',
+              fontSize: '0.7rem',
               lineHeight: 1.6,
               display: 'block',
-              textAlign: 'center'
+              textAlign: 'center',
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            투자 권유 및 조언이 아닙니다. 투자의 최종 결정은 투자자 본인의 판단과 책임하에 이루어져야 하며,
-            투자에 따른 손실은 투자자 본인에게 귀속됩니다.
+            [RISK_DISCLOSURE]: Not investment advice. Capital at risk. Past performance is not indicative of future results.
+            System uptime guarantees subject to SLA protocols.
           </Typography>
         </Box>
       </Container>

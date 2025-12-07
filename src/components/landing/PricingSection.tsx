@@ -4,11 +4,9 @@ import {
   Container,
   Typography,
   Grid,
-  Card,
   CardContent,
   Stack,
   Button,
-  Chip,
   List,
   ListItem,
   ListItemIcon,
@@ -18,7 +16,10 @@ import {
 import {
   CheckCircle,
   ArrowForward,
-  Star
+  Star,
+  Terminal,
+  Security,
+  Speed
 } from '@mui/icons-material'
 
 interface PricingSectionProps {
@@ -28,58 +29,57 @@ interface PricingSectionProps {
 const PricingSection: React.FC<PricingSectionProps> = ({ onLoginClick }) => {
   const plans = [
     {
-      name: 'Basic',
-      price: '무료',
+      name: 'OBSERVER',
+      price: 'FREE',
       period: '',
-      description: '개인 투자자를 위한 기본 플랜',
+      description: 'Public access level. Basic market data access.',
       features: [
-        '기본 백테스팅 (월 10회)',
-        '투자 유니버스 필터링',
-        '3개 전략 저장',
-        '일별 시장 리포트',
-        '커뮤니티 접근'
+        '10 Backtest Cycles / Mo',
+        'Basic Asset Filtering',
+        '3 Algorithm Slots',
+        'Daily Market Report',
+        'Read-Only Community Access'
       ],
       color: '#90CAF9',
       popular: false,
-      gradient: 'linear-gradient(135deg, #90CAF9 0%, #64B5F6 100%)'
+      icon: <Terminal sx={{ color: '#90CAF9' }} />
     },
     {
-      name: 'Pro',
-      price: '49,000원',
-      period: '/ 월',
-      description: '전문 투자자를 위한 프리미엄 플랜',
+      name: 'OPERATOR',
+      price: '₩49,000',
+      period: '/ MO',
+      description: 'Professional trading clearance. Full system control.',
       features: [
-        '무제한 백테스팅',
-        '고급 필터링 도구',
-        '무제한 전략 저장',
-        '실시간 신호 알림',
-        '자동매매 연동',
-        'AI 포트폴리오 분석',
-        '우선 고객 지원',
-        '전략 템플릿 제공'
+        'Unlimited Backtesting',
+        'Advanced Quantum Filters',
+        'Unlimited Strategies',
+        'Real-time Alpha Signals',
+        'Auto-Execution Link',
+        'Portfolio Analytics',
+        'Priority Uplink'
       ],
-      color: '#FFB800',
+      color: '#00E5FF', // Cyan
       popular: true,
-      gradient: 'linear-gradient(135deg, #FFB800 0%, #FF8A00 100%)'
+      icon: <Speed sx={{ color: '#00E5FF' }} />
     },
     {
-      name: 'Enterprise',
-      price: '문의',
+      name: 'INSTITUTIONAL',
+      price: 'CONTACT',
       period: '',
-      description: '기관/법인을 위한 맞춤형 솔루션',
+      description: 'Enterprise-grade infrastructure for funds.',
       features: [
-        'Pro 플랜 모든 기능',
-        '전용 서버 환경',
-        'API 접근 권한',
-        '맞춤형 전략 개발',
-        '전담 매니저 배정',
-        '온사이트 교육',
-        'White-label 솔루션',
-        'SLA 보장'
+        'Operator Features Included',
+        'Dedicated Server Node',
+        'Direct Market Access API',
+        'Custom Algorithm Dev',
+        'Dedicated Account Manager',
+        'On-site Training',
+        'White-label Solution',
+        'SLA Guarantee'
       ],
-      color: '#B388FF',
+      color: '#B388FF', // Purple
       popular: false,
-      gradient: 'linear-gradient(135deg, #B388FF 0%, #7C4DFF 100%)'
+      icon: <Security sx={{ color: '#B388FF' }} />
     }
   ]
 
@@ -87,21 +87,24 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onLoginClick }) => {
     <Box
       sx={{
         py: 12,
-        background: '#0A0E1A',
+        bgcolor: '#050912',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        borderTop: `1px solid ${alpha('#00E5FF', 0.1)}`
       }}
     >
-      {/* Background Effects */}
+      {/* Background Matrix Effect */}
       <Box
         sx={{
           position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '800px',
-          height: '800px',
-          background: 'radial-gradient(circle, rgba(255, 184, 0, 0.08) 0%, transparent 70%)',
+          inset: 0,
+          background: `
+            radial-gradient(circle at 50% 50%, ${alpha('#00E5FF', 0.05)} 0%, transparent 50%),
+            linear-gradient(rgba(0, 255, 136, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 255, 136, 0.02) 1px, transparent 1px)
+          `,
+          backgroundSize: '100% 100%, 50px 50px, 50px 50px',
+          opacity: 0.5,
           pointerEvents: 'none'
         }}
       />
@@ -109,39 +112,49 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onLoginClick }) => {
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         {/* Section Header */}
         <Stack spacing={2} alignItems="center" textAlign="center" sx={{ mb: 10 }}>
-          <Typography
-            variant="overline"
+          <Box
             sx={{
-              color: '#FFB800',
-              fontWeight: 700,
-              letterSpacing: 2,
-              fontSize: '0.9rem'
+              border: '1px solid #FFB800',
+              px: 2,
+              py: 0.5,
+              bgcolor: alpha('#FFB800', 0.1)
             }}
           >
-            PRICING PLANS
-          </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#FFB800',
+                fontWeight: 700,
+                fontFamily: '"JetBrains Mono", monospace',
+                letterSpacing: 2
+              }}
+            >
+              SYSTEM_ACCESS
+            </Typography>
+          </Box>
           <Typography
             variant="h2"
             sx={{
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #90CAF9 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#fff',
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: -2
             }}
           >
-            당신에게 맞는 플랜을 선택하세요
+            TERMINAL ACCESS LEVEL
           </Typography>
           <Typography
             variant="h6"
             sx={{
               maxWidth: 700,
-              color: alpha('#FFFFFF', 0.7),
-              lineHeight: 1.8,
-              fontWeight: 300
+              color: '#8F9EB3',
+              lineHeight: 1.6,
+              fontWeight: 400,
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            모든 플랜은 7일 무료 체험이 가능합니다
+            Select your clearance level. Upgrade capability available at any time.
           </Typography>
         </Stack>
 
@@ -149,25 +162,19 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onLoginClick }) => {
         <Grid container spacing={4} alignItems="stretch">
           {plans.map((plan, index) => (
             <Grid item xs={12} md={4} key={index}>
-              <Card
+              <Box
                 sx={{
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  background: plan.popular
-                    ? `linear-gradient(135deg, ${alpha('#FFB800', 0.15)} 0%, ${alpha('#1A1F3A', 0.9)} 100%)`
-                    : alpha('#1A1F3A', 0.6),
-                  backdropFilter: 'blur(20px)',
-                  border: `2px solid ${plan.popular ? plan.color : alpha(plan.color, 0.3)}`,
-                  borderRadius: 3,
+                  bgcolor: plan.popular ? alpha(plan.color, 0.05) : '#0A0E1A',
+                  border: `1px solid ${plan.popular ? plan.color : alpha(plan.color, 0.3)}`,
                   position: 'relative',
-                  overflow: 'hidden',
-                  transform: plan.popular ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'all 0.4s ease',
+                  transition: 'all 0.3s ease',
                   '&:hover': {
-                    transform: plan.popular ? 'scale(1.07)' : 'scale(1.03)',
+                    transform: plan.popular ? 'translateY(-10px)' : 'translateY(-5px)',
                     borderColor: plan.color,
-                    boxShadow: `0 20px 60px ${alpha(plan.color, 0.4)}`,
+                    boxShadow: `0 0 30px ${alpha(plan.color, 0.15)}`,
                   }
                 }}
               >
@@ -176,65 +183,54 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onLoginClick }) => {
                   <Box
                     sx={{
                       position: 'absolute',
-                      top: 20,
-                      right: -35,
-                      transform: 'rotate(45deg)',
-                      background: plan.gradient,
+                      top: 0,
+                      right: 0,
+                      bgcolor: plan.color,
                       color: '#000',
                       py: 0.5,
-                      px: 6,
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      letterSpacing: 1,
-                      boxShadow: `0 4px 20px ${alpha(plan.color, 0.5)}`
+                      px: 2,
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      fontFamily: '"JetBrains Mono", monospace'
                     }}
                   >
-                    <Star sx={{ fontSize: 14, mr: 0.5, mb: -0.5 }} />
-                    POPULAR
+                    RECOMMENDED
                   </Box>
                 )}
 
-                {/* Top Gradient Bar */}
-                <Box
-                  sx={{
-                    height: 6,
-                    background: plan.gradient,
-                  }}
-                />
-
                 <CardContent sx={{ p: 4, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                  {/* Plan Name */}
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight: 700,
-                      color: plan.color,
-                      mb: 1
-                    }}
-                  >
-                    {plan.name}
-                  </Typography>
-
-                  {/* Description */}
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: alpha('#FFFFFF', 0.7),
-                      mb: 3,
-                      minHeight: 40
-                    }}
-                  >
-                    {plan.description}
-                  </Typography>
+                  {/* Header */}
+                  <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+                    <Box sx={{ p: 1, border: `1px solid ${plan.color}`, color: plan.color, display: 'flex' }}>
+                      {plan.icon}
+                    </Box>
+                    <Box>
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          fontWeight: 700,
+                          color: plan.color,
+                          fontFamily: '"JetBrains Mono", monospace',
+                          letterSpacing: 1
+                        }}
+                      >
+                        {plan.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#5C6B7F', fontFamily: '"JetBrains Mono", monospace' }}>
+                        ACCESS_LEVEL_{index + 1}
+                      </Typography>
+                    </Box>
+                  </Stack>
 
                   {/* Price */}
-                  <Box sx={{ mb: 4 }}>
-                    <Stack direction="row" alignItems="baseline" spacing={0.5}>
+                  <Box sx={{ mb: 4, py: 2, borderBottom: `1px solid ${alpha('#fff', 0.1)}` }}>
+                    <Stack direction="row" alignItems="baseline" spacing={1}>
                       <Typography
                         variant="h3"
                         sx={{
-                          fontWeight: 900,
-                          color: '#FFFFFF'
+                          fontWeight: 800,
+                          color: '#fff',
+                          fontFamily: '"JetBrains Mono", monospace'
                         }}
                       >
                         {plan.price}
@@ -242,31 +238,38 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onLoginClick }) => {
                       <Typography
                         variant="body1"
                         sx={{
-                          color: alpha('#FFFFFF', 0.6)
+                          color: '#8F9EB3',
+                          fontFamily: '"JetBrains Mono", monospace'
                         }}
                       >
                         {plan.period}
                       </Typography>
                     </Stack>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: '#5C6B7F',
+                        mt: 1,
+                        fontSize: '0.8rem',
+                        fontFamily: '"JetBrains Mono", monospace'
+                      }}
+                    >
+                      {plan.description}
+                    </Typography>
                   </Box>
 
                   {/* Features List */}
                   <List sx={{ mb: 4, flexGrow: 1 }}>
                     {plan.features.map((feature, idx) => (
-                      <ListItem key={idx} sx={{ px: 0, py: 1 }}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <CheckCircle
-                            sx={{
-                              color: plan.color,
-                              fontSize: 20
-                            }}
-                          />
+                      <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                          <Box sx={{ width: 6, height: 6, bgcolor: plan.color }} />
                         </ListItemIcon>
                         <ListItemText
                           primary={feature}
                           primaryTypographyProps={{
                             variant: 'body2',
-                            sx: { color: alpha('#FFFFFF', 0.9) }
+                            sx: { color: '#B0BEC5', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.9rem' }
                           }}
                         />
                       </ListItem>
@@ -276,78 +279,38 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onLoginClick }) => {
                   {/* CTA Button */}
                   <Button
                     variant={plan.popular ? 'contained' : 'outlined'}
-                    size="large"
                     fullWidth
                     endIcon={<ArrowForward />}
                     onClick={onLoginClick}
                     sx={{
                       py: 1.5,
+                      borderRadius: 0,
+                      fontFamily: '"JetBrains Mono", monospace',
                       fontWeight: 700,
                       ...(plan.popular ? {
-                        background: plan.gradient,
-                        boxShadow: `0 8px 32px ${alpha(plan.color, 0.4)}`,
+                        bgcolor: plan.color,
+                        color: '#000',
                         '&:hover': {
-                          boxShadow: `0 12px 40px ${alpha(plan.color, 0.6)}`,
-                          transform: 'translateY(-2px)'
+                          bgcolor: alpha(plan.color, 0.8),
+                          boxShadow: `0 0 20px ${alpha(plan.color, 0.4)}`
                         }
                       } : {
-                        borderWidth: 2,
-                        borderColor: alpha(plan.color, 0.5),
+                        borderColor: plan.color,
                         color: plan.color,
                         '&:hover': {
-                          borderWidth: 2,
                           borderColor: plan.color,
-                          background: alpha(plan.color, 0.1),
-                          transform: 'translateY(-2px)'
+                          bgcolor: alpha(plan.color, 0.1)
                         }
-                      }),
-                      transition: 'all 0.3s ease'
+                      })
                     }}
                   >
-                    {plan.price === '문의' ? '문의하기' : '시작하기'}
+                    INITIALIZE_{plan.name}
                   </Button>
                 </CardContent>
-              </Card>
+              </Box>
             </Grid>
           ))}
         </Grid>
-
-        {/* Additional Info */}
-        <Box sx={{ mt: 8, textAlign: 'center' }}>
-          <Typography
-            variant="body1"
-            sx={{
-              color: alpha('#FFFFFF', 0.6),
-              mb: 3
-            }}
-          >
-            모든 플랜은 언제든지 업그레이드 또는 다운그레이드가 가능합니다
-          </Typography>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            justifyContent="center"
-            flexWrap="wrap"
-          >
-            {[
-              '7일 무료 체험',
-              '신용카드 불필요',
-              '언제든지 취소 가능',
-              '환불 보장'
-            ].map((info, index) => (
-              <Chip
-                key={index}
-                label={info}
-                sx={{
-                  background: alpha('#FFB800', 0.1),
-                  border: `1px solid ${alpha('#FFB800', 0.3)}`,
-                  color: '#FFB800',
-                  fontWeight: 600
-                }}
-              />
-            ))}
-          </Stack>
-        </Box>
       </Container>
     </Box>
   )

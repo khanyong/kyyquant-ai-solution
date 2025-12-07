@@ -6,9 +6,10 @@ import {
   Stack,
   Button,
   alpha,
-  useTheme
+  useTheme,
+  Grid
 } from '@mui/material'
-import { ArrowForward, PlayArrow } from '@mui/icons-material'
+import { ArrowForward, Terminal, AutoGraph, Bolt } from '@mui/icons-material'
 import VideoPlayerModal from './VideoPlayerModal'
 
 interface HeroSectionProps {
@@ -16,115 +17,89 @@ interface HeroSectionProps {
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
-  const theme = useTheme()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [videoOpen, setVideoOpen] = useState(false)
+  const [typedText, setTypedText] = useState('')
+  const fullText = "AI ALGORITHM ANALYZING..."
 
+  // Typing effect
+  useEffect(() => {
+    let index = 0
+    const timer = setInterval(() => {
+      if (index <= fullText.length) {
+        setTypedText(fullText.slice(0, index))
+        index++
+      } else {
+        clearInterval(timer)
+      }
+    }, 100)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Matrix/Grid Background Effect
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const dpr = window.devicePixelRatio || 1
-    canvas.width = window.innerWidth * dpr
-    canvas.height = window.innerHeight * dpr
-    ctx.scale(dpr, dpr)
-
-    canvas.style.width = `${window.innerWidth}px`
-    canvas.style.height = `${window.innerHeight}px`
-
-    // Particle system
-    class Particle {
-      x: number
-      y: number
-      size: number
-      speedX: number
-      speedY: number
-      opacity: number
-
-      constructor() {
-        this.x = Math.random() * canvas!.width
-        this.y = Math.random() * canvas!.height
-        this.size = Math.random() * 2 + 1
-        this.speedX = Math.random() * 0.5 - 0.25
-        this.speedY = Math.random() * 0.5 - 0.25
-        this.opacity = Math.random() * 0.5 + 0.2
-      }
-
-      update() {
-        this.x += this.speedX
-        this.y += this.speedY
-
-        if (this.x > canvas!.width) this.x = 0
-        if (this.x < 0) this.x = canvas!.width
-        if (this.y > canvas!.height) this.y = 0
-        if (this.y < 0) this.y = canvas!.height
-      }
-
-      draw() {
-        if (!ctx) return
-        ctx.fillStyle = `rgba(144, 202, 249, ${this.opacity})`
-        ctx.beginPath()
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-        ctx.fill()
-      }
-    }
-
-    const particles: Particle[] = []
-    for (let i = 0; i < 100; i++) {
-      particles.push(new Particle())
-    }
-
     let animationId: number
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    window.addEventListener('resize', resize)
+    resize()
 
-    const animate = () => {
-      ctx.fillStyle = 'rgba(26, 31, 58, 0.05)'
+    // Grid properties
+    const gridSize = 40
+    let time = 0
+
+    const draw = () => {
+      ctx.fillStyle = '#050912' // Darker background
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      particles.forEach(particle => {
-        particle.update()
-        particle.draw()
-      })
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.1)' // Cyan grid
+      ctx.lineWidth = 1
 
-      // Draw connections
-      particles.forEach((a, i) => {
-        particles.slice(i + 1).forEach(b => {
-          const dx = a.x - b.x
-          const dy = a.y - b.y
-          const distance = Math.sqrt(dx * dx + dy * dy)
+      // Moving Grid Effect
+      const cols = Math.ceil(canvas.width / gridSize)
+      const rows = Math.ceil(canvas.height / gridSize)
 
-          if (distance < 100) {
-            ctx.strokeStyle = `rgba(144, 202, 249, ${0.2 * (1 - distance / 100)})`
-            ctx.lineWidth = 0.5
-            ctx.beginPath()
-            ctx.moveTo(a.x, a.y)
-            ctx.lineTo(b.x, b.y)
-            ctx.stroke()
-          }
-        })
-      })
+      // Vertical lines
+      for (let i = 0; i <= cols; i++) {
+        const x = i * gridSize
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, canvas.height)
+        ctx.stroke()
+      }
 
-      animationId = requestAnimationFrame(animate)
+      // Horizontal lines (moving down)
+      const offset = (time * 0.5) % gridSize
+      for (let i = 0; i <= rows; i++) {
+        const y = i * gridSize + offset
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(canvas.width, y)
+        ctx.stroke()
+      }
+
+      // Random "Data Packets"
+      if (Math.random() > 0.9) {
+        const x = Math.floor(Math.random() * cols) * gridSize
+        const y = Math.floor(Math.random() * rows) * gridSize + offset
+        ctx.fillStyle = 'rgba(0, 255, 136, 0.4)' // Green packet
+        ctx.fillRect(x, y, gridSize, gridSize)
+      }
+
+      time++
+      animationId = requestAnimationFrame(draw)
     }
-
-    animate()
-
-    const handleResize = () => {
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = window.innerWidth * dpr
-      canvas.height = window.innerHeight * dpr
-      ctx.scale(dpr, dpr)
-
-      canvas.style.width = `${window.innerWidth}px`
-      canvas.style.height = `${window.innerHeight}px`
-    }
-
-    window.addEventListener('resize', handleResize)
+    draw()
 
     return () => {
-      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('resize', resize)
       cancelAnimationFrame(animationId)
     }
   }, [])
@@ -137,317 +112,229 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
         display: 'flex',
         alignItems: 'center',
         overflow: 'hidden',
-        background: `linear-gradient(135deg, #1A1F3A 0%, #0f1419 100%)`,
+        bgcolor: '#050912',
       }}
     >
-      {/* Animated Canvas Background */}
+      {/* Canvas Background */}
       <canvas
         ref={canvasRef}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
-          width: '100vw',
-          height: '100vh',
+          width: '100%',
+          height: '100%',
           zIndex: 0,
-          pointerEvents: 'none'
+          opacity: 0.6
         }}
       />
 
-      {/* Gradient Overlay */}
+      {/* Radial Overlay for text readability */}
       <Box
         sx={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'radial-gradient(circle at 30% 50%, rgba(255, 184, 0, 0.08) 0%, transparent 50%), radial-gradient(circle at 70% 50%, rgba(179, 136, 255, 0.08) 0%, transparent 50%)',
+          inset: 0,
+          background: 'radial-gradient(circle at center, transparent 0%, #050912 90%)',
           zIndex: 1
         }}
       />
 
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2, py: 8 }}>
-        <Stack spacing={4} alignItems="center" textAlign="center">
-          {/* Premium Badge */}
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 1,
-              px: 3,
-              py: 1,
-              borderRadius: 50,
-              background: `linear-gradient(135deg, ${alpha('#FFB800', 0.2)} 0%, ${alpha('#B388FF', 0.2)} 100%)`,
-              border: `1px solid ${alpha('#FFB800', 0.3)}`,
-              backdropFilter: 'blur(10px)'
-            }}
-          >
-            <Box
-              sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: '#FFB800',
-                animation: 'pulse 2s ease-in-out infinite',
-                '@keyframes pulse': {
-                  '0%, 100%': { opacity: 1, transform: 'scale(1)' },
-                  '50%': { opacity: 0.5, transform: 'scale(1.2)' }
-                }
-              }}
-            />
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, #FFB800 0%, #B388FF 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              전략 마켓플레이스 + AI 퀀트 트레이딩
-            </Typography>
-          </Box>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
+        <Grid container spacing={6} alignItems="center">
+          <Grid item xs={12} md={7}>
+            <Stack spacing={4} alignItems={{ xs: 'center', md: 'flex-start' }} textAlign={{ xs: 'center', md: 'left' }}>
 
-          {/* Main Headline */}
-          <Typography
-            variant="h1"
-            sx={{
-              fontSize: { xs: '2.5rem', md: '4rem', lg: '5rem' },
-              fontWeight: 900,
-              lineHeight: 1.1,
-              letterSpacing: '-0.02em',
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #90CAF9 50%, #B388FF 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              textShadow: '0 0 80px rgba(144, 202, 249, 0.3)',
-              animation: 'fadeInUp 1s ease-out',
-              '@keyframes fadeInUp': {
-                from: { opacity: 0, transform: 'translateY(30px)' },
-                to: { opacity: 1, transform: 'translateY(0)' }
-              }
-            }}
-          >
-            AI가 분석하고
-            <br />
-            알고리즘이 실행하는
-            <br />
-            <Box
-              component="span"
-              sx={{
-                background: 'linear-gradient(135deg, #FFB800 0%, #FF6B00 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              스마트 투자
-            </Box>
-          </Typography>
-
-          {/* Subheadline */}
-          <Typography
-            variant="h5"
-            sx={{
-              maxWidth: 900,
-              color: alpha('#FFFFFF', 0.8),
-              fontWeight: 300,
-              lineHeight: 1.8,
-              animation: 'fadeInUp 1s ease-out 0.2s backwards',
-            }}
-          >
-            <Box component="span" sx={{ color: '#FFB800', fontWeight: 600 }}>전문가의 전략을 따라하거나</Box>,
-            <Box component="span" sx={{ color: '#00E5FF', fontWeight: 600 }}> 나만의 전략을 공유</Box>하세요.
-            <br />
-            팔로워는 자동 매매로 수익을, 개발자는 <Box component="span" sx={{ color: '#B388FF', fontWeight: 600 }}>이중 수익</Box>을 창출합니다.
-          </Typography>
-
-          {/* CTA Buttons */}
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            sx={{
-              animation: 'fadeInUp 1s ease-out 0.4s backwards',
-            }}
-          >
-            <Button
-              variant="contained"
-              size="large"
-              onClick={onLoginClick}
-              endIcon={<ArrowForward />}
-              sx={{
-                py: 2,
-                px: 5,
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                background: 'linear-gradient(135deg, #FFB800 0%, #FF8A00 100%)',
-                boxShadow: `0 8px 32px ${alpha('#FFB800', 0.4)}`,
-                border: 'none',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
-                  transition: 'left 0.5s',
-                },
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #FF8A00 0%, #FFB800 100%)',
-                  boxShadow: `0 12px 48px ${alpha('#FFB800', 0.6)}`,
-                  transform: 'translateY(-2px)',
-                  '&::before': {
-                    left: '100%',
-                  }
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              무료로 시작하기
-            </Button>
-
-            <Button
-              variant="outlined"
-              size="large"
-              startIcon={<PlayArrow />}
-              onClick={() => setVideoOpen(true)}
-              sx={{
-                py: 2,
-                px: 5,
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                borderWidth: 2,
-                borderColor: alpha('#00E5FF', 0.5),
-                color: '#00E5FF',
-                backdropFilter: 'blur(10px)',
-                background: alpha('#00E5FF', 0.05),
-                '&:hover': {
-                  borderWidth: 2,
-                  borderColor: '#00E5FF',
-                  background: alpha('#00E5FF', 0.15),
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 8px 32px ${alpha('#00E5FF', 0.3)}`
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              데모 영상 보기
-            </Button>
-          </Stack>
-
-          {/* Live Stats */}
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={6}
-            sx={{
-              mt: 8,
-              animation: 'fadeInUp 1s ease-out 0.6s backwards',
-            }}
-          >
-            {[
-              { value: '892', label: '공유된 전략' },
-              { value: '2,847', label: '전략 팔로워' },
-              { value: '₩3.2억', label: '월 전략 수익' }
-            ].map((stat, index) => (
+              {/* Terminal Badge */}
               <Box
-                key={index}
                 sx={{
-                  textAlign: 'center',
-                  px: 4,
-                  py: 2,
-                  borderRadius: 2,
-                  background: alpha('#1A1F3A', 0.6),
-                  backdropFilter: 'blur(10px)',
-                  border: `1px solid ${alpha('#FFB800', 0.2)}`,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    borderColor: '#FFB800',
-                    transform: 'translateY(-4px)',
-                    boxShadow: `0 8px 32px ${alpha('#FFB800', 0.2)}`
-                  }
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 1,
+                  bgcolor: alpha('#00E5FF', 0.1),
+                  border: `1px solid ${alpha('#00E5FF', 0.3)}`,
+                  fontFamily: '"JetBrains Mono", monospace'
                 }}
               >
+                <Terminal sx={{ fontSize: 16, color: '#00E5FF' }} />
                 <Typography
-                  variant="h3"
+                  variant="caption"
                   sx={{
-                    fontWeight: 900,
-                    background: 'linear-gradient(135deg, #FFB800 0%, #FFFFFF 100%)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
+                    color: '#00E5FF',
+                    fontWeight: 700,
+                    letterSpacing: 1
                   }}
                 >
-                  {stat.value}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    fontWeight: 500,
-                    mt: 1
-                  }}
-                >
-                  {stat.label}
+                  SYSTEM STATUS: ONLINE
                 </Typography>
               </Box>
-            ))}
-          </Stack>
 
-          {/* Scroll Indicator */}
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 40,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              animation: 'bounce 2s infinite',
-              '@keyframes bounce': {
-                '0%, 100%': { transform: 'translateX(-50%) translateY(0)' },
-                '50%': { transform: 'translateX(-50%) translateY(10px)' }
-              }
-            }}
-          >
+              {/* Main Headline */}
+              <Box>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: '#00FF88', // Cyber Green
+                    fontFamily: '"JetBrains Mono", monospace',
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <Box component="span" className="blinking-cursor">&gt;</Box> {typedText}
+                </Typography>
+                <Typography
+                  variant="h1"
+                  sx={{
+                    fontWeight: 900,
+                    fontSize: { xs: '3rem', md: '4.5rem' },
+                    lineHeight: 1.1,
+                    color: '#fff',
+                    textShadow: '0 0 30px rgba(0, 229, 255, 0.3)',
+                    mb: 2
+                  }}
+                >
+                  QUANTUM LEVEL
+                  <br />
+                  <Box component="span" sx={{ color: 'transparent', background: 'linear-gradient(90deg, #00E5FF, #00FF88)', backgroundClip: 'text' }}>
+                    TRADING INTELLIGENCE
+                  </Box>
+                </Typography>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    color: '#8F9EB3',
+                    maxWidth: 600,
+                    fontWeight: 400,
+                    lineHeight: 1.6
+                  }}
+                >
+                  Experience institutional-grade algorithm trading powered by deep learning.
+                  Automate your wealth generation with precision.
+                </Typography>
+              </Box>
+
+              {/* CTA Buttons - High Tech Style */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={onLoginClick}
+                  endIcon={<ArrowForward />}
+                  sx={{
+                    bgcolor: '#00E5FF',
+                    color: '#000',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    px: 4,
+                    py: 1.8,
+                    borderRadius: 0, // Sharp edges
+                    clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 100%, 0 100%)', // Cyber shape
+                    '&:hover': {
+                      bgcolor: '#00B8D4',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 0 20px rgba(0, 229, 255, 0.5)'
+                    }
+                  }}
+                >
+                  ACCESS TERMINAL
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => setVideoOpen(true)}
+                  startIcon={<AutoGraph />}
+                  sx={{
+                    borderColor: '#00FF88',
+                    color: '#00FF88',
+                    fontWeight: 700,
+                    px: 4,
+                    py: 1.8,
+                    borderRadius: 0,
+                    '&:hover': {
+                      borderColor: '#00FF88',
+                      bgcolor: alpha('#00FF88', 0.1),
+                    }
+                  }}
+                >
+                  VIEW BACKTEST
+                </Button>
+              </Stack>
+
+              {/* Stats HUD */}
+              <Grid container spacing={3} sx={{ mt: 4, pt: 4, borderTop: `1px solid ${alpha('#fff', 0.1)}` }}>
+                {[
+                  { label: 'ACTIVE ALGORITHMS', value: '892', icon: <AutoGraph /> },
+                  { label: 'TOTAL VOLUME', value: '$3.2B+', icon: <Bolt /> },
+                  { label: 'UPTIME', value: '99.99%', icon: <Terminal /> },
+                ].map((stat, idx) => (
+                  <Grid item key={idx}>
+                    <Stack>
+                      <Typography variant="caption" sx={{ color: '#5C6B7F', fontWeight: 700, fontFamily: '"JetBrains Mono", monospace' }}>
+                        {stat.label}
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: '#fff', fontWeight: 700, fontFamily: '"JetBrains Mono", monospace' }}>
+                        {stat.value}
+                      </Typography>
+                    </Stack>
+                  </Grid>
+                ))}
+              </Grid>
+
+            </Stack>
+          </Grid>
+
+          {/* Visual Element (Right Side) - 3D Mockup placeholder or similar */}
+          <Grid item xs={12} md={5} sx={{ display: { xs: 'none', md: 'block' }, position: 'relative' }}>
             <Box
               sx={{
-                width: 30,
-                height: 50,
-                border: `2px solid ${alpha('#FFB800', 0.5)}`,
-                borderRadius: 20,
+                width: '100%',
+                height: 500,
+                background: 'radial-gradient(circle, rgba(0,229,255,0.1) 0%, transparent 70%)',
+                border: `1px solid ${alpha('#00E5FF', 0.3)}`,
+                borderRadius: 2,
                 position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 8,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 4,
-                  height: 8,
-                  borderRadius: 2,
-                  background: '#FFB800',
-                  animation: 'scrollIndicator 2s infinite',
-                },
-                '@keyframes scrollIndicator': {
-                  '0%': { top: 8, opacity: 1 },
-                  '100%': { top: 32, opacity: 0 }
-                }
+                backdropFilter: 'blur(10px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
-            />
-          </Box>
-        </Stack>
+            >
+              {/* Abstract Data Visualization Mockup */}
+              <Stack spacing={2} sx={{ width: '80%' }}>
+                {[100, 70, 40, 90, 60].map((w, i) => (
+                  <Box key={i} sx={{ height: 4, width: `${w}%`, bgcolor: i % 2 === 0 ? '#00E5FF' : '#00FF88', opacity: 0.7, boxShadow: '0 0 10px currentColor' }} />
+                ))}
+                <Typography sx={{ color: '#00E5FF', fontFamily: '"JetBrains Mono", monospace', textAlign: 'center', mt: 4 }}>
+                  [ SYSTEM OPTIMIZED ]
+                </Typography>
+              </Stack>
+            </Box>
+          </Grid>
+        </Grid>
       </Container>
 
-      {/* Video Player Modal */}
       <VideoPlayerModal
         open={videoOpen}
         onClose={() => setVideoOpen(false)}
         videoSrc={import.meta.env.VITE_DEMO_VIDEO_URL || '/Company_CI/video-1759676192502.mp4'}
         onCtaClick={onLoginClick}
       />
+
+      <style>
+        {`
+          .blinking-cursor {
+            animation: blink 1s step-end infinite;
+          }
+          @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+          }
+        `}
+      </style>
     </Box>
   )
 }

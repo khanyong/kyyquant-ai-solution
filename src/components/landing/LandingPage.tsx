@@ -9,6 +9,7 @@ import CoreServicesSection from './CoreServicesSection'
 import UserReviewsSection from './UserReviewsSection'
 import PricingSection from './PricingSection'
 import FooterSection from './FooterSection'
+import LiveMarketTicker from './LiveMarketTicker'
 
 interface LandingPageProps {
   onLoginClick: () => void
@@ -21,9 +22,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
         width: '100%',
         maxWidth: '100vw',
         overflowX: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        bgcolor: '#050912', // Global dark background fix
+        minHeight: '100vh',
       }}
     >
+      <LiveMarketTicker />
+
       {/* Hero Section */}
       <HeroSection onLoginClick={onLoginClick} />
 

@@ -1,31 +1,26 @@
-import React, { useState } from 'react'
+import React from 'react'
 import {
   Box,
   Container,
   Typography,
   Grid,
-  Card,
   CardContent,
   Stack,
   Button,
   Chip,
   Avatar,
-  LinearProgress,
-  alpha,
-  IconButton,
-  Tooltip
+  alpha
 } from '@mui/material'
 import {
-  TrendingUp,
   People,
   AttachMoney,
-  Star,
   Verified,
-  Info,
   ArrowForward,
-  Speed,
   ShowChart,
-  AccountBalance
+  AccountBalance,
+  Terminal,
+  Code,
+  DataObject
 } from '@mui/icons-material'
 
 interface StrategyMarketplaceSectionProps {
@@ -33,63 +28,62 @@ interface StrategyMarketplaceSectionProps {
 }
 
 const StrategyMarketplaceSection: React.FC<StrategyMarketplaceSectionProps> = ({ onLoginClick }) => {
-  // Mock data - 실제로는 Supabase에서 가져올 데이터
   const topStrategies = [
     {
       id: 1,
-      name: '모멘텀 퀀트 골드',
-      creator: '퀀트킹',
+      name: 'QUANTUM_GOLD_V1',
+      creator: 'SYS_ADMIN',
       creatorAvatar: 'Q',
       verified: true,
       premium: true,
       returnRate: 156.8,
-      period: '1년',
+      period: '1Y',
       followers: 2847,
       monthlyFee: 49000,
       totalEarnings: 139513000,
       winRate: 78.5,
       maxDrawdown: -12.3,
-      description: '모멘텀과 가치 지표를 결합한 중장기 전략',
-      tags: ['모멘텀', '가치투자', '중장기'],
-      color: '#FFB800',
+      description: 'Momentum-based algorithm focusing on high-volatility assets.',
+      tags: ['MOMENTUM', 'HFT', 'LONG_ONLY'],
+      color: '#00E5FF', // Cyan
       rating: 4.9
     },
     {
       id: 2,
-      name: '변동성 돌파 시스템',
-      creator: '알고마스터',
+      name: 'NEURAL_NET_ALPHA',
+      creator: 'AI_LABS',
       creatorAvatar: 'A',
       verified: true,
       premium: true,
       returnRate: 89.3,
-      period: '6개월',
+      period: '6M',
       followers: 1563,
       monthlyFee: 39000,
       totalEarnings: 60957000,
       winRate: 82.1,
       maxDrawdown: -8.7,
-      description: '변동성 돌파를 활용한 단기 스윙 전략',
-      tags: ['변동성', '스윙', '단기'],
-      color: '#00E5FF',
+      description: 'Deep learning model trained on 10 years of tick data.',
+      tags: ['AI', 'SWING', 'STABLE'],
+      color: '#00FF88', // Green
       rating: 4.8
     },
     {
       id: 3,
-      name: 'AI 딥러닝 전략',
-      creator: 'AI트레이더',
-      creatorAvatar: 'AI',
+      name: 'VOLATILITY_BREAK_X',
+      creator: 'TRADER_ZERO',
+      creatorAvatar: 'Z',
       verified: true,
       premium: true,
       returnRate: 203.5,
-      period: '18개월',
+      period: '18M',
       followers: 3421,
       monthlyFee: 99000,
       totalEarnings: 338679000,
       winRate: 71.3,
       maxDrawdown: -18.9,
-      description: 'LSTM 기반 머신러닝 예측 모델',
-      tags: ['AI', 'ML', '고수익'],
-      color: '#B388FF',
+      description: 'Aggressive breakout strategy for maximum capital efficiency.',
+      tags: ['AGGRESSIVE', 'SCALPING', 'HIGH_RISK'],
+      color: '#EA00FF', // Purple
       rating: 4.7
     }
   ]
@@ -98,613 +92,321 @@ const StrategyMarketplaceSection: React.FC<StrategyMarketplaceSectionProps> = ({
     <Box
       sx={{
         py: 12,
-        background: `linear-gradient(180deg, #0A0E1A 0%, #1A1F3A 50%, #0A0E1A 100%)`,
+        bgcolor: '#050912',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        borderTop: `1px solid ${alpha('#00E5FF', 0.1)}`
       }}
     >
-      {/* Background Effects */}
+      {/* Background Grid */}
       <Box
         sx={{
           position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '1200px',
-          height: '1200px',
-          background: 'radial-gradient(circle, rgba(255, 184, 0, 0.08) 0%, transparent 70%)',
-          pointerEvents: 'none'
+          inset: 0,
+          backgroundImage: `
+            linear-gradient(rgba(0, 255, 136, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 255, 136, 0.02) 1px, transparent 1px)
+          `,
+          backgroundSize: '30px 30px',
+          opacity: 0.3,
+          zIndex: 0
         }}
       />
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         {/* Section Header */}
-        <Stack spacing={2} alignItems="center" textAlign="center" sx={{ mb: 3 }}>
-          <Chip
-            icon={<Star sx={{ color: '#FFB800 !important' }} />}
-            label="핵심 기능"
+        <Stack spacing={2} alignItems="center" textAlign="center" sx={{ mb: 8 }}>
+          <Box
             sx={{
-              background: alpha('#FFB800', 0.15),
-              border: `2px solid ${alpha('#FFB800', 0.4)}`,
-              color: '#FFB800',
-              fontWeight: 700,
-              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
               px: 2,
-              py: 2.5,
-              '& .MuiChip-icon': {
-                fontSize: 20
-              }
-            }}
-          />
-          <Typography
-            variant="h2"
-            sx={{
-              fontWeight: 900,
-              background: 'linear-gradient(135deg, #FFB800 0%, #FFFFFF 50%, #00E5FF 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              lineHeight: 1.2
-            }}
-          >
-            전략 마켓플레이스
-          </Typography>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              color: '#FFB800',
+              py: 0.5,
+              border: '1px solid #00FF88',
+              bgcolor: alpha('#00FF88', 0.1),
               mb: 2
             }}
           >
-            전문가의 전략을 따라하고 수익을 창출하세요
+            <Code sx={{ fontSize: 16, color: '#00FF88' }} />
+            <Typography variant="caption" sx={{ color: '#00FF88', fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
+              ALGORITHM_MARKETPLACE.EXE
+            </Typography>
+          </Box>
+          <Typography
+            variant="h2"
+            sx={{
+              fontWeight: 800,
+              color: '#fff',
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: -2,
+              mb: 1
+            }}
+          >
+            EXECUTE PRO STRATEGIES
           </Typography>
           <Typography
             variant="h6"
             sx={{
-              maxWidth: 900,
-              color: alpha('#FFFFFF', 0.85),
-              lineHeight: 1.9,
-              fontWeight: 400
+              maxWidth: 800,
+              color: '#8F9EB3',
+              lineHeight: 1.6,
+              fontWeight: 400,
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            전략을 개발할 시간이 없으신가요? <strong style={{ color: '#FFB800' }}>검증된 전략을 팔로우</strong>하면
-            <br />
-            전문가의 매매 시그널이 <strong style={{ color: '#00E5FF' }}>자동으로 실행</strong>됩니다.
-            <br />
-            전략 개발자는 <strong style={{ color: '#B388FF' }}>수익률 + 사용료</strong>로 이중 수익을 얻습니다.
+            Deploy verified algorithms from top architects. Zero latency execution.
           </Typography>
         </Stack>
 
-        {/* Value Proposition Cards */}
-        <Grid container spacing={3} sx={{ mb: 8 }}>
+        {/* Value Props - Terminal Style */}
+        <Grid container spacing={3} sx={{ mb: 10 }}>
           {[
             {
-              icon: <People sx={{ fontSize: 40 }} />,
-              title: '팔로워에게',
-              subtitle: '전략 상세 없이도 수익 창출',
-              features: [
-                '검증된 전문가 전략 선택',
-                '자동 매매 시그널 실행',
-                '전략 내용 비공개로 안전',
-                '월 사용료만 지불'
-              ],
-              color: '#00E5FF',
-              highlight: '전략을 몰라도 OK!'
+              icon: <DataObject />,
+              title: 'FOR OPERATORS',
+              subtitle: 'AUTO-EXECUTION',
+              desc: 'Select an algorithm. Allocate capital. Let the system execute trades automatically 24/7.',
+              color: '#00E5FF'
             },
             {
-              icon: <AccountBalance sx={{ fontSize: 40 }} />,
-              title: '전략 개발자에게',
-              subtitle: '이중 수익 구조',
-              features: [
-                '본인 투자 수익률',
-                '+ 팔로워 사용료 수익',
-                '팔로워 많을수록 고수익',
-                '전략은 비공개 유지'
-              ],
-              color: '#FFB800',
-              highlight: '수익 X 팔로워!'
+              icon: <Terminal />,
+              title: 'FOR ARCHITECTS',
+              subtitle: 'MONETIZE LOGIC',
+              desc: 'Publish your strategy. Earn subscription fees from followers while keeping your logic private.',
+              color: '#00FF88'
             },
             {
-              icon: <ShowChart sx={{ fontSize: 40 }} />,
-              title: '플랫폼 특장점',
-              subtitle: 'Win-Win 생태계',
-              features: [
-                '투명한 수익률 공개',
-                '실시간 성과 추적',
-                '안전한 결제 시스템',
-                '전략 보호 및 보안'
-              ],
-              color: '#B388FF',
-              highlight: '모두가 이익!'
+              icon: <AccountBalance />,
+              title: 'ECOSYSTEM',
+              subtitle: 'TRANSPARENCY',
+              desc: 'Real-time performance tracking. Verified historical data. Immutable trade records.',
+              color: '#EA00FF'
             }
           ].map((card, index) => (
             <Grid item xs={12} md={4} key={index}>
-              <Card
+              <Box
                 sx={{
                   height: '100%',
-                  background: alpha('#1A1F3A', 0.6),
-                  backdropFilter: 'blur(20px)',
-                  border: `2px solid ${alpha(card.color, 0.3)}`,
-                  borderRadius: 3,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'all 0.4s ease',
+                  p: 4,
+                  bgcolor: alpha('#0A0E1A', 0.6),
+                  border: `1px solid ${alpha(card.color, 0.3)}`,
+                  transition: 'all 0.3s ease',
                   '&:hover': {
-                    transform: 'translateY(-8px)',
                     borderColor: card.color,
-                    boxShadow: `0 20px 60px ${alpha(card.color, 0.4)}`
+                    bgcolor: alpha(card.color, 0.05),
+                    boxShadow: `0 0 20px ${alpha(card.color, 0.1)}`
                   }
                 }}
               >
-                {/* Top Bar */}
-                <Box
-                  sx={{
-                    height: 4,
-                    background: `linear-gradient(90deg, ${card.color} 0%, transparent 100%)`
-                  }}
-                />
-
-                {/* Highlight Badge */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 20,
-                    right: 20,
-                    px: 2,
-                    py: 0.5,
-                    borderRadius: 2,
-                    background: alpha(card.color, 0.2),
-                    border: `1px solid ${alpha(card.color, 0.5)}`
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: card.color,
-                      fontWeight: 700
-                    }}
-                  >
-                    {card.highlight}
-                  </Typography>
-                </Box>
-
-                <CardContent sx={{ p: 4 }}>
-                  <Box
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      background: alpha(card.color, 0.1),
-                      border: `1px solid ${alpha(card.color, 0.3)}`,
-                      color: card.color,
-                      display: 'inline-flex',
-                      mb: 3
-                    }}
-                  >
-                    {card.icon}
-                  </Box>
-
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight: 700,
-                      color: '#FFFFFF',
-                      mb: 1
-                    }}
-                  >
-                    {card.title}
-                  </Typography>
-
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: alpha('#FFFFFF', 0.6),
-                      mb: 3
-                    }}
-                  >
-                    {card.subtitle}
-                  </Typography>
-
-                  <Stack spacing={1.5}>
-                    {card.features.map((feature, idx) => (
-                      <Stack
-                        key={idx}
-                        direction="row"
-                        spacing={1.5}
-                        alignItems="center"
-                      >
-                        <Box
-                          sx={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            background: card.color,
-                            boxShadow: `0 0 10px ${alpha(card.color, 0.6)}`
-                          }}
-                        />
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: alpha('#FFFFFF', 0.9),
-                            fontWeight: 500
-                          }}
-                        >
-                          {feature}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                </CardContent>
-              </Card>
+                <Box sx={{ color: card.color, mb: 2 }}>{card.icon}</Box>
+                <Typography variant="caption" sx={{ color: card.color, fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
+                  {card.title}
+                </Typography>
+                <Typography variant="h5" sx={{ color: '#fff', fontFamily: '"JetBrains Mono", monospace', fontWeight: 800, mb: 2 }}>
+                  {card.subtitle}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#8F9EB3' }}>
+                  {card.desc}
+                </Typography>
+              </Box>
             </Grid>
           ))}
         </Grid>
 
-        {/* Top Strategies */}
-        <Box sx={{ mb: 6 }}>
-          <Typography
-            variant="h3"
-            sx={{
-              fontWeight: 800,
-              color: '#FFFFFF',
-              mb: 1,
-              textAlign: 'center'
-            }}
-          >
-            인기 전략 TOP 3
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: alpha('#FFFFFF', 0.7),
-              mb: 6,
-              textAlign: 'center'
-            }}
-          >
-            실제 수익률과 팔로워 수가 증명하는 검증된 전략
-          </Typography>
+        {/* Top Strategies Grid */}
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 800,
+            color: '#fff',
+            fontFamily: '"JetBrains Mono", monospace',
+            mb: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <Box component="span" sx={{ color: '#00FF88' }}>&gt;</Box> TOP_PERFORMING_NODES
+        </Typography>
 
-          <Grid container spacing={3}>
-            {topStrategies.map((strategy, index) => (
-              <Grid item xs={12} md={4} key={strategy.id}>
-                <Card
+        <Grid container spacing={3} sx={{ mb: 8 }}>
+          {topStrategies.map((strategy, index) => (
+            <Grid item xs={12} md={4} key={strategy.id}>
+              <Box
+                sx={{
+                  height: '100%',
+                  bgcolor: '#0A0E1A',
+                  border: `1px solid ${alpha(strategy.color, 0.3)}`,
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    borderColor: strategy.color,
+                    transform: 'translateY(-5px)',
+                    boxShadow: `0 0 30px ${alpha(strategy.color, 0.1)}`
+                  }
+                }}
+                onClick={onLoginClick}
+              >
+                {/* Header Bar */}
+                <Box
                   sx={{
-                    height: '100%',
-                    background: alpha('#0A0E1A', 0.8),
-                    backdropFilter: 'blur(20px)',
-                    border: `2px solid ${alpha(strategy.color, 0.4)}`,
-                    borderRadius: 3,
-                    position: 'relative',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:hover': {
-                      transform: 'translateY(-12px)',
-                      borderColor: strategy.color,
-                      boxShadow: `0 24px 80px ${alpha(strategy.color, 0.5)}`
-                    }
+                    p: 2,
+                    borderBottom: `1px solid ${alpha(strategy.color, 0.3)}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    bgcolor: alpha(strategy.color, 0.05)
                   }}
-                  onClick={onLoginClick}
                 >
-                  {/* Rank Badge */}
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: -5,
-                      left: 20,
-                      px: 2,
-                      py: 1,
-                      borderRadius: '0 0 8px 8px',
-                      background: `linear-gradient(135deg, ${strategy.color} 0%, ${alpha(strategy.color, 0.8)} 100%)`,
-                      boxShadow: `0 4px 20px ${alpha(strategy.color, 0.6)}`,
-                      zIndex: 2
-                    }}
-                  >
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 900,
-                        color: '#000',
-                        lineHeight: 1
-                      }}
-                    >
-                      #{index + 1}
-                    </Typography>
-                  </Box>
-
-                  {/* Top Gradient Bar */}
-                  <Box
-                    sx={{
-                      height: 6,
-                      background: `linear-gradient(90deg, ${strategy.color} 0%, transparent 100%)`
-                    }}
-                  />
-
-                  <CardContent sx={{ p: 3 }}>
-                    {/* Strategy Name & Creator */}
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        fontWeight: 700,
-                        color: '#FFFFFF',
-                        mb: 2,
-                        mt: 1
-                      }}
-                    >
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="h6" sx={{ color: '#fff', fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, fontSize: '1rem' }}>
                       {strategy.name}
-                      {strategy.premium && (
-                        <Chip
-                          label="프리미엄"
-                          size="small"
-                          sx={{
-                            ml: 1,
-                            background: alpha('#FFB800', 0.2),
-                            color: '#FFB800',
-                            border: `1px solid ${alpha('#FFB800', 0.4)}`,
-                            fontWeight: 700
-                          }}
-                        />
-                      )}
                     </Typography>
+                    {strategy.premium && (
+                      <Box sx={{ px: 0.5, bgcolor: strategy.color, color: '#000', fontSize: '0.6rem', fontWeight: 800 }}>P</Box>
+                    )}
+                  </Stack>
+                  <Typography variant="caption" sx={{ color: strategy.color, fontFamily: '"JetBrains Mono", monospace' }}>
+                    ID: {strategy.id.toString().padStart(4, '0')}
+                  </Typography>
+                </Box>
 
-                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-                      <Avatar
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          background: alpha(strategy.color, 0.2),
-                          border: `2px solid ${alpha(strategy.color, 0.5)}`,
-                          color: strategy.color,
-                          fontWeight: 700
-                        }}
-                      >
-                        {strategy.creatorAvatar}
-                      </Avatar>
-                      <Box>
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: 600,
-                              color: '#FFFFFF'
-                            }}
-                          >
-                            {strategy.creator}
-                          </Typography>
-                          {strategy.verified && (
-                            <Verified sx={{ fontSize: 16, color: '#4CAF50' }} />
-                          )}
-                        </Stack>
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Star sx={{ fontSize: 14, color: '#FFB800' }} />
-                          <Typography variant="caption" sx={{ color: '#FFB800', fontWeight: 600 }}>
-                            {strategy.rating}
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    </Stack>
-
-                    {/* Description */}
-                    <Typography
-                      variant="body2"
+                <CardContent sx={{ p: 3 }}>
+                  {/* Creator Info */}
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                    <Avatar
                       sx={{
-                        color: alpha('#FFFFFF', 0.7),
-                        mb: 2,
-                        minHeight: 40
+                        width: 32,
+                        height: 32,
+                        bgcolor: 'transparent',
+                        border: `1px solid ${strategy.color}`,
+                        color: strategy.color,
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                        borderRadius: 0
                       }}
                     >
-                      {strategy.description}
-                    </Typography>
-
-                    {/* Tags */}
-                    <Stack direction="row" spacing={1} sx={{ mb: 3 }} flexWrap="wrap" gap={1}>
-                      {strategy.tags.map((tag, idx) => (
-                        <Chip
-                          key={idx}
-                          label={tag}
-                          size="small"
+                      {strategy.creatorAvatar}
+                    </Avatar>
+                    <Box>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Typography
+                          variant="body2"
                           sx={{
-                            background: alpha(strategy.color, 0.1),
-                            border: `1px solid ${alpha(strategy.color, 0.3)}`,
-                            color: strategy.color,
-                            fontSize: '0.75rem'
-                          }}
-                        />
-                      ))}
-                    </Stack>
-
-                    {/* Stats Grid */}
-                    <Grid container spacing={2} sx={{ mb: 3 }}>
-                      <Grid item xs={6}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            borderRadius: 2,
-                            background: alpha(strategy.color, 0.1),
-                            border: `1px solid ${alpha(strategy.color, 0.3)}`,
-                            textAlign: 'center'
+                            fontWeight: 600,
+                            color: '#fff',
+                            fontFamily: '"JetBrains Mono", monospace'
                           }}
                         >
-                          <Typography
-                            variant="h4"
-                            sx={{
-                              fontWeight: 900,
-                              color: strategy.color,
-                              lineHeight: 1,
-                              mb: 0.5
-                            }}
-                          >
-                            +{strategy.returnRate}%
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: alpha('#FFFFFF', 0.7)
-                            }}
-                          >
-                            누적 수익률 ({strategy.period})
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            borderRadius: 2,
-                            background: alpha('#4CAF50', 0.1),
-                            border: `1px solid ${alpha('#4CAF50', 0.3)}`,
-                            textAlign: 'center'
-                          }}
-                        >
-                          <Typography
-                            variant="h4"
-                            sx={{
-                              fontWeight: 900,
-                              color: '#4CAF50',
-                              lineHeight: 1,
-                              mb: 0.5
-                            }}
-                          >
-                            {strategy.winRate}%
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: alpha('#FFFFFF', 0.7)
-                            }}
-                          >
-                            승률
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    </Grid>
-
-                    {/* Earnings Info */}
-                    <Box
-                      sx={{
-                        p: 2.5,
-                        mb: 3,
-                        borderRadius: 2,
-                        background: `linear-gradient(135deg, ${alpha('#FFB800', 0.15)} 0%, ${alpha(strategy.color, 0.1)} 100%)`,
-                        border: `1px solid ${alpha('#FFB800', 0.3)}`
-                      }}
-                    >
-                      <Stack spacing={2}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <People sx={{ fontSize: 20, color: '#00E5FF' }} />
-                            <Typography variant="body2" sx={{ color: alpha('#FFFFFF', 0.8) }}>
-                              팔로워
-                            </Typography>
-                          </Stack>
-                          <Typography
-                            variant="h6"
-                            sx={{
-                              fontWeight: 700,
-                              color: '#00E5FF'
-                            }}
-                          >
-                            {strategy.followers.toLocaleString()}명
-                          </Typography>
-                        </Stack>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <AttachMoney sx={{ fontSize: 20, color: '#FFB800' }} />
-                            <Typography variant="body2" sx={{ color: alpha('#FFFFFF', 0.8) }}>
-                              월 사용료
-                            </Typography>
-                          </Stack>
-                          <Typography
-                            variant="h6"
-                            sx={{
-                              fontWeight: 700,
-                              color: '#FFB800'
-                            }}
-                          >
-                            {strategy.monthlyFee.toLocaleString()}원
-                          </Typography>
-                        </Stack>
-                        <Box
-                          sx={{
-                            pt: 2,
-                            borderTop: `1px solid ${alpha('#FFFFFF', 0.1)}`
-                          }}
-                        >
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                color: alpha('#FFFFFF', 0.9),
-                                fontWeight: 600
-                              }}
-                            >
-                              개발자 예상 월수익
-                            </Typography>
-                            <Typography
-                              variant="h5"
-                              sx={{
-                                fontWeight: 900,
-                                background: 'linear-gradient(135deg, #FFB800 0%, #FF6B00 100%)',
-                                backgroundClip: 'text',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent'
-                              }}
-                            >
-                              ₩{(strategy.followers * strategy.monthlyFee).toLocaleString()}
-                            </Typography>
-                          </Stack>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: alpha('#FFFFFF', 0.5),
-                              display: 'block',
-                              textAlign: 'right',
-                              mt: 0.5
-                            }}
-                          >
-                            누적 총수익: ₩{strategy.totalEarnings.toLocaleString()}
-                          </Typography>
-                        </Box>
+                          {strategy.creator}
+                        </Typography>
+                        {strategy.verified && (
+                          <Verified sx={{ fontSize: 14, color: '#00FF88' }} />
+                        )}
                       </Stack>
                     </Box>
+                  </Stack>
 
-                    {/* Follow Button */}
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      size="large"
-                      endIcon={<ArrowForward />}
-                      onClick={onLoginClick}
-                      sx={{
-                        py: 1.5,
-                        fontWeight: 700,
-                        background: `linear-gradient(135deg, ${strategy.color} 0%, ${alpha(strategy.color, 0.8)} 100%)`,
-                        boxShadow: `0 8px 32px ${alpha(strategy.color, 0.4)}`,
-                        color: '#000',
-                        '&:hover': {
-                          boxShadow: `0 12px 48px ${alpha(strategy.color, 0.6)}`,
-                          transform: 'translateY(-2px)'
-                        },
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      전략 팔로우하기
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
+                  {/* Stats */}
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
+                    <Grid item xs={6}>
+                      <Box sx={{ p: 1.5, border: `1px solid ${alpha(strategy.color, 0.3)}`, bgcolor: alpha(strategy.color, 0.05) }}>
+                        <Typography variant="caption" sx={{ color: '#8F9EB3', fontFamily: '"JetBrains Mono", monospace', display: 'block', mb: 0.5 }}>RETURN ({strategy.period})</Typography>
+                        <Typography variant="h5" sx={{ color: strategy.color, fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
+                          +{strategy.returnRate}%
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{ p: 1.5, border: `1px solid ${alpha('#00FF88', 0.3)}`, bgcolor: alpha('#00FF88', 0.05) }}>
+                        <Typography variant="caption" sx={{ color: '#8F9EB3', fontFamily: '"JetBrains Mono", monospace', display: 'block', mb: 0.5 }}>WIN RATE</Typography>
+                        <Typography variant="h5" sx={{ color: '#00FF88', fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
+                          {strategy.winRate}%
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
 
-        {/* CTA Section */}
+                  {/* Description */}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: '#8F9EB3',
+                      mb: 2,
+                      minHeight: 40,
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    {strategy.description}
+                  </Typography>
+
+                  {/* Tags */}
+                  <Stack direction="row" spacing={1} sx={{ mb: 3 }} flexWrap="wrap" gap={0.5}>
+                    {strategy.tags.map((tag, idx) => (
+                      <Chip
+                        key={idx}
+                        label={tag}
+                        size="small"
+                        sx={{
+                          bgcolor: 'transparent',
+                          border: `1px solid ${alpha('#fff', 0.2)}`,
+                          color: '#8F9EB3',
+                          fontSize: '0.65rem',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          borderRadius: 0,
+                          height: 20
+                        }}
+                      />
+                    ))}
+                  </Stack>
+
+                  {/* Footer Info */}
+                  <Stack spacing={1} sx={{ pt: 2, borderTop: `1px solid ${alpha('#fff', 0.1)}` }}>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="caption" sx={{ color: '#5C6B7F' }}>FOLLOWERS</Typography>
+                      <Typography variant="caption" sx={{ color: '#fff', fontWeight: 700, fontFamily: '"JetBrains Mono", monospace' }}>{strategy.followers.toLocaleString()}</Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="caption" sx={{ color: '#5C6B7F' }}>FEE / MO</Typography>
+                      <Typography variant="caption" sx={{ color: strategy.color, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace' }}>₩{strategy.monthlyFee.toLocaleString()}</Typography>
+                    </Stack>
+                  </Stack>
+
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    endIcon={<ArrowForward />}
+                    sx={{
+                      mt: 3,
+                      borderColor: strategy.color,
+                      color: strategy.color,
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontWeight: 700,
+                      borderRadius: 0,
+                      '&:hover': {
+                        bgcolor: alpha(strategy.color, 0.1),
+                        borderColor: strategy.color
+                      }
+
+                    }}
+                  >
+                    INITIALIZE
+                  </Button>
+                </CardContent>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* CTA Banner */}
         <Box
           sx={{
-            mt: 8,
             p: 6,
-            borderRadius: 3,
-            background: `linear-gradient(135deg, ${alpha('#FFB800', 0.15)} 0%, ${alpha('#1A1F3A', 0.9)} 100%)`,
-            border: `2px solid ${alpha('#FFB800', 0.4)}`,
+            border: `1px solid #00E5FF`,
+            bgcolor: alpha('#00E5FF', 0.05),
             textAlign: 'center',
             position: 'relative',
             overflow: 'hidden'
@@ -714,87 +416,59 @@ const StrategyMarketplaceSection: React.FC<StrategyMarketplaceSectionProps> = ({
             sx={{
               position: 'absolute',
               top: 0,
-              left: 0,
               right: 0,
-              bottom: 0,
-              background: 'radial-gradient(circle at center, rgba(255, 184, 0, 0.1) 0%, transparent 70%)',
-              pointerEvents: 'none'
-            }}
-          />
-
-          <Typography
-            variant="h3"
-            sx={{
-              fontWeight: 800,
-              color: '#FFFFFF',
-              mb: 2,
-              position: 'relative'
+              p: 1,
+              bgcolor: '#00E5FF',
+              color: '#000',
+              fontWeight: 700,
+              fontSize: '0.7rem',
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            지금 바로 시작하세요
+            SYSTEM_READY
+          </Box>
+          <Typography variant="h4" sx={{ color: '#fff', fontFamily: '"JetBrains Mono", monospace', fontWeight: 800, mb: 2 }}>
+            READY TO DEPLOY?
           </Typography>
-          <Typography
-            variant="h6"
-            sx={{
-              color: alpha('#FFFFFF', 0.8),
-              mb: 4,
-              position: 'relative'
-            }}
-          >
-            전략을 팔로우하거나, 나만의 전략을 공유하고 수익을 창출하세요
+          <Typography variant="body1" sx={{ color: '#8F9EB3', mb: 4, maxWidth: 600, mx: 'auto' }}>
+            Join the network of algorithmic traders. Access institutional tools today.
           </Typography>
-
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            justifyContent="center"
-            sx={{ position: 'relative' }}
-          >
+          <Stack direction="row" spacing={2} justifyContent="center">
             <Button
               variant="contained"
               size="large"
-              endIcon={<People />}
               onClick={onLoginClick}
               sx={{
-                py: 2,
-                px: 5,
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                background: 'linear-gradient(135deg, #00E5FF 0%, #00B8D4 100%)',
-                boxShadow: `0 8px 32px ${alpha('#00E5FF', 0.4)}`,
-                '&:hover': {
-                  boxShadow: `0 12px 48px ${alpha('#00E5FF', 0.6)}`,
-                  transform: 'translateY(-2px)'
-                }
+                bgcolor: '#00E5FF',
+                color: '#000',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontWeight: 800,
+                borderRadius: 0,
+                px: 4,
+                '&:hover': { bgcolor: '#00B8D4' }
               }}
             >
-              전략 팔로우 시작
+              ACCESS TERMINAL
             </Button>
             <Button
               variant="outlined"
               size="large"
-              endIcon={<ShowChart />}
               onClick={onLoginClick}
               sx={{
-                py: 2,
-                px: 5,
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                borderWidth: 2,
-                borderColor: '#FFB800',
-                color: '#FFB800',
-                '&:hover': {
-                  borderWidth: 2,
-                  borderColor: '#FFB800',
-                  background: alpha('#FFB800', 0.1),
-                  transform: 'translateY(-2px)'
-                }
+                borderColor: '#00FF88',
+                color: '#00FF88',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontWeight: 800,
+                borderRadius: 0,
+                px: 4,
+                '&:hover': { borderColor: '#00B8D4', bgcolor: 'transparent' }
               }}
             >
-              전략 개발하고 수익 창출
+              VIEW DOCS
             </Button>
           </Stack>
         </Box>
+
       </Container>
     </Box>
   )

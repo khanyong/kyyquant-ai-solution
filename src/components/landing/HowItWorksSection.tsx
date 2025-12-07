@@ -4,11 +4,9 @@ import {
   Container,
   Typography,
   Grid,
-  Card,
-  CardContent,
   Stack,
   alpha,
-  Avatar
+  Divider
 } from '@mui/material'
 import {
   Search,
@@ -18,235 +16,176 @@ import {
   TrendingUp,
   Share,
   People,
-  MonetizationOn
+  MonetizationOn,
+  ArrowForward,
+  Terminal,
+  Memory,
+  Settings
 } from '@mui/icons-material'
 
 const HowItWorksSection: React.FC = () => {
   const followerSteps = [
     {
       step: '01',
-      icon: <Search sx={{ fontSize: 40 }} />,
-      title: '전략 검색 및 비교',
-      description: '수익률, 승률, 팔로워 수 등을 비교하여 원하는 전략을 찾습니다',
-      color: '#00E5FF'
+      id: 'SCAN',
+      icon: <Search sx={{ fontSize: 32 }} />,
+      title: 'SCAN_MARKET',
+      description: 'Filter algorithms by Sharpe ratio, Win Rate, and Drawdown.',
+      color: '#00E5FF' // Cyan
     },
     {
       step: '02',
-      icon: <TouchApp sx={{ fontSize: 40 }} />,
-      title: '전략 팔로우',
-      description: '마음에 드는 전략을 클릭 한 번으로 팔로우합니다',
-      color: '#4CAF50'
+      id: 'LINK',
+      icon: <Memory sx={{ fontSize: 32 }} />,
+      title: 'ESTABLISH_UPLINK',
+      description: 'Connect your capital to the selected node via API bridge.',
+      color: '#00FF88' // Green
     },
     {
       step: '03',
-      icon: <Autorenew sx={{ fontSize: 40 }} />,
-      title: '자동 매매 실행',
-      description: '전략의 매수/매도 시그널이 자동으로 실행됩니다',
-      color: '#FF9800'
+      id: 'EXEC',
+      icon: <Autorenew sx={{ fontSize: 32 }} />,
+      title: 'AUTO_EXECUTION',
+      description: 'System mirrors signals in real-time with <50ms latency.',
+      color: '#EA00FF' // Purple
     },
     {
       step: '04',
-      icon: <AccountBalanceWallet sx={{ fontSize: 40 }} />,
-      title: '수익 창출',
-      description: '전문가의 전략으로 안정적인 수익을 얻고 월 사용료만 지불합니다',
-      color: '#FFB800'
+      id: 'YIELD',
+      icon: <AccountBalanceWallet sx={{ fontSize: 32 }} />,
+      title: 'EXTRACT_YIELD',
+      description: 'Monitor performance dashboard and withdraw profits.',
+      color: '#FFB800' // Gold
     }
   ]
 
   const creatorSteps = [
     {
       step: '01',
-      icon: <TrendingUp sx={{ fontSize: 40 }} />,
-      title: '전략 개발 및 검증',
-      description: '자신만의 투자 전략을 개발하고 백테스트로 검증합니다',
-      color: '#B388FF'
-    },
-    {
-      step: '02',
-      icon: <Share sx={{ fontSize: 40 }} />,
-      title: '전략 공개',
-      description: '검증된 전략을 마켓플레이스에 공개합니다 (내용은 비공개)',
+      id: 'DEV',
+      icon: <Terminal sx={{ fontSize: 32 }} />,
+      title: 'DEVELOP_LOGIC',
+      description: 'Code strategies in Python/C++ or use the Visual Builder.',
       color: '#00E5FF'
     },
     {
+      step: '02',
+      id: 'TEST',
+      icon: <Settings sx={{ fontSize: 32 }} />,
+      title: 'BACKTEST_CORE',
+      description: 'Validate against 10 years of tick-level historical data.',
+      color: '#00FF88'
+    },
+    {
       step: '03',
-      icon: <People sx={{ fontSize: 40 }} />,
-      title: '팔로워 유치',
-      description: '높은 수익률로 투자자들이 전략을 팔로우합니다',
-      color: '#4CAF50'
+      id: 'DEPLOY',
+      icon: <Share sx={{ fontSize: 32 }} />,
+      title: 'DEPLOY_NODE',
+      description: 'Publish to Marketplace. Logic remains encrypted/hidden.',
+      color: '#EA00FF'
     },
     {
       step: '04',
-      icon: <MonetizationOn sx={{ fontSize: 40 }} />,
-      title: '이중 수익 창출',
-      description: '본인 투자 수익 + (팔로워 수 × 월 사용료) 로 수익을 극대화합니다',
+      id: 'EARN',
+      icon: <MonetizationOn sx={{ fontSize: 32 }} />,
+      title: 'COLLECT_FEES',
+      description: 'Earn performance fees + subscription revenue globally.',
       color: '#FFB800'
     }
   ]
 
-  const renderSteps = (steps: typeof followerSteps, title: string, subtitle: string) => (
-    <Box sx={{ mb: 10 }}>
-      <Typography
-        variant="h3"
-        sx={{
-          fontWeight: 800,
-          color: '#FFFFFF',
-          mb: 2,
-          textAlign: 'center'
-        }}
-      >
-        {title}
-      </Typography>
-      <Typography
-        variant="h6"
-        sx={{
-          color: alpha('#FFFFFF', 0.7),
-          mb: 6,
-          textAlign: 'center',
-          maxWidth: 700,
-          mx: 'auto'
-        }}
-      >
-        {subtitle}
-      </Typography>
+  const renderPipeline = (steps: typeof followerSteps, title: string, subtitle: string) => (
+    <Box sx={{ mb: 12 }}>
+      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 6 }}>
+        <Box sx={{ width: 4, height: 24, bgcolor: '#00E5FF' }} />
+        <Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              color: '#fff',
+              fontFamily: '"JetBrains Mono", monospace',
+              letterSpacing: -1
+            }}
+          >
+            {title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#8F9EB3', fontFamily: '"JetBrains Mono", monospace' }}>
+            {subtitle}
+          </Typography>
+        </Box>
+      </Stack>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={4} sx={{ position: 'relative' }}>
+        {/* Connection Line (Desktop) */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 50,
+            left: 60,
+            right: 60,
+            height: 2,
+            bgcolor: alpha('#00E5FF', 0.2),
+            zIndex: 0,
+            display: { xs: 'none', md: 'block' },
+            backgroundImage: 'repeating-linear-gradient(90deg, #00E5FF, #00E5FF 5px, transparent 5px, transparent 10px)'
+          }}
+        />
+
         {steps.map((step, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card
+          <Grid item xs={12} md={3} key={index} sx={{ position: 'relative', zIndex: 1 }}>
+            <Box
               sx={{
                 height: '100%',
-                background: alpha('#1A1F3A', 0.6),
-                backdropFilter: 'blur(20px)',
-                border: `2px solid ${alpha(step.color, 0.3)}`,
-                borderRadius: 3,
-                position: 'relative',
-                overflow: 'hidden',
-                transition: 'all 0.4s ease',
+                bgcolor: '#050912',
+                border: `1px solid ${alpha(step.color, 0.3)}`,
+                p: 3,
+                transition: 'all 0.3s ease',
                 '&:hover': {
-                  transform: 'translateY(-12px)',
                   borderColor: step.color,
-                  boxShadow: `0 20px 60px ${alpha(step.color, 0.5)}`,
-                  '& .step-number': {
-                    transform: 'scale(1.1)',
-                  },
-                  '& .icon-box': {
-                    transform: 'rotateY(360deg)',
-                  }
+                  boxShadow: `0 0 20px ${alpha(step.color, 0.1)}`,
+                  transform: 'translateY(-5px)'
                 }
               }}
             >
-              {/* Step Number */}
-              <Box
-                className="step-number"
-                sx={{
-                  position: 'absolute',
-                  top: -15,
-                  right: 15,
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${step.color} 0%, ${alpha(step.color, 0.7)} 100%)`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: `0 8px 32px ${alpha(step.color, 0.5)}`,
-                  transition: 'transform 0.4s ease',
-                  zIndex: 2
-                }}
-              >
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontWeight: 900,
-                    color: '#000'
-                  }}
-                >
-                  {step.step}
-                </Typography>
-              </Box>
-
-              {/* Top Bar */}
-              <Box
-                sx={{
-                  height: 5,
-                  background: `linear-gradient(90deg, ${step.color} 0%, transparent 100%)`
-                }}
-              />
-
-              {/* Arrow (except last card) */}
-              {index < steps.length - 1 && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    right: { xs: 'auto', md: -20 },
-                    bottom: { xs: -20, md: 'auto' },
-                    left: { xs: '50%', md: 'auto' },
-                    transform: {
-                      xs: 'translate(-50%, 0) rotate(90deg)',
-                      md: 'translateY(-50%)'
-                    },
-                    zIndex: 3,
-                    display: { xs: 'none', sm: 'block' }
-                  }}
-                >
+              <Stack spacing={2}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                   <Box
                     sx={{
-                      width: 0,
-                      height: 0,
-                      borderTop: '15px solid transparent',
-                      borderBottom: '15px solid transparent',
-                      borderLeft: `20px solid ${alpha(step.color, 0.5)}`
+                      width: 50,
+                      height: 50,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: `1px solid ${step.color}`,
+                      color: step.color,
+                      bgcolor: alpha(step.color, 0.1)
                     }}
-                  />
+                  >
+                    {step.icon}
+                  </Box>
+                  <Typography variant="h2" sx={{ color: alpha('#fff', 0.1), fontWeight: 900, fontFamily: '"JetBrains Mono", monospace' }}>
+                    {step.step}
+                  </Typography>
+                </Stack>
+
+                <Box>
+                  <Typography variant="caption" sx={{ color: step.color, fontFamily: '"JetBrains Mono", monospace' }}>
+                    [{step.id}]
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', mb: 1, minHeight: 60 }}>
+                    {step.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#8F9EB3', fontSize: '0.85rem' }}>
+                    {step.description}
+                  </Typography>
                 </Box>
-              )}
-
-              <CardContent sx={{ p: 4, pt: 5 }}>
-                {/* Icon */}
-                <Box
-                  className="icon-box"
-                  sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    background: alpha(step.color, 0.1),
-                    border: `1px solid ${alpha(step.color, 0.3)}`,
-                    color: step.color,
-                    display: 'inline-flex',
-                    mb: 3,
-                    transition: 'transform 0.8s ease',
-                    transformStyle: 'preserve-3d'
-                  }}
-                >
-                  {step.icon}
-                </Box>
-
-                {/* Title */}
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 700,
-                    color: '#FFFFFF',
-                    mb: 2,
-                    minHeight: 56
-                  }}
-                >
-                  {step.title}
-                </Typography>
-
-                {/* Description */}
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: alpha('#FFFFFF', 0.7),
-                    lineHeight: 1.7
-                  }}
-                >
-                  {step.description}
-                </Typography>
-              </CardContent>
-            </Card>
+              </Stack>
+            </Box>
+            {/* Arrow for mobile */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, justifyContent: 'center', my: 2, color: alpha(step.color, 0.3) }}>
+              {index < 3 && <ArrowForward sx={{ transform: 'rotate(90deg)' }} />}
+            </Box>
           </Grid>
         ))}
       </Grid>
@@ -257,217 +196,186 @@ const HowItWorksSection: React.FC = () => {
     <Box
       sx={{
         py: 12,
-        background: `linear-gradient(180deg, #0A0E1A 0%, #1A1F3A 50%, #0A0E1A 100%)`,
+        bgcolor: '#050912',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        borderTop: `1px solid ${alpha('#00E5FF', 0.1)}`
       }}
     >
-      {/* Background Pattern */}
+      {/* Cyberpunk Grid Background */}
       <Box
         sx={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: 0.03,
+          inset: 0,
           backgroundImage: `
-            linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent),
-            linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent)
-          `,
-          backgroundSize: '50px 50px'
+                    linear-gradient(transparent 95%, ${alpha('#00E5FF', 0.1)} 95%),
+                    linear-gradient(90deg, transparent 95%, ${alpha('#00E5FF', 0.1)} 95%)
+                `,
+          backgroundSize: '40px 40px',
+          opacity: 0.3,
+          pointerEvents: 'none'
         }}
       />
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         {/* Section Header */}
         <Stack spacing={2} alignItems="center" textAlign="center" sx={{ mb: 10 }}>
-          <Typography
-            variant="overline"
+          <Box
             sx={{
-              color: '#FFB800',
-              fontWeight: 700,
-              letterSpacing: 2,
-              fontSize: '0.9rem'
+              border: '1px solid #00E5FF',
+              px: 2,
+              py: 0.5,
+              bgcolor: alpha('#00E5FF', 0.1)
             }}
           >
-            HOW IT WORKS
-          </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#00E5FF',
+                fontWeight: 700,
+                fontFamily: '"JetBrains Mono", monospace',
+                letterSpacing: 2
+              }}
+            >
+              SYSTEM_ARCHITECTURE
+            </Typography>
+          </Box>
           <Typography
             variant="h2"
             sx={{
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #FFB800 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#fff',
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: -2
             }}
           >
-            이렇게 작동합니다
+            EXECUTION PROTOCOL
           </Typography>
           <Typography
             variant="h6"
             sx={{
               maxWidth: 700,
-              color: alpha('#FFFFFF', 0.7),
-              lineHeight: 1.8,
-              fontWeight: 300
+              color: '#8F9EB3',
+              lineHeight: 1.6,
+              fontWeight: 400,
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            간단한 4단계로 전략을 팔로우하거나 수익을 창출하세요
+            Choose your role in the ecosystem. Initialize uplink.
           </Typography>
         </Stack>
 
-        {/* Follower Process */}
-        {renderSteps(
+        {/* Follower Pipeline */}
+        {renderPipeline(
           followerSteps,
-          '팔로워: 전략 따라하기',
-          '전문가의 전략을 따라하고 수익을 창출하는 과정'
+          'OPERATOR_PROTOCOL',
+          'Sequence for capital allocation and auto-execution.'
         )}
 
-        {/* Divider */}
-        <Box
-          sx={{
-            my: 10,
-            height: 2,
-            background: `linear-gradient(90deg, transparent 0%, ${alpha('#FFB800', 0.5)} 50%, transparent 100%)`
-          }}
-        />
-
-        {/* Creator Process */}
-        {renderSteps(
+        {/* Creator Pipeline */}
+        {renderPipeline(
           creatorSteps,
-          '전략 개발자: 이중 수익 창출',
-          '전략을 공유하고 본인 수익 + 팔로워 사용료로 수익을 극대화하는 과정'
+          'ARCHITECT_PROTOCOL',
+          'Sequence for algorithm development and monetization.'
         )}
 
-        {/* Earnings Example */}
+        {/* Earnings Simulation - Terminal Style */}
         <Box
           sx={{
             mt: 8,
-            p: 6,
-            borderRadius: 3,
-            background: `linear-gradient(135deg, ${alpha('#FFB800', 0.15)} 0%, ${alpha('#1A1F3A', 0.9)} 100%)`,
-            border: `2px solid ${alpha('#FFB800', 0.4)}`
+            p: { xs: 3, md: 6 },
+            bgcolor: alpha('#1A1F3A', 0.4),
+            border: `1px solid ${alpha('#00FF88', 0.3)}`,
+            position: 'relative'
           }}
         >
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 800,
-              color: '#FFB800',
-              mb: 4,
-              textAlign: 'center'
-            }}
-          >
-            💰 전략 개발자 수익 시뮬레이션
-          </Typography>
+          {/* Corner Accents */}
+          <Box sx={{ position: 'absolute', top: 0, left: 0, width: 20, height: 20, borderTop: '2px solid #00FF88', borderLeft: '2px solid #00FF88' }} />
+          <Box sx={{ position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderBottom: '2px solid #00FF88', borderRight: '2px solid #00FF88' }} />
+
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4, justifyContent: 'center' }}>
+            <Terminal sx={{ color: '#00FF88' }} />
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: '#fff',
+                fontFamily: '"JetBrains Mono", monospace'
+              }}
+            >
+              YIELD_PROJECTION_SIMULATOR
+            </Typography>
+          </Stack>
 
           <Grid container spacing={3}>
             {[
               {
+                label: 'LEVEL_1: NOVICE',
                 followers: 100,
-                fee: 39000,
-                monthly: 3900000,
-                yearly: 46800000,
-                label: '초보 개발자'
+                monthly: '3,900,000',
+                yearly: '46,800,000'
               },
               {
+                label: 'LEVEL_2: VETERAN',
                 followers: 1000,
-                fee: 49000,
-                monthly: 49000000,
-                yearly: 588000000,
-                label: '중급 개발자'
+                monthly: '49,000,000',
+                yearly: '588,000,000'
               },
               {
+                label: 'LEVEL_3: WHALE',
                 followers: 3000,
-                fee: 99000,
-                monthly: 297000000,
-                yearly: 3564000000,
-                label: '전문 개발자'
+                monthly: '297,000,000',
+                yearly: '3,564,000,000'
               }
             ].map((scenario, index) => (
               <Grid item xs={12} md={4} key={index}>
-                <Card
+                <Box
                   sx={{
-                    background: alpha('#1A1F3A', 0.6),
-                    border: `2px solid ${alpha('#FFB800', 0.3)}`,
-                    borderRadius: 2,
+                    bgcolor: '#050912',
+                    border: `1px solid ${alpha('#00FF88', 0.2)}`,
+                    p: 3,
+                    textAlign: 'center',
                     transition: 'all 0.3s ease',
                     '&:hover': {
-                      borderColor: '#FFB800',
-                      transform: 'translateY(-4px)',
-                      boxShadow: `0 12px 40px ${alpha('#FFB800', 0.3)}`
+                      borderColor: '#00FF88',
+                      bgcolor: alpha('#00FF88', 0.05)
                     }
                   }}
                 >
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 700,
-                        color: '#FFB800',
-                        mb: 3,
-                        textAlign: 'center'
-                      }}
-                    >
-                      {scenario.label}
-                    </Typography>
+                  <Typography variant="caption" sx={{ color: '#00FF88', fontFamily: '"JetBrains Mono", monospace', display: 'block', mb: 2 }}>
+                    {scenario.label}
+                  </Typography>
 
-                    <Stack spacing={2}>
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="body2" sx={{ color: alpha('#FFFFFF', 0.7) }}>
-                          팔로워
-                        </Typography>
-                        <Typography variant="body1" sx={{ color: '#FFFFFF', fontWeight: 600 }}>
-                          {scenario.followers.toLocaleString()}명
-                        </Typography>
-                      </Stack>
-
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="body2" sx={{ color: alpha('#FFFFFF', 0.7) }}>
-                          월 사용료
-                        </Typography>
-                        <Typography variant="body1" sx={{ color: '#FFFFFF', fontWeight: 600 }}>
-                          ₩{scenario.fee.toLocaleString()}
-                        </Typography>
-                      </Stack>
-
-                      <Box sx={{ height: 1, background: alpha('#FFFFFF', 0.1), my: 1 }} />
-
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="body2" sx={{ color: alpha('#FFB800', 0.9), fontWeight: 700 }}>
-                          월 수익
-                        </Typography>
-                        <Typography variant="h6" sx={{ color: '#FFB800', fontWeight: 900 }}>
-                          ₩{scenario.monthly.toLocaleString()}
-                        </Typography>
-                      </Stack>
-
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="body2" sx={{ color: alpha('#4CAF50', 0.9), fontWeight: 700 }}>
-                          연 수익
-                        </Typography>
-                        <Typography variant="h6" sx={{ color: '#4CAF50', fontWeight: 900 }}>
-                          ₩{scenario.yearly.toLocaleString()}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
+                  <Stack spacing={2}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #232a3b', pb: 1 }}>
+                      <Typography variant="body2" sx={{ color: '#8F9EB3', fontFamily: '"JetBrains Mono", monospace' }}>NODES_LINKED</Typography>
+                      <Typography variant="body2" sx={{ color: '#fff', fontFamily: '"JetBrains Mono", monospace' }}>{scenario.followers}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #232a3b', pb: 1 }}>
+                      <Typography variant="body2" sx={{ color: '#8F9EB3', fontFamily: '"JetBrains Mono", monospace' }}>MONTHLY_YIELD</Typography>
+                      <Typography variant="body2" sx={{ color: '#00FF88', fontFamily: '"JetBrains Mono", monospace' }}>₩{scenario.monthly}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: '#8F9EB3', fontFamily: '"JetBrains Mono", monospace' }}>ANNUAL_PROJECTION</Typography>
+                      <Typography variant="body2" sx={{ color: '#00FF88', fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>₩{scenario.yearly}</Typography>
+                    </Box>
+                  </Stack>
+                </Box>
               </Grid>
             ))}
           </Grid>
-
           <Typography
-            variant="body2"
+            variant="caption"
             sx={{
-              mt: 4,
+              display: 'block',
+              mt: 3,
               textAlign: 'center',
-              color: alpha('#FFFFFF', 0.6)
+              color: '#5C6B7F',
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            * 본인 투자 수익은 별도입니다. 위 금액은 팔로워 사용료만 계산한 예상 수익입니다.
+            * Simulation based on standard fee structure. Actual yield may vary based on market conditions.
           </Typography>
         </Box>
       </Container>

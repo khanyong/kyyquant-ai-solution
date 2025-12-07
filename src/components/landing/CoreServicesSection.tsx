@@ -17,52 +17,51 @@ import {
   Speed,
   TrendingUp,
   Analytics,
-  ArrowForward
+  ArrowForward,
+  Terminal,
+  Memory
 } from '@mui/icons-material'
 
 const CoreServicesSection: React.FC = () => {
   const services = [
     {
-      icon: <FilterAlt sx={{ fontSize: 60 }} />,
-      title: '투자 유니버스 필터링',
-      subtitle: 'Investment Universe',
-      description: '재무지표, 기술적 지표, 펀더멘털 분석을 통해 우량 종목을 자동으로 선별합니다.',
+      icon: <FilterAlt sx={{ fontSize: 40 }} />,
+      title: 'QUANT FILTER',
+      subtitle: 'INVESTMENT UNIVERSE',
+      description: 'Automatically screens high-quality stocks using 30+ financial and technical indicators.',
       features: [
-        'PER, PBR, ROE 등 30+ 재무지표',
-        '실시간 스크리닝',
-        '커스텀 필터 저장',
-        '백테스트 연동'
+        'PER, PBR, ROE METRICS',
+        'REAL-TIME SCREENING',
+        'CUSTOM PRESETS',
+        'BACKTEST SYNC'
       ],
-      color: '#00E5FF',
-      gradient: 'linear-gradient(135deg, #00E5FF 0%, #00B8D4 100%)'
+      color: '#00E5FF', // Cyan
     },
     {
-      icon: <Architecture sx={{ fontSize: 60 }} />,
-      title: '전략 빌더',
-      subtitle: 'Strategy Builder',
-      description: '코딩 없이 클릭만으로 복잡한 매매 전략을 만들고 최적화할 수 있습니다.',
+      icon: <Architecture sx={{ fontSize: 40 }} />,
+      title: 'STRATEGY BUILDER',
+      subtitle: 'NO-CODE LOGIC BUILDER',
+      description: 'Design complex trading algorithms without writing a single line of code.',
       features: [
-        '노코드 전략 생성',
-        '50+ 기술적 지표',
-        '다중 조건 설정',
-        '전략 템플릿 제공'
+        'DRAG & DROP INTERFACE',
+        '50+ TECH INDICATORS',
+        'MULTI-CONDITION LOGIC',
+        'AUTO OPTIMIZATION'
       ],
-      color: '#FFB800',
-      gradient: 'linear-gradient(135deg, #FFB800 0%, #FF8A00 100%)'
+      color: '#00FF88', // Neon Green
     },
     {
-      icon: <Assessment sx={{ fontSize: 60 }} />,
-      title: '백테스팅 엔진',
-      subtitle: 'Backtesting Engine',
-      description: '과거 10년 데이터로 전략을 검증하고 성과를 시뮬레이션합니다.',
+      icon: <Assessment sx={{ fontSize: 40 }} />,
+      title: 'BACKTEST ENGINE',
+      subtitle: 'HISTORICAL SIMULATION',
+      description: 'Validate your strategy with 10 years of historical data in seconds.',
       features: [
-        '10년+ 과거 데이터',
-        '실시간 결과 분석',
-        '리스크 지표 제공',
-        '최적화 기능'
+        '10Y+ TICK DATA',
+        'MDD/CAGR ANALYSIS',
+        'SLIPPAGE ESTIMATION',
+        'LOG VISUALIZATION'
       ],
-      color: '#B388FF',
-      gradient: 'linear-gradient(135deg, #B388FF 0%, #7C4DFF 100%)'
+      color: '#EA00FF', // Neon Purple
     }
   ]
 
@@ -70,66 +69,68 @@ const CoreServicesSection: React.FC = () => {
     <Box
       sx={{
         py: 12,
-        background: `linear-gradient(180deg, #0A0E1A 0%, #1A1F3A 100%)`,
+        bgcolor: '#050912',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        borderTop: `1px solid ${alpha('#00E5FF', 0.1)}`
       }}
     >
-      {/* Background Pattern */}
+      {/* Grid Background Pattern */}
       <Box
         sx={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: 0.03,
+          inset: 0,
           backgroundImage: `
-            linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent),
-            linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent)
+            linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px)
           `,
-          backgroundSize: '50px 50px'
+          backgroundSize: '40px 40px',
+          opacity: 0.5,
+          zIndex: 0
         }}
       />
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
         {/* Section Header */}
-        <Stack spacing={2} alignItems="center" textAlign="center" sx={{ mb: 10 }}>
+        <Stack spacing={2} sx={{ mb: 10 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Terminal sx={{ color: '#00E5FF', fontSize: 20 }} />
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#00E5FF',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontWeight: 700,
+                letterSpacing: 2,
+              }}
+            >
+              SYSTEM MODULES
+            </Typography>
+          </Box>
           <Typography
-            variant="overline"
-            sx={{
-              color: '#FFB800',
-              fontWeight: 700,
-              letterSpacing: 2,
-              fontSize: '0.9rem'
-            }}
-          >
-            CORE SERVICES
-          </Typography>
-          <Typography
-            variant="h2"
+            variant="h3"
             sx={{
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #90CAF9 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#fff',
+              fontFamily: '"JetBrains Mono", monospace',
+              textTransform: 'uppercase',
+              letterSpacing: -1
             }}
           >
-            3가지 핵심 서비스
+            CORE CAPABILITIES
           </Typography>
+          <Box sx={{ width: 60, height: 4, bgcolor: '#00E5FF', mb: 2 }} />
           <Typography
             variant="h6"
             sx={{
               maxWidth: 700,
-              color: alpha('#FFFFFF', 0.7),
-              lineHeight: 1.8,
-              fontWeight: 300
+              color: '#8F9EB3',
+              lineHeight: 1.6,
+              fontWeight: 400,
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            종목 선정부터 전략 수립, 백테스팅까지
-            <br />
-            체계적인 투자를 위한 모든 도구를 제공합니다
+            Deploy institutional-grade tools. From universe selection to execution.
           </Typography>
         </Stack>
 
@@ -137,75 +138,46 @@ const CoreServicesSection: React.FC = () => {
         <Grid container spacing={4}>
           {services.map((service, index) => (
             <Grid item xs={12} md={4} key={index}>
-              <Card
+              <Box
                 sx={{
                   height: '100%',
-                  background: alpha('#0A0E1A', 0.6),
-                  backdropFilter: 'blur(20px)',
-                  border: `2px solid ${alpha(service.color, 0.3)}`,
-                  borderRadius: 3,
+                  bgcolor: alpha('#0A0E1A', 0.8),
+                  backdropFilter: 'blur(10px)',
+                  border: `1px solid ${alpha(service.color, 0.3)}`,
                   position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transform: 'perspective(1000px) rotateX(0deg)',
+                  transition: 'all 0.3s ease',
                   '&:hover': {
-                    transform: 'perspective(1000px) rotateX(2deg) translateY(-12px)',
                     borderColor: service.color,
-                    boxShadow: `0 20px 60px ${alpha(service.color, 0.4)}`,
-                    '& .service-icon': {
-                      transform: 'scale(1.1) rotateY(360deg)',
-                    },
-                    '& .gradient-overlay': {
-                      opacity: 0.15,
-                    },
-                    '& .learn-more': {
-                      transform: 'translateX(5px)',
+                    boxShadow: `0 0 30px ${alpha(service.color, 0.15)}`,
+                    transform: 'translateY(-5px)',
+                    '& .icon-box': {
+                      bgcolor: alpha(service.color, 0.2),
+                      color: service.color
                     }
                   }
                 }}
               >
-                {/* Gradient Overlay */}
-                <Box
-                  className="gradient-overlay"
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '200px',
-                    background: service.gradient,
-                    opacity: 0.1,
-                    transition: 'opacity 0.4s ease',
-                    pointerEvents: 'none'
-                  }}
-                />
+                {/* Decorative corner markers */}
+                <Box sx={{ position: 'absolute', top: 0, left: 0, width: 10, height: 10, borderTop: `2px solid ${service.color}`, borderLeft: `2px solid ${service.color}` }} />
+                <Box sx={{ position: 'absolute', top: 0, right: 0, width: 10, height: 10, borderTop: `2px solid ${service.color}`, borderRight: `2px solid ${service.color}` }} />
+                <Box sx={{ position: 'absolute', bottom: 0, left: 0, width: 10, height: 10, borderBottom: `2px solid ${service.color}`, borderLeft: `2px solid ${service.color}` }} />
+                <Box sx={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderBottom: `2px solid ${service.color}`, borderRight: `2px solid ${service.color}` }} />
 
-                {/* Top Bar */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 4,
-                    background: service.gradient,
-                  }}
-                />
-
-                <CardContent sx={{ p: 4, position: 'relative' }}>
+                <CardContent sx={{ p: 4 }}>
                   {/* Icon */}
                   <Box
-                    className="service-icon"
+                    className="icon-box"
                     sx={{
                       display: 'inline-flex',
-                      p: 2,
-                      borderRadius: 2,
-                      background: alpha(service.color, 0.1),
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 70,
+                      height: 70,
+                      bgcolor: alpha(service.color, 0.1),
                       border: `1px solid ${alpha(service.color, 0.3)}`,
                       color: service.color,
                       mb: 3,
-                      transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                      transformStyle: 'preserve-3d',
+                      transition: 'all 0.3s ease'
                     }}
                   >
                     {service.icon}
@@ -213,13 +185,14 @@ const CoreServicesSection: React.FC = () => {
 
                   {/* Title */}
                   <Typography
-                    variant="overline"
+                    variant="caption"
                     sx={{
-                      color: alpha(service.color, 0.8),
-                      fontWeight: 600,
+                      color: service.color,
+                      fontWeight: 700,
                       letterSpacing: 1,
                       display: 'block',
-                      mb: 1
+                      mb: 1,
+                      fontFamily: '"JetBrains Mono", monospace'
                     }}
                   >
                     {service.subtitle}
@@ -227,9 +200,11 @@ const CoreServicesSection: React.FC = () => {
                   <Typography
                     variant="h5"
                     sx={{
-                      fontWeight: 700,
+                      fontWeight: 800,
                       color: '#FFFFFF',
-                      mb: 2
+                      mb: 2,
+                      fontFamily: '"JetBrains Mono", monospace',
+                      letterSpacing: -1
                     }}
                   >
                     {service.title}
@@ -239,16 +214,17 @@ const CoreServicesSection: React.FC = () => {
                   <Typography
                     variant="body2"
                     sx={{
-                      color: alpha('#FFFFFF', 0.7),
+                      color: '#8F9EB3',
                       lineHeight: 1.7,
-                      mb: 3
+                      mb: 4,
+                      minHeight: 48
                     }}
                   >
                     {service.description}
                   </Typography>
 
                   {/* Features List */}
-                  <Stack spacing={1.5} sx={{ mb: 3 }}>
+                  <Stack spacing={1.5} sx={{ mb: 4 }}>
                     {service.features.map((feature, idx) => (
                       <Stack
                         key={idx}
@@ -256,20 +232,13 @@ const CoreServicesSection: React.FC = () => {
                         spacing={1.5}
                         alignItems="center"
                       >
-                        <Box
-                          sx={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            background: service.color,
-                            boxShadow: `0 0 10px ${alpha(service.color, 0.6)}`
-                          }}
-                        />
+                        <Box sx={{ width: 4, height: 4, bgcolor: service.color }} />
                         <Typography
                           variant="body2"
                           sx={{
-                            color: alpha('#FFFFFF', 0.8),
-                            fontSize: '0.9rem'
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            fontFamily: '"JetBrains Mono", monospace'
                           }}
                         >
                           {feature}
@@ -278,112 +247,112 @@ const CoreServicesSection: React.FC = () => {
                     ))}
                   </Stack>
 
-                  {/* Learn More Link */}
                   <Button
-                    endIcon={<ArrowForward className="learn-more" sx={{ transition: 'transform 0.3s ease' }} />}
+                    endIcon={<ArrowForward />}
                     sx={{
                       color: service.color,
-                      fontWeight: 600,
+                      fontWeight: 700,
+                      fontFamily: '"JetBrains Mono", monospace',
                       p: 0,
                       '&:hover': {
-                        background: 'transparent',
+                        bgcolor: 'transparent',
+                        textDecoration: 'underline'
                       }
                     }}
                   >
-                    자세히 보기
+                    ACCESS MODULE
                   </Button>
                 </CardContent>
-
-                {/* Bottom Accent */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '1px',
-                    background: `linear-gradient(90deg, transparent 0%, ${service.color} 50%, transparent 100%)`,
-                    opacity: 0.5
-                  }}
-                />
-              </Card>
+              </Box>
             </Grid>
           ))}
         </Grid>
 
         {/* Additional Features */}
-        <Box sx={{ mt: 12, textAlign: 'center' }}>
+        <Box sx={{ mt: 15 }}>
           <Typography
-            variant="h4"
+            variant="h5"
             sx={{
               fontWeight: 700,
-              mb: 6,
-              color: '#FFFFFF'
+              mb: 4,
+              color: '#fff',
+              textAlign: 'center',
+              fontFamily: '"JetBrains Mono", monospace'
             }}
           >
-            더 많은 기능들
+            &gt;&gt; ADDITIONAL PARAMETERS
           </Typography>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {[
               {
                 icon: <Speed />,
-                title: '실시간 신호',
-                description: '밀리초 단위 시장 모니터링'
+                title: 'LATENCY',
+                value: '< 50ms',
+                desc: 'Execution speed'
               },
               {
-                icon: <TrendingUp />,
-                title: '자동매매',
-                description: '검증된 전략 자동 실행'
+                icon: <Memory />,
+                title: 'CAPACITY',
+                value: 'UNLIMITED',
+                desc: 'Strategies per account'
               },
               {
                 icon: <Analytics />,
-                title: '성과 분석',
-                description: 'AI 기반 포트폴리오 리포트'
+                title: 'ANALYTICS',
+                value: 'REAL-TIME',
+                desc: 'Portfolio tracking'
               }
             ].map((feature, index) => (
               <Grid item xs={12} sm={4} key={index}>
-                <Stack
-                  alignItems="center"
-                  spacing={2}
+                <Box
                   sx={{
                     p: 3,
-                    borderRadius: 2,
-                    background: alpha('#1A1F3A', 0.4),
-                    border: `1px solid ${alpha('#FFFFFF', 0.1)}`,
+                    bgcolor: alpha('#1A1F3A', 0.3),
+                    border: `1px solid ${alpha('#fff', 0.1)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
                     transition: 'all 0.3s ease',
                     '&:hover': {
-                      background: alpha('#1A1F3A', 0.6),
-                      borderColor: alpha('#FFB800', 0.5),
-                      transform: 'translateY(-4px)'
+                      borderColor: '#00E5FF',
+                      transform: 'translateX(5px)'
                     }
                   }}
                 >
                   <Box
                     sx={{
-                      color: '#FFB800',
-                      '& svg': { fontSize: 40 }
+                      color: '#00E5FF',
+                      '& svg': { fontSize: 32 }
                     }}
                   >
                     {feature.icon}
                   </Box>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 600,
-                      color: '#FFFFFF'
-                    }}
-                  >
-                    {feature.title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: alpha('#FFFFFF', 0.7)
-                    }}
-                  >
-                    {feature.description}
-                  </Typography>
-                </Stack>
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: '#8F9EB3',
+                        fontFamily: '"JetBrains Mono", monospace'
+                      }}
+                    >
+                      {feature.title}
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        color: '#FFFFFF',
+                        fontFamily: '"JetBrains Mono", monospace',
+                        lineHeight: 1.2
+                      }}
+                    >
+                      {feature.value}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#5C6B7F' }}>
+                      {feature.desc}
+                    </Typography>
+                  </Box>
+                </Box>
               </Grid>
             ))}
           </Grid>
