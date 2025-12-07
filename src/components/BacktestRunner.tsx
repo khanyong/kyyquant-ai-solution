@@ -1341,6 +1341,7 @@ const BacktestRunner: React.FC = () => {
 
                         const end = new Date();
                         const start = new Date(end); // create copy
+                        const MIN_DATA_DATE = new Date('2018-08-07');
 
                         switch (value) {
                           case '1M': start.setMonth(end.getMonth() - 1); break;
@@ -1350,9 +1351,15 @@ const BacktestRunner: React.FC = () => {
                           case '3Y': start.setFullYear(end.getFullYear() - 3); break;
                           case '5Y': start.setFullYear(end.getFullYear() - 5); break;
                           case '7Y': start.setFullYear(end.getFullYear() - 7); break;
-                          case '10Y': start.setFullYear(end.getFullYear() - 10); break;
-                          case 'Max': start.setFullYear(end.getFullYear() - 20); break; // 20년 전
+                          case 'Max':
+                            start.setTime(MIN_DATA_DATE.getTime());
+                            break;
                           case 'YTD': start.setMonth(0, 1); break; // 1월 1일
+                        }
+
+                        // Ensure start date is not before available data
+                        if (start < MIN_DATA_DATE) {
+                          start.setTime(MIN_DATA_DATE.getTime());
                         }
 
                         setConfig({ ...config, startDate: start, endDate: end });
@@ -1372,8 +1379,7 @@ const BacktestRunner: React.FC = () => {
                       <ToggleButton value="3Y">3년</ToggleButton>
                       <ToggleButton value="5Y">5년</ToggleButton>
                       <ToggleButton value="7Y">7년</ToggleButton>
-                      <ToggleButton value="10Y">10년</ToggleButton>
-                      <ToggleButton value="Max">최대</ToggleButton>
+                      <ToggleButton value="Max">전체 (2018.08~)</ToggleButton>
                     </ToggleButtonGroup>
                   </Box>
                 </Grid>

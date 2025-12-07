@@ -40,6 +40,7 @@ import MarketOverview from './components/trading/MarketOverview'
 import KiwoomTradingPanel from './components/trading/KiwoomTradingPanel'
 import MarketMonitor from './components/MarketMonitor'
 import Community from './components/community/Community'
+import VisualRetirementPlanner from './components/simulation/VisualRetirementPlanner'
 import Settings from './pages/Settings'
 import TradingSettings from './pages/TradingSettings'
 import MyPage from './pages/MyPage'
@@ -95,7 +96,7 @@ function MainApp() {
 
   // Debug log
   console.log('🎯 MainApp: isConnected =', isConnected, ', currentTab =', currentTab)
-  
+
   // 전략 실행 함수
   const executeStrategy = (strategy: any) => {
     setActiveStrategies([...activeStrategies, strategy])
@@ -112,14 +113,14 @@ function MainApp() {
         localStorage.setItem('filteredUniverse', JSON.stringify(event.detail.universe))
       }
     }
-    
+
     const handleNavigateToInvestmentSettings = () => {
       setCurrentTab(2) // 투자설정 탭으로 이동
     }
 
     window.addEventListener('navigateToStrategyBuilder', handleNavigateToStrategyBuilder as EventListener)
     window.addEventListener('navigateToInvestmentSettings', handleNavigateToInvestmentSettings as EventListener)
-    
+
     return () => {
       window.removeEventListener('navigateToStrategyBuilder', handleNavigateToStrategyBuilder as EventListener)
       window.removeEventListener('navigateToInvestmentSettings', handleNavigateToInvestmentSettings as EventListener)
@@ -191,20 +192,20 @@ function MainApp() {
             )}
 
             {/* 탭 메뉴 */}
-            <Paper 
+            <Paper
               elevation={3}
-              sx={{ 
+              sx={{
                 mb: 3,
                 background: 'linear-gradient(135deg, rgba(25, 28, 51, 0.9) 0%, rgba(30, 30, 46, 0.95) 100%)',
                 borderRadius: 2,
                 overflow: 'hidden'
               }}
             >
-              <Tabs 
-                value={currentTab} 
+              <Tabs
+                value={currentTab}
                 onChange={handleTabChange}
                 variant="fullWidth"
-                sx={{ 
+                sx={{
                   '& .MuiTabs-indicator': {
                     backgroundColor: '#90caf9',
                     height: 4,
@@ -338,6 +339,18 @@ function MainApp() {
                     }}
                   />
                 )}
+                <Tab
+                  icon={<Speed />}
+                  label="IPC"
+                  onClick={() => navigate('/consulting')}
+                  sx={{
+                    '&.Mui-selected': {
+                      '& .MuiSvgIcon-root': {
+                        color: '#00e676'
+                      }
+                    }
+                  }}
+                />
               </Tabs>
             </Paper>
 
@@ -385,9 +398,9 @@ function MainApp() {
                           {t('auto_trading.premium_description')}
                         </Typography>
                         <Typography variant="body2">
-                          • {t('auto_trading.feature_247')}<br/>
-                          • {t('auto_trading.feature_monitoring')}<br/>
-                          • {t('auto_trading.feature_multi_strategy')}<br/>
+                          • {t('auto_trading.feature_247')}<br />
+                          • {t('auto_trading.feature_monitoring')}<br />
+                          • {t('auto_trading.feature_multi_strategy')}<br />
                           • {t('auto_trading.feature_universe')}
                         </Typography>
                       </Alert>
@@ -441,6 +454,11 @@ function App() {
       <Routes>
         <Route path="/" element={<MainApp />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/consulting" element={
+          <Container maxWidth="xl" sx={{ mt: 3 }}>
+            <VisualRetirementPlanner />
+          </Container>
+        } />
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/backtest/results" element={<BacktestResultsList />} />
