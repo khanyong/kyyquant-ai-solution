@@ -165,9 +165,9 @@ interface BacktestResultViewerProps {
   onRefresh?: () => void;
 }
 
-const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({ 
-  result: propResult, 
-  onRefresh 
+const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
+  result: propResult,
+  onRefresh
 }) => {
   const theme = useTheme();
   const { hasRole } = useAuth();
@@ -350,14 +350,14 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
       tooltip: {
         enabled: true,
         callbacks: {
-          title: function(context: any) {
+          title: function (context: any) {
             const dataPoint = context[0]?.raw;
             if (dataPoint?.label) {
               return dataPoint.label;
             }
             return dataPoint?.x || '';
           },
-          label: function(context: any) {
+          label: function (context: any) {
             const dataPoint = context.raw;
             const labels = [];
 
@@ -391,7 +391,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
         time: {
           unit: 'day' as const,
           displayFormats: {
-            day: 'MM/dd'
+            day: 'yyyy-MM-dd'
           },
           tooltipFormat: 'yyyy-MM-dd'
         },
@@ -417,7 +417,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
           text: '누적 수익률 (%)'
         },
         ticks: {
-          callback: function(value: any) {
+          callback: function (value: any) {
             return value.toFixed(1) + '%';
           },
         },
@@ -571,7 +571,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
           {(() => {
             const chartData = getChartData();
             console.log('Chart data for rendering:', chartData);
-            
+
             if (!chartData) {
               // 데이터가 없어도 더미 데이터로 차트를 표시
               const dummyData = {
@@ -587,7 +587,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                   }
                 ]
               };
-              
+
               return (
                 <Box>
                   <Alert severity="info" sx={{ mb: 2 }}>
@@ -599,7 +599,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                 </Box>
               );
             }
-            
+
             return (
               <Box sx={{ height: 500, position: 'relative' }}>
                 <Chart type='line' data={chartData} options={chartOptions} />
@@ -637,93 +637,93 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                   {result.trades
                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                     .map((trade, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{trade.date}</TableCell>
-                      <TableCell>
-                        <Stack>
-                          <Typography variant="body2">{trade.stock_name || '종목'}</Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {trade.stock_code || trade.code || ''}
-                          </Typography>
-                        </Stack>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={trade.action === 'buy' ? '매수' : '매도'}
-                          color={trade.action === 'buy' ? 'primary' : 'secondary'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {hasRole(['premium', 'admin']) ? (
-                          <Stack spacing={0.5}>
-                            <Typography variant="caption" sx={{ maxWidth: 200, display: 'block' }}>
-                              {trade.reason || trade.signal_reason || '-'}
+                      <TableRow key={index}>
+                        <TableCell>{trade.date}</TableCell>
+                        <TableCell>
+                          <Stack>
+                            <Typography variant="body2">{trade.stock_name || '종목'}</Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {trade.stock_code || trade.code || ''}
                             </Typography>
-                            {trade.signal_details?.type && (
-                              <Chip
-                                label={trade.signal_details.type === 'target_profit' ? '목표달성' :
-                                       trade.signal_details.type === 'stop_loss' ? '손절' :
-                                       trade.signal_details.type === 'signal' ? '신호' :
-                                       trade.signal_details.type === 'backtest_end' ? '청산' :
-                                       trade.signal_details.type}
-                                size="small"
-                                variant="outlined"
-                                color={trade.signal_details.type === 'target_profit' ? 'success' :
-                                       trade.signal_details.type === 'stop_loss' ? 'error' : 'default'}
-                              />
-                            )}
                           </Stack>
-                        ) : (
+                        </TableCell>
+                        <TableCell align="center">
                           <Chip
-                            icon={<Lock />}
-                            label="프리미엄 전용"
+                            label={trade.action === 'buy' ? '매수' : '매도'}
+                            color={trade.action === 'buy' ? 'primary' : 'secondary'}
                             size="small"
-                            color="warning"
-                            onClick={() => setPremiumDialogOpen(true)}
-                            sx={{ cursor: 'pointer' }}
                           />
-                        )}
-                      </TableCell>
-                      <TableCell align="right">{(trade.shares || trade.quantity || 0).toLocaleString()}</TableCell>
-                      <TableCell align="right">{(trade.price || 0).toLocaleString()}원</TableCell>
-                      <TableCell align="right">{(trade.cost || trade.revenue || trade.amount || 0).toLocaleString()}원</TableCell>
-                      <TableCell align="right">
-                        {(trade.profit_loss !== undefined || trade.revenue !== undefined) && (
-                          <Typography
-                            color={trade.action === 'sell' ? 'success.main' : 'text.secondary'}
-                          >
-                            {trade.action === 'sell' ? '매도' : '-'}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        {(trade.profit_rate !== undefined || trade.profit_pct !== undefined) ? (
-                          <Typography
-                            color={(trade.profit_rate || trade.profit_pct || 0) >= 0 ? 'success.main' : 'error.main'}
-                          >
-                            {(trade.profit_rate || trade.profit_pct || 0) >= 0 ? '+' : ''}
-                            {(trade.profit_rate || trade.profit_pct || 0).toFixed(2)}%
-                          </Typography>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              component="div"
-              count={result.trades.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage="페이지당 행 수:"
-            />
-          </TableContainer>
+                        </TableCell>
+                        <TableCell>
+                          {hasRole(['premium', 'admin']) ? (
+                            <Stack spacing={0.5}>
+                              <Typography variant="caption" sx={{ maxWidth: 200, display: 'block' }}>
+                                {trade.reason || trade.signal_reason || '-'}
+                              </Typography>
+                              {trade.signal_details?.type && (
+                                <Chip
+                                  label={trade.signal_details.type === 'target_profit' ? '목표달성' :
+                                    trade.signal_details.type === 'stop_loss' ? '손절' :
+                                      trade.signal_details.type === 'signal' ? '신호' :
+                                        trade.signal_details.type === 'backtest_end' ? '청산' :
+                                          trade.signal_details.type}
+                                  size="small"
+                                  variant="outlined"
+                                  color={trade.signal_details.type === 'target_profit' ? 'success' :
+                                    trade.signal_details.type === 'stop_loss' ? 'error' : 'default'}
+                                />
+                              )}
+                            </Stack>
+                          ) : (
+                            <Chip
+                              icon={<Lock />}
+                              label="프리미엄 전용"
+                              size="small"
+                              color="warning"
+                              onClick={() => setPremiumDialogOpen(true)}
+                              sx={{ cursor: 'pointer' }}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell align="right">{(trade.shares || trade.quantity || 0).toLocaleString()}</TableCell>
+                        <TableCell align="right">{(trade.price || 0).toLocaleString()}원</TableCell>
+                        <TableCell align="right">{(trade.cost || trade.revenue || trade.amount || 0).toLocaleString()}원</TableCell>
+                        <TableCell align="right">
+                          {(trade.profit_loss !== undefined || trade.revenue !== undefined) && (
+                            <Typography
+                              color={trade.action === 'sell' ? 'success.main' : 'text.secondary'}
+                            >
+                              {trade.action === 'sell' ? '매도' : '-'}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          {(trade.profit_rate !== undefined || trade.profit_pct !== undefined) ? (
+                            <Typography
+                              color={(trade.profit_rate || trade.profit_pct || 0) >= 0 ? 'success.main' : 'error.main'}
+                            >
+                              {(trade.profit_rate || trade.profit_pct || 0) >= 0 ? '+' : ''}
+                              {(trade.profit_rate || trade.profit_pct || 0).toFixed(2)}%
+                            </Typography>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                component="div"
+                count={result.trades.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage="페이지당 행 수:"
+              />
+            </TableContainer>
           ) : (
             <Alert severity="info">거래 내역이 없습니다.</Alert>
           )}
@@ -747,8 +747,8 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                         <Chip
                           label={
                             result.data_source === 'supabase' ? '실제 시장 데이터 (Supabase)' :
-                            result.data_source === 'mock' ? '시뮬레이션 데이터 (Mock)' :
-                            '알 수 없음'
+                              result.data_source === 'mock' ? '시뮬레이션 데이터 (Mock)' :
+                                '알 수 없음'
                           }
                           color={result.data_source === 'supabase' ? 'success' : 'warning'}
                           variant="outlined"
@@ -807,7 +807,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                     </Box>
                     <Box display="flex" justifyContent="space-between">
                       <Typography>순손익</Typography>
-                      <Typography 
+                      <Typography
                         fontWeight="bold"
                         color={(result.final_capital - result.initial_capital) >= 0 ? 'success.main' : 'error.main'}
                       >
@@ -887,8 +887,8 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                         <Typography variant="subtitle2" gutterBottom>
                           전략 파라미터:
                         </Typography>
-                        <pre style={{ 
-                          fontSize: '0.8rem', 
+                        <pre style={{
+                          fontSize: '0.8rem',
                           overflow: 'auto',
                           backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
                           color: theme.palette.text.primary,
@@ -925,19 +925,19 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                             result.investment_config.universe_type === 'single_stock'
                               ? '단일 종목'
                               : result.investment_config.universe_type === 'investment_filter'
-                              ? '투자유니버스 (필터)'
-                              : result.investment_config.universe_type === 'multiple_stocks'
-                              ? '복수 종목 (수동 선택)'
-                              : result.investment_config.universe_type || '알 수 없음'
+                                ? '투자유니버스 (필터)'
+                                : result.investment_config.universe_type === 'multiple_stocks'
+                                  ? '복수 종목 (수동 선택)'
+                                  : result.investment_config.universe_type || '알 수 없음'
                           }
                           color={
                             result.investment_config.universe_type === 'single_stock'
                               ? 'primary'
                               : result.investment_config.universe_type === 'investment_filter'
-                              ? 'success'
-                              : result.investment_config.universe_type === 'multiple_stocks'
-                              ? 'info'
-                              : 'default'
+                                ? 'success'
+                                : result.investment_config.universe_type === 'multiple_stocks'
+                                  ? 'info'
+                                  : 'default'
                           }
                           size="small"
                         />
@@ -1051,31 +1051,31 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
                       {Object.keys(result.investment_config).some(key =>
                         !['universe_type', 'stock_code', 'stock_name', 'filter_name', 'filter_id', 'stock_count', 'stocks', 'initial_capital'].includes(key)
                       ) && (
-                        <Box>
-                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            추가 설정
-                          </Typography>
-                          <Paper variant="outlined" sx={{ p: 1, bgcolor: 'grey.50' }}>
-                            <pre style={{
-                              fontSize: '0.75rem',
-                              overflow: 'auto',
-                              margin: 0,
-                              maxHeight: 150,
-                              color: '#000'
-                            }}>
-                              {JSON.stringify(
-                                Object.fromEntries(
-                                  Object.entries(result.investment_config).filter(([key]) =>
-                                    !['universe_type', 'stock_code', 'stock_name', 'filter_name', 'filter_id', 'stock_count', 'stocks', 'initial_capital'].includes(key)
-                                  )
-                                ),
-                                null,
-                                2
-                              )}
-                            </pre>
-                          </Paper>
-                        </Box>
-                      )}
+                          <Box>
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              추가 설정
+                            </Typography>
+                            <Paper variant="outlined" sx={{ p: 1, bgcolor: 'grey.50' }}>
+                              <pre style={{
+                                fontSize: '0.75rem',
+                                overflow: 'auto',
+                                margin: 0,
+                                maxHeight: 150,
+                                color: '#000'
+                              }}>
+                                {JSON.stringify(
+                                  Object.fromEntries(
+                                    Object.entries(result.investment_config).filter(([key]) =>
+                                      !['universe_type', 'stock_code', 'stock_name', 'filter_name', 'filter_id', 'stock_count', 'stocks', 'initial_capital'].includes(key)
+                                    )
+                                  ),
+                                  null,
+                                  2
+                                )}
+                              </pre>
+                            </Paper>
+                          </Box>
+                        )}
                     </Stack>
                   ) : (
                     <Alert severity="info">
@@ -1134,7 +1134,7 @@ const BacktestResultViewer: React.FC<BacktestResultViewerProps> = ({
               setPremiumDialogOpen(true);
               return;
             }
-            
+
             // CSV 다운로드 로직 (UTF-8 BOM 추가, 모든 지표 포함)
 
             // 1. 모든 거래에서 사용된 지표 목록 수집

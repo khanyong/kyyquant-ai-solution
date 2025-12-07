@@ -1,0 +1,432 @@
+[
+  {
+    "id": "TC001",
+    "title": "Landing Page Load and Responsiveness",
+    "description": "Verify the landing page loads correctly and is fully responsive on desktop, tablet, and mobile devices.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the landing page on desktop viewport."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm all assets load properly and UI elements are displayed as designed."
+      },
+      {
+        "type": "action",
+        "description": "Resize browser to tablet viewport."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the UI adjusts correctly without layout breaks or overlapping elements."
+      },
+      {
+        "type": "action",
+        "description": "Resize browser to mobile viewport."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the landing page maintains usability and design integrity, including the visibility and functionality of CTA buttons."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "LoginDialog Authentication Success",
+    "description": "Check that the LoginDialog opens when login button is clicked and successfully authenticates user with Supabase backend.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the landing page and click the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the LoginDialog modal opens."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid user credentials."
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm authentication succeeds and user session is established."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Redux store updates with loginSuccess action and user's profile data is loaded."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "LoginDialog Authentication Failure and Error Handling",
+    "description": "Verify the system's behavior when an incorrect username or password is entered during login.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open LoginDialog via login button."
+      },
+      {
+        "type": "action",
+        "description": "Input invalid username and/or password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that login fails and appropriate error message is displayed."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure Redux store does not update loginSuccess state."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Session Persistence After Reload",
+    "description": "Ensure that user sessions persist after page reload using Supabase session management APIs.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a valid user."
+      },
+      {
+        "type": "action",
+        "description": "Reload the application page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the session is restored without requiring login again."
+      },
+      {
+        "type": "assertion",
+        "description": "Check Redux store accurately reflects the persisted authentication state."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Navigation and Route Protection",
+    "description": "Test that navigation routes update correctly with browser history and protect admin-only routes based on authentication state.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a non-admin user."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to navigate to an admin-only route."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied or redirected appropriately."
+      },
+      {
+        "type": "action",
+        "description": "Navigate between main app tabs and verify URL syncs with tab state."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm browser back and forward buttons navigate app tabs correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Strategy Builder Save and Load Strategies",
+    "description": "Validate that strategies created or modified in Strategy Builder are saved correctly to localStorage and reloaded accurately in the application state.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open Strategy Builder and create a new strategy."
+      },
+      {
+        "type": "action",
+        "description": "Save the strategy."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the strategy is correctly stored in localStorage."
+      },
+      {
+        "type": "action",
+        "description": "Refresh the app and open Strategy Builder again."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the previously saved strategy is loaded and editable."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to load corrupted or invalid data from localStorage."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure the app handles the error gracefully without crash and prompts user appropriately."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Backtesting Process and Results Display",
+    "description": "Ensure backtesting runs correctly on selected strategies and results are clearly displayed with history accessible.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Select a saved strategy and initiate backtest run."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify backtest completes without error."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm results are displayed in BacktestResults UI component with correct metrics and visuals."
+      },
+      {
+        "type": "action",
+        "description": "Access backtest result history."
+      },
+      {
+        "type": "assertion",
+        "description": "Check past backtest results are listed correctly with option to re-review."
+      },
+      {
+        "type": "action",
+        "description": "Simulate failure in backtest process (e.g., invalid input or network error)."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate error message is shown to user and system recovers gracefully."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Realtime Signal Monitor Updates",
+    "description": "Verify the Realtime Signal Monitor component receives and updates live trading signals reliably and without delay.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the Signal Monitor page."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the component subscribes to live trading signal feed."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate signals are updated in real-time on the UI without noticeable lag."
+      },
+      {
+        "type": "action",
+        "description": "Simulate interruption of the live feed."
+      },
+      {
+        "type": "assertion",
+        "description": "Check if the component handles feed loss gracefully, shows an error or reconnect message."
+      },
+      {
+        "type": "action",
+        "description": "Restore live feed."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure signals resume updating correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Auto Trading Panels Functional Verification",
+    "description": "Test Auto Trading panels for order placement, portfolio monitoring, and automation controls with real-time updates.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Auto Trading panel."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify current portfolio data displays accurately."
+      },
+      {
+        "type": "action",
+        "description": "Place a new order via OrderPanel."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm order submission succeeds and reflects in the portfolio."
+      },
+      {
+        "type": "action",
+        "description": "Toggle automated trading feature on/off."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure system responds correctly to automation control."
+      },
+      {
+        "type": "action",
+        "description": "Simulate failed order submission due to network or validation error."
+      },
+      {
+        "type": "assertion",
+        "description": "Check error is displayed and user can retry."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Market Overview Dashboard Data and Responsiveness",
+    "description": "Validate Market Overview dashboard displays current market status with accurate data and is responsive across device types.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open Market Overview dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm all market data components load and update correctly."
+      },
+      {
+        "type": "action",
+        "description": "Resize viewport across device sizes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dashboard maintains usability and layout consistency."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Investment Settings Save and Apply",
+    "description": "Ensure investment parameters configured by the user are saved and properly applied to affect trading strategies as expected.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Investment Settings page."
+      },
+      {
+        "type": "action",
+        "description": "Modify investment parameters such as risk tolerance and trade frequency."
+      },
+      {
+        "type": "action",
+        "description": "Save changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes persist after page reload."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that updated settings influence strategy execution behavior during trading or backtesting."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Performance Dashboard Metrics Accuracy",
+    "description": "Verify trading performance metrics update correctly based on recent trading activity and portfolio changes.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Execute trades or simulate trades in Auto Trading panels."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to Performance Dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that metrics such as profit/loss, ROI, and win rate update accurately."
+      },
+      {
+        "type": "action",
+        "description": "Verify charts and visualizations reflect the updated trading data correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Network Error Handling for API Calls",
+    "description": "Simulate and verify that network or API errors during Supabase calls or other API interactions are handled gracefully with appropriate user feedback.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate network timeout or server error during login or data fetch operations."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify error message is displayed to user without crashing the app."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure the app provides retry options or fallback states."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Avoidance of Unnecessary Re-renders",
+    "description": "Verify that landing page and components prevent unnecessary re-renders to maintain performance standards.",
+    "category": "performance",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Load landing page and measure component render counts."
+      },
+      {
+        "type": "action",
+        "description": "Interact with UI elements that do not affect landing page state."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm components do not re-render unnecessarily."
+      },
+      {
+        "type": "action",
+        "description": "Monitor memory and CPU usage during typical user flows."
+      },
+      {
+        "type": "assertion",
+        "description": "Check for performance degradation or memory leaks."
+      }
+    ]
+  }
+]

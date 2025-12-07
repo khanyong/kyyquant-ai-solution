@@ -1,0 +1,42 @@
+1. 랜딩 페이지 (비로그인 상태) (src/components/landing/LandingPage.tsx 예상)
+렌더링 및 UI:
+!isConnected 상태일 때 랜딩 페이지가 정확히 로드되는지 확인.
+반응형 디자인 점검: 데스크탑, 태블릿, 모바일 뷰포트에서의 레이아웃 깨짐 확인 (MUI Grid 및 sx prop 확인).
+이미지 및 에셋 로딩 속도 최적화 여부.
+인터랙션:
+onLoginClick prop이 제대로 전달되고, "로그인/시작하기" 버튼 클릭 시 setLoginOpen(true)가 호출되어 로그인 다이얼로그가 뜨는지 확인.
+CTA (Call to Action) 버튼들의 링크 및 동작 확인.
+2. 인증 및 상태 관리 (src/contexts/AuthContext, src/store/authSlice)
+로그인 프로세스:
+LoginDialog 컴포넌트 동작 확인.
+Supabase Auth 로그인 성공 후 authUser 상태 업데이트 시점 확인.
+useEffect (Line 139)에서 authUser 변경 시 Redux loginSuccess 액션이 올바르게 디스패치되는지 확인.
+프로필 정보(kiwoom_account 등)가 없을 때의 에러 핸들링 및 기본값('DEMO') 설정 로직 확인.
+세션 유지:
+새로고침 시 supabase.auth.getSession()을 통해 로그인 상태가 유지되는지 확인 (Persisted State).
+로그아웃 시 dispatch(logout()) 및 상태 초기화가 깔끔하게 이루어지는지 확인.
+3. 라우팅 및 네비게이션 (src/AppWithRouter.tsx)
+라우트 접근 제어:
+/ (MainApp) 외 서브 페이지들(/about, /services, /contact 등) 접근 시 렌더링 확인.
+isAdmin 상태일 때 /admin 탭 이동 및 라우트 접근 권한 확인.
+존재하지 않는 경로 접근 시 Navigate to="/" (리다이렉트) 동작 확인.
+탭 네비게이션:
+handleTabChange 함수 동작 확인.
+navigate 함수와 currentTab 상태 간의 동기화 문제 없는지 (예: 브라우저 뒤로가기 시 탭 상태).
+4. 핵심 기능 컴포넌트 연동
+전략 빌더 (src/components/StrategyBuilder):
+전략 생성 및 이벤트(navigateToStrategyBuilder) 발생 시 탭 전환 동작 디버깅.
+로컬 스토리지(localStorage)에 저장되는 데이터 포맷 확인.
+데이터 로딩 및 에러 처리:
+activeStrategies 상태 업데이트 및 이를 사용하는 하위 컴포넌트(AutoTradingPanel 등)의 데이터 흐름.
+서버 상태(serverStatus)가 'offline'일 때 경고 메시지(Alert) 표시 로직 점검.
+5. API 및 네트워크 (src/services, src/lib/supabase)
+Supabase 연결:
+supabase 클라이언트 초기화 및 환경 변수(VITE_SUPABASE_URL 등) 설정 확인.
+네트워크 탭(Network Tab)에서 실패한 API 요청(4xx, 5xx 에러) 모니터링.
+WebSocket/실시간 데이터:
+현재 주석 처리된 WebSocket 관련 코드(// import { connectWebSocket }...)와 대체된 Supabase Realtime 구독 로직이 있다면 해당 부분의 연결 안정성 테스트.
+6. 성능 및 최적화
+초기 로딩: main.tsx 진입부터 첫 화면(FCP)까지의 시간 측정 (Lighthouse 등 활용).
+번들 사이즈: 불필요하게 큰 라이브러리가 로드되고 있지 않은지 확인 (특히 InvestmentSettingsComplete.tsx 등 큰 파일).
+불필요한 리렌더링: MainApp 내부의 console.log를 통해 상태 변경에 따른 리렌더링 빈도 체크.

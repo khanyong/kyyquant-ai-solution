@@ -188,7 +188,7 @@
             },
             {
               "name": "Prefer",
-              "value": "resolution=merge-duplicates"
+              "value": "resolution=merge-duplicates, return=representation"
             }
           ]
         },

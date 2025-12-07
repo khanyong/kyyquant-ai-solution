@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "executionArgs": {
+    "projectName": "auto_stock",
+    "projectPath": "d:\\Dev\\auto_stock",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user--_r0CQ5YwiKIWKahUxTSudviVL7xMhln7ndSt3FvkqyOCitYDCoJ1MyjayJcSGIFiOk7-atYPf-Rm6RCQIWa0fxfaQfs3RPJ0JuRllSAHIEfCNEShHEKMOSqkhFnqewmmZU"
+    }
+  },
+  "proxy": "http://4387c825-8a98-44cc-a0e5-90e5a0c6b834:zMzDQN5fDAOph0D2B5QPpLKBeB10IDNz@tun.testsprite.com:8080"
+}

@@ -28,6 +28,8 @@ import {
   Tabs,
   Tab,
   Snackbar,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 // import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 // import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -97,7 +99,8 @@ const BacktestRunner: React.FC = () => {
   const [currentSubTab, setCurrentSubTab] = useState(0); // 0: 백테스트 실행, 1: 결과 보기
   const [showTemplateDialog, setShowTemplateDialog] = useState(false); // 템플릿 선택 다이얼로그
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
-  
+  const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
+
   const [config, setConfig] = useState<BacktestConfig>({
     strategyId: '',
     startDate: new Date('2024-09-14'),  // 데이터 시작일
@@ -114,7 +117,7 @@ const BacktestRunner: React.FC = () => {
   React.useEffect(() => {
     console.log('BacktestRunner component mounted');
     loadStrategies();
-    
+
     // URL에서 strategyId 파라미터 가져오기
     const urlParams = new URLSearchParams(window.location.search);
     const strategyIdFromUrl = urlParams.get('strategyId');
@@ -122,7 +125,7 @@ const BacktestRunner: React.FC = () => {
       console.log('Strategy ID from URL:', strategyIdFromUrl);
       setConfig(prev => ({ ...prev, strategyId: strategyIdFromUrl }));
     }
-    
+
     // 투자설정에서 선택된 종목 가져오기 (옵션)
     // 자동 로드를 원하지 않으면 아래 코드를 주석 처리하거나
     // 사용자가 명시적으로 요청할 때만 로드하도록 변경
@@ -142,7 +145,7 @@ const BacktestRunner: React.FC = () => {
       // 현재 사용자 가져오기
       const user = await authService.getCurrentUser();
       console.log('Current user:', user);
-      
+
       if (!user) {
         console.warn('User not logged in, attempting to load all strategies');
         // 로그인하지 않은 경우에도 전략 로드 시도 (테스트용)
@@ -151,15 +154,15 @@ const BacktestRunner: React.FC = () => {
           .select('*')
           .eq('is_active', true)
           .order('created_at', { ascending: false });
-        
+
         console.log('All strategies query result:', { data, error });
-        
+
         if (error) {
           console.error('Error loading all strategies:', error);
           setStrategies([]);
           return;
         }
-        
+
         // 전략 데이터 형식 변환
         const formattedStrategies = data?.map(s => ({
           id: s.id,
@@ -169,7 +172,7 @@ const BacktestRunner: React.FC = () => {
           parameters: s.config || s.parameters || {},
           created_at: s.created_at
         })) || [];
-        
+
         console.log('Formatted all strategies:', formattedStrategies);
         setStrategies(formattedStrategies);
         return;
@@ -183,9 +186,9 @@ const BacktestRunner: React.FC = () => {
         // .eq('user_id', user.id)  // 개발 중 주석 처리 - 모든 사용자 전략 조회
         .eq('is_active', true)
         .order('created_at', { ascending: false });
-      
+
       console.log('User strategies query result:', { data, error });
-      
+
       if (error) {
         console.error('Error loading user strategies:', error);
         // user_id 필터 없이 다시 시도
@@ -195,14 +198,14 @@ const BacktestRunner: React.FC = () => {
           .select('*')
           .eq('is_active', true)
           .order('created_at', { ascending: false });
-        
+
         if (allError) {
           console.error('Error loading all strategies:', allError);
           throw allError;
         }
-        
+
         console.log('All strategies (fallback):', allData);
-        
+
         const formattedStrategies = allData?.map(s => ({
           id: s.id,
           name: s.name,
@@ -211,11 +214,11 @@ const BacktestRunner: React.FC = () => {
           parameters: s.config || s.parameters || {},
           created_at: s.created_at
         })) || [];
-        
+
         setStrategies(formattedStrategies);
         return;
       }
-      
+
       // 전략 데이터 형식 변환 (config 컬럼 사용)
       const formattedStrategies = data?.map(s => ({
         id: s.id,
@@ -228,10 +231,10 @@ const BacktestRunner: React.FC = () => {
         user_id: s.user_id,  // 사용자 ID 추가
         isOwn: s.user_id === user.id  // 자신의 전략인지 표시
       })) || [];
-      
+
       console.log('Formatted strategies:', formattedStrategies);
       setStrategies(formattedStrategies);
-      
+
       // URL에 strategyId가 있으면 해당 전략 선택
       const urlParams = new URLSearchParams(window.location.search);
       const strategyIdFromUrl = urlParams.get('strategyId');
@@ -252,12 +255,12 @@ const BacktestRunner: React.FC = () => {
         const config = JSON.parse(investmentConfig);
         console.log('Investment config loaded:', config);
         console.log('Universe data:', config.universe);
-        
+
         // 필터링된 종목이 있으면 우선 사용
         if (config.universe?.filteredStocks && config.universe.filteredStocks.length > 0) {
           console.log('Found filteredStocks:', config.universe.filteredStocks.length, 'stocks');
           console.log('First filtered stock structure:', config.universe.filteredStocks[0]); // 첫 번째 항목 구조 확인
-          
+
           // stock_code, code, 또는 symbol 등 다양한 필드명 지원
           const stockCodes = config.universe.filteredStocks.map((stock: any) => {
             // 객체인 경우 속성에서 코드 추출
@@ -268,25 +271,25 @@ const BacktestRunner: React.FC = () => {
             return String(stock);
           }).filter((code: any) => {
             // 유효한 문자열이고 '[object Object]'가 아닌 경우만 포함
-            return code && 
-                   typeof code === 'string' && 
-                   code.trim() !== '' &&
-                   code !== '[object Object]' &&
-                   code !== 'undefined' &&
-                   code !== 'null';
+            return code &&
+              typeof code === 'string' &&
+              code.trim() !== '' &&
+              code !== '[object Object]' &&
+              code !== 'undefined' &&
+              code !== 'null';
           }).map((code: any) => String(code).trim());
-          
+
           console.log('Extracted stock codes from filteredStocks:', stockCodes);
-          
+
           if (stockCodes.length > 0) {
             setSuccess(`필터링된 ${stockCodes.length}개 종목을 로드했습니다.`);
-            
+
             // 필터 설정도 로드
             if (config.universe?.filters) {
               setCurrentFilters(config.universe.filters);
               console.log('Loaded filter settings:', config.universe.filters);
             }
-            
+
             return stockCodes;
           } else {
             console.warn('No valid stock codes found in filteredStocks');
@@ -296,7 +299,7 @@ const BacktestRunner: React.FC = () => {
         // 선택된 종목 코드 추출 (필터링 전)
         else if (config.universe?.selectedStocks && config.universe.selectedStocks.length > 0) {
           console.log('Selected stocks data:', config.universe.selectedStocks[0]); // 첫 번째 항목 구조 확인
-          
+
           const stockCodes = config.universe.selectedStocks.map((stock: any) => {
             // 객체인 경우 속성에서 코드 추출
             if (typeof stock === 'object' && stock !== null) {
@@ -306,21 +309,21 @@ const BacktestRunner: React.FC = () => {
             return String(stock);
           }).filter((code: any) => {
             // 유효한 문자열이고 '[object Object]'가 아닌 경우만 포함
-            return code && 
-                   typeof code === 'string' && 
-                   code.trim() !== '' &&
-                   code !== '[object Object]' &&
-                   code !== 'undefined' &&
-                   code !== 'null';
+            return code &&
+              typeof code === 'string' &&
+              code.trim() !== '' &&
+              code !== '[object Object]' &&
+              code !== 'undefined' &&
+              code !== 'null';
           }).map((code: any) => String(code).trim());
-          
+
           console.log('Selected stock codes from investment settings:', stockCodes);
-          
+
           if (stockCodes.length > 0) {
             return stockCodes;
           }
         }
-        
+
         // 필터 설정도 로드
         if (config.universe?.filters) {
           setCurrentFilters(config.universe.filters);
@@ -344,7 +347,7 @@ const BacktestRunner: React.FC = () => {
       console.log('Loading filter data:', filterData);
       console.log('Filter ID from filterData:', filterData.id);
       console.log('Current filteringMode state:', filteringMode);
-      
+
       // SavedFilter 형식의 데이터 처리
       if (filterData.filtered_stocks && filterData.filtered_stocks.length > 0) {
         // Supabase에서 가져온 데이터 (filtered_stocks 필드)
@@ -359,22 +362,22 @@ const BacktestRunner: React.FC = () => {
           return String(stock);
         }).filter((code: any) => {
           // 유효한 문자열이고 '[object Object]'가 아닌 경우만 포함
-          return code && 
-                 typeof code === 'string' && 
-                 code.trim() !== '' &&
-                 code !== '[object Object]' &&
-                 code !== 'undefined' &&
-                 code !== 'null';
+          return code &&
+            typeof code === 'string' &&
+            code.trim() !== '' &&
+            code !== '[object Object]' &&
+            code !== 'undefined' &&
+            code !== 'null';
         }).map((code: any) => String(code).trim());
-        
+
         if (stockCodes.length > 0) {
           console.log('Filter ID:', filterData.id);
           console.log('Filtering mode:', filteringMode);
-          
+
           // 필터 ID는 항상 저장
           setCurrentFilterId(filterData.id || null);
           setCurrentFilters(filterData.filters);
-          
+
           // 사전 필터링 모드가 아닌 경우에만 stockCodes 설정
           const currentMode = typeof filteringMode === 'object' ? filteringMode?.mode : filteringMode;
           if (currentMode !== 'pre-filter') {
@@ -385,13 +388,13 @@ const BacktestRunner: React.FC = () => {
             // 사전 필터링 모드에서는 stockCodes를 비움
             setConfig(prev => ({ ...prev, stockCodes: [] }));
           }
-          
+
           const filterTypes = [];
           if (filterData.filters?.valuation) filterTypes.push('가치지표');
           if (filterData.filters?.financial) filterTypes.push('재무지표');
           if (filterData.filters?.sector) filterTypes.push('섹터');
           if (filterData.filters?.investor) filterTypes.push('투자자동향');
-          
+
           setSuccess(`"${filterData.name}" 필터를 적용했습니다. ${stockCodes.length}개 종목이 선택되었습니다. (필터: ${filterTypes.join(', ')})`);
         } else {
           setError('필터에 유효한 종목 코드가 없습니다.');
@@ -409,29 +412,29 @@ const BacktestRunner: React.FC = () => {
           return String(stock);
         }).filter((code: any) => {
           // 유효한 문자열이고 '[object Object]'가 아닌 경우만 포함
-          return code && 
-                 typeof code === 'string' && 
-                 code.trim() !== '' &&
-                 code !== '[object Object]' &&
-                 code !== 'undefined' &&
-                 code !== 'null';
+          return code &&
+            typeof code === 'string' &&
+            code.trim() !== '' &&
+            code !== '[object Object]' &&
+            code !== 'undefined' &&
+            code !== 'null';
         }).map((code: any) => String(code).trim());
-        
+
         if (stockCodes.length > 0) {
           console.log('Setting stock codes (local):', stockCodes);
           setConfig(prev => ({ ...prev, stockCodes }));
           setCurrentFilterId(filterData.id || null);
-          
+
           // 필터 설정도 로드
           if (filterData.filters) {
             setCurrentFilters(filterData.filters);
-            
+
             const filterTypes = [];
             if (filterData.filters.valuation) filterTypes.push('가치지표');
             if (filterData.filters.financial) filterTypes.push('재무지표');
             if (filterData.filters.sector) filterTypes.push('섹터');
             if (filterData.filters.investor) filterTypes.push('투자자동향');
-            
+
             setSuccess(`"${filterData.name}" 필터를 적용했습니다. ${stockCodes.length}개 종목이 선택되었습니다. (필터: ${filterTypes.join(', ')})`);
           } else {
             setSuccess(`"${filterData.name}" 필터를 적용했습니다. ${stockCodes.length}개 종목이 선택되었습니다.`);
@@ -506,28 +509,28 @@ const BacktestRunner: React.FC = () => {
           type: template.type === 'complex' ? 'stage_based' : 'custom',
           config: template.type === 'complex'
             ? {
-                buyStageStrategy: template.stageStrategy?.buyStages || templateConfig.buyStageStrategy,
-                sellStageStrategy: template.stageStrategy?.sellStages || templateConfig.sellStageStrategy,
-                isStageBasedStrategy: true,
-                templateId: template.id,
-                templateName: template.name
-              }
+              buyStageStrategy: template.stageStrategy?.buyStages || templateConfig.buyStageStrategy,
+              sellStageStrategy: template.stageStrategy?.sellStages || templateConfig.sellStageStrategy,
+              isStageBasedStrategy: true,
+              templateId: template.id,
+              templateName: template.name
+            }
             : {
-                indicators: templateConfig.indicators || [],
-                buyConditions: templateConfig.buyConditions || [],
-                sellConditions: templateConfig.sellConditions || [],
-                riskManagement: templateConfig.riskManagement || {
-                  stopLoss: -5,
-                  takeProfit: 10,
-                  trailingStop: false,
-                  trailingStopPercent: 0,
-                  positionSize: 20,
-                  maxPositions: 5
-                },
-                templateId: template.id,
-                templateName: template.name,
-                strategy_type: template.type === 'complex' ? 'stage_based' : 'custom'
+              indicators: templateConfig.indicators || [],
+              buyConditions: templateConfig.buyConditions || [],
+              sellConditions: templateConfig.sellConditions || [],
+              riskManagement: templateConfig.riskManagement || {
+                stopLoss: -5,
+                takeProfit: 10,
+                trailingStop: false,
+                trailingStopPercent: 0,
+                positionSize: 20,
+                maxPositions: 5
               },
+              templateId: template.id,
+              templateName: template.name,
+              strategy_type: template.type === 'complex' ? 'stage_based' : 'custom'
+            },
           user_id: user.id,
           is_active: true
         };
@@ -595,47 +598,47 @@ const BacktestRunner: React.FC = () => {
     try {
       // 종목 코드 유효성 검증
       const validStockCodes = config.stockCodes
-        ?.filter(code => code && 
-                        typeof code === 'string' && 
-                        code.trim() !== '' &&
-                        code !== '[object Object]' &&
-                        code !== 'undefined' &&
-                        code !== 'null')
+        ?.filter(code => code &&
+          typeof code === 'string' &&
+          code.trim() !== '' &&
+          code !== '[object Object]' &&
+          code !== 'undefined' &&
+          code !== 'null')
         ?.map(code => String(code).trim()) || [];
 
       console.log('Valid stock codes for backtest:', validStockCodes);
-      
+
       // 원본 종목 코드와 유효한 종목 코드 비교 로그
       if (config.stockCodes.length !== validStockCodes.length) {
         console.warn(`Filtered out ${config.stockCodes.length - validStockCodes.length} invalid stock codes`);
         console.warn('Original stock codes:', config.stockCodes);
         console.warn('Valid stock codes:', validStockCodes);
       }
-      
+
       // 종목 코드가 있는 경우, 3-tier 데이터 소싱 전략으로 데이터 미리 로드
       if (validStockCodes && validStockCodes.length > 0) {
         console.log('Pre-loading stock data using 3-tier strategy...');
         setProgress(10);
-        
+
         const startDateStr = config.startDate.toISOString().split('T')[0];
         const endDateStr = config.endDate.toISOString().split('T')[0];
-        
+
         // 3-tier 전략으로 데이터 로드 (로컬 → Supabase → API)
         const stockData = await stockDataService.getStockData(
           validStockCodes,
           startDateStr,
           endDateStr
         );
-        
+
         const loadedCount = Object.keys(stockData).length;
         console.log(`Loaded data for ${loadedCount}/${validStockCodes.length} stocks`);
-        
+
         if (loadedCount === 0) {
           throw new Error('종목 데이터를 불러올 수 없습니다. 종목 코드를 확인해주세요.');
         } else if (loadedCount < validStockCodes.length) {
           console.warn(`Some stocks have no data: ${validStockCodes.filter(code => !stockData[code]).join(', ')}`);
         }
-        
+
         setProgress(20);
       }
 
@@ -703,21 +706,21 @@ const BacktestRunner: React.FC = () => {
       }
 
       if (!strategyConfig.buyConditions?.length &&
-          !strategyConfig.buyStageStrategy?.stages?.some((s: any) => s.enabled)) {
+        !strategyConfig.buyStageStrategy?.stages?.some((s: any) => s.enabled)) {
         console.error('🛑 오류: DB에 저장된 전략에 매수 조건이 없습니다!');
         console.error('전략을 다시 저장하거나, 전략 빌더에서 조건을 설정한 후 저장하세요.');
         setError('선택한 전략에 매수 조건이 없습니다. 전략 빌더에서 조건을 설정 후 다시 저장해주세요.');
         setIsRunning(false);
         return;
       }
-      
+
       // 필터링 모드에 따라 다르게 처리
       const filterMode = typeof config.filteringMode === 'object' ? config.filteringMode.mode : config.filteringMode;
-      
+
       // FilteringMode 객체에서 filterId 가져오기
       const filterIdFromMode = typeof config.filteringMode === 'object' ? config.filteringMode.filterId : null;
       const effectiveFilterId = filterIdFromMode || currentFilterId;
-      
+
       console.log('=== Backtest Execution Debug ===');
       console.log('Filter mode:', filterMode);
       console.log('Current filter ID:', currentFilterId);
@@ -726,17 +729,17 @@ const BacktestRunner: React.FC = () => {
       console.log('Current filters:', currentFilters);
       console.log('Stock codes count:', validStockCodes?.length || 0);
       console.log('================================');
-      
+
       if (filterMode === 'pre-filter') {
         // 사전 필터링 모드: 필터에서 가져온 종목 코드 사용
         if (effectiveFilterId && effectiveFilterId !== null && effectiveFilterId !== '') {
           requestPayload.filter_id = effectiveFilterId;
           console.log('Using pre-filter mode with filter_id:', effectiveFilterId);
         }
-        
+
         // FilteringMode에서 종목 코드 가져오기
         const stockCodesFromMode = typeof config.filteringMode === 'object' ? config.filteringMode.stockCodes : null;
-        
+
         if (stockCodesFromMode && stockCodesFromMode.length > 0) {
           requestPayload.stock_codes = stockCodesFromMode;
           console.log('Using stock codes from filtering mode:', stockCodesFromMode.length, 'stocks');
@@ -761,7 +764,7 @@ const BacktestRunner: React.FC = () => {
           requestPayload.stock_codes = validStockCodes;
         }
       }
-      
+
       // null 또는 undefined 필드 제거
       const cleanPayload = Object.entries(requestPayload).reduce((acc, [key, value]) => {
         if (value !== null && value !== undefined) {
@@ -774,7 +777,7 @@ const BacktestRunner: React.FC = () => {
 
       // 매수/매도 조건이 비어있는지 확인 (strategyConfig에서 확인)
       if (strategyConfig && ((!strategyConfig.buyConditions || strategyConfig.buyConditions.length === 0) &&
-          (!strategyConfig.buyStageStrategy || !strategyConfig.useStageBasedStrategy))) {
+        (!strategyConfig.buyStageStrategy || !strategyConfig.useStageBasedStrategy))) {
         console.warn('⚠️ 경고: 매수 조건이 설정되지 않았습니다!');
         console.warn('Buy Conditions:', strategyConfig.buyConditions);
         console.warn('Buy Stage Strategy:', strategyConfig.buyStageStrategy);
@@ -782,13 +785,13 @@ const BacktestRunner: React.FC = () => {
       }
 
       if (strategyConfig && ((!strategyConfig.sellConditions || strategyConfig.sellConditions.length === 0) &&
-          !strategyConfig.targetProfit?.simple?.enabled &&
-          !strategyConfig.targetProfit?.staged?.enabled)) {
+        !strategyConfig.targetProfit?.simple?.enabled &&
+        !strategyConfig.targetProfit?.staged?.enabled)) {
         console.warn('⚠️ 경고: 매도 조건이 설정되지 않았습니다!');
         console.warn('Sell Conditions:', strategyConfig.sellConditions);
         console.warn('Target Profit:', strategyConfig.targetProfit);
       }
-      
+
       // 백테스트 실행 요청
       console.log('Sending backtest request to server...');
       // 프로덕션에서는 Vercel Functions 프록시 사용
@@ -811,16 +814,16 @@ const BacktestRunner: React.FC = () => {
       });
 
       console.log('Response status:', response.status);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Backtest server error:', errorText);
-        
+
         let errorMessage = '백테스트 실행 실패';
         try {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.error || errorData.detail || errorMessage;
-          
+
           // 전략 조건 미설정 에러 강조
           if (errorMessage.includes('전략에 매수/매도 조건이 설정되지 않았습니다')) {
             errorMessage = `⚠️ ${errorMessage}`;
@@ -828,7 +831,7 @@ const BacktestRunner: React.FC = () => {
         } catch {
           errorMessage = errorText || errorMessage;
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -859,12 +862,12 @@ const BacktestRunner: React.FC = () => {
         console.log('Summary:', backtestData.summary);
         console.log('Individual results:', backtestData.individual_results);
         console.log('First stock result:', backtestData.individual_results?.[0]);
-        
+
         // 전략 이름 찾기 - strategies 배열이나 백엔드 응답에서
         const currentStrategy = strategies.find(s => s.id === config.strategyId);
         const strategyNameFromBackend = result.strategy_name || result.summary?.strategy_name;
         const finalStrategyName = currentStrategy?.name || strategyNameFromBackend || '알 수 없음';
-        
+
         console.log('Strategy name resolution:', {
           fromStrategies: currentStrategy?.name,
           fromBackend: strategyNameFromBackend,
@@ -955,7 +958,7 @@ const BacktestRunner: React.FC = () => {
             const portfolioValue = dv.total_value || dv.portfolio_value || config.initialCapital;
             const dailyReturn = index === 0 ? 0 :
               ((portfolioValue - (result.daily_values?.[index - 1]?.total_value || config.initialCapital)) /
-               (result.daily_values?.[index - 1]?.total_value || config.initialCapital) * 100);
+                (result.daily_values?.[index - 1]?.total_value || config.initialCapital) * 100);
             const cumulativeReturn = ((portfolioValue - config.initialCapital) / config.initialCapital * 100);
 
             return {
@@ -969,7 +972,7 @@ const BacktestRunner: React.FC = () => {
           investment_config: currentFilters || {},
           filtering_config: filteringMode || {},
         };
-        
+
         console.log('Formatted result:', formattedResult);
         console.log('Formatted trades count:', formattedResult.trades.length);
         console.log('Formatted daily_returns count:', formattedResult.daily_returns.length);
@@ -981,7 +984,7 @@ const BacktestRunner: React.FC = () => {
           console.log('[BacktestRunner] Formatted reason:', sampleFormattedTrade.reason);
           console.log('[BacktestRunner] Formatted signal_reason:', sampleFormattedTrade.signal_reason);
         }
-        
+
         setBacktestResults(formattedResult);
         // 결과 다이얼로그 자동 표시
         setShowResultDialog(true);
@@ -1005,7 +1008,7 @@ const BacktestRunner: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Backtest error:', err);
-      
+
       // 에러 메시지 개선
       if (err.message && err.message.includes('Failed to fetch')) {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
@@ -1015,7 +1018,7 @@ const BacktestRunner: React.FC = () => {
       } else {
         setError(err.message || '백테스트 실행 중 오류가 발생했습니다.');
       }
-      
+
       setIsRunning(false);
     }
   };
@@ -1107,10 +1110,10 @@ const BacktestRunner: React.FC = () => {
             universe_type: currentFilterId
               ? 'investment_filter'
               : (config.stockCodes && config.stockCodes.length === 1)
-              ? 'single_stock'
-              : (config.stockCodes && config.stockCodes.length > 1)
-              ? 'multiple_stocks'
-              : 'unknown',
+                ? 'single_stock'
+                : (config.stockCodes && config.stockCodes.length > 1)
+                  ? 'multiple_stocks'
+                  : 'unknown',
 
             // 단일 종목인 경우
             ...(config.stockCodes && config.stockCodes.length === 1 && {
@@ -1229,601 +1232,659 @@ const BacktestRunner: React.FC = () => {
 
           {/* 전략 선택 카드 */}
           <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              전략 선택
-            </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<StyleIcon />}
-              onClick={() => setShowTemplateDialog(true)}
-              disabled={isRunning}
-            >
-              템플릿에서 선택
-            </Button>
-          </Box>
-          <FormControl fullWidth>
-            <InputLabel id="strategy-select-label">전략 선택</InputLabel>
-            <Select
-              labelId="strategy-select-label"
-              value={config.strategyId || ''}
-              label="전략 선택"
-              onChange={(e) => setConfig({ ...config, strategyId: e.target.value })}
-              disabled={isRunning}
-              renderValue={(value) => {
-                if (!value) return <em>전략을 선택하세요</em>;
-                const strategy = strategies.find(s => s.id === value);
-                return strategy ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip size="small" label={strategy.name} color="primary" />
-                  </Box>
-                ) : <em>전략을 선택하세요</em>;
-              }}
-            >
-              <MenuItem value="">
-                <em>전략을 선택하세요</em>
-              </MenuItem>
-              {strategies.length === 0 ? (
-                <MenuItem disabled>
-                  <em>저장된 전략이 없습니다. 전략빌더에서 생성해주세요.</em>
-                </MenuItem>
-              ) : (
-                strategies.map((strategy) => (
-                  <MenuItem key={strategy.id} value={strategy.id}>
-                    <Box>
-                      <Typography>{strategy.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {strategy.type} | {strategy.description?.substring(0, 50)}
-                        {strategy.created_at && ` | ${new Date(strategy.created_at).toLocaleDateString('ko-KR')}`}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
-          {strategies.length > 0 && (
-            <>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                총 {strategies.length}개의 전략이 있습니다.
-              </Typography>
-              <Alert severity="info" sx={{ mt: 2 }}>
-                <Typography variant="caption">
-                  ⚠️ 백테스트를 실행하기 전에 전략에 매수/매도 조건이 설정되어 있는지 확인하세요.
-                  조건이 없는 전략은 백테스트를 실행할 수 없습니다.
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  전략 선택
                 </Typography>
-              </Alert>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 백테스트 설정 카드 */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            백테스트 설정
-          </Typography>
-          <Grid container spacing={3}>
-
-            {/* 데이터 간격 */}
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>데이터 간격</InputLabel>
-                <Select
-                  value={config.dataInterval}
-                  label="데이터 간격"
-                  onChange={(e) => setConfig({ ...config, dataInterval: e.target.value })}
+                <Button
+                  variant="outlined"
+                  startIcon={<StyleIcon />}
+                  onClick={() => setShowTemplateDialog(true)}
                   disabled={isRunning}
                 >
-                  <MenuItem value="1d">일봉 (Daily)</MenuItem>
-                  <MenuItem value="1w">주봉 (Weekly)</MenuItem>
-                  <MenuItem value="1M">월봉 (Monthly)</MenuItem>
+                  템플릿에서 선택
+                </Button>
+              </Box>
+              <FormControl fullWidth>
+                <InputLabel id="strategy-select-label">전략 선택</InputLabel>
+                <Select
+                  labelId="strategy-select-label"
+                  value={config.strategyId || ''}
+                  label="전략 선택"
+                  onChange={(e) => setConfig({ ...config, strategyId: e.target.value })}
+                  disabled={isRunning}
+                  renderValue={(value) => {
+                    if (!value) return <em>전략을 선택하세요</em>;
+                    const strategy = strategies.find(s => s.id === value);
+                    return strategy ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip size="small" label={strategy.name} color="primary" />
+                      </Box>
+                    ) : <em>전략을 선택하세요</em>;
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>전략을 선택하세요</em>
+                  </MenuItem>
+                  {strategies.length === 0 ? (
+                    <MenuItem disabled>
+                      <em>저장된 전략이 없습니다. 전략빌더에서 생성해주세요.</em>
+                    </MenuItem>
+                  ) : (
+                    strategies.map((strategy) => (
+                      <MenuItem key={strategy.id} value={strategy.id}>
+                        <Box>
+                          <Typography>{strategy.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {strategy.type} | {strategy.description?.substring(0, 50)}
+                            {strategy.created_at && ` | ${new Date(strategy.created_at).toLocaleDateString('ko-KR')}`}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
               </FormControl>
-            </Grid>
-
-            {/* 기간 설정 */}
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="시작일"
-                type="date"
-                value={config.startDate ? config.startDate.toISOString().split('T')[0] : ''}
-                onChange={(e) => setConfig({ ...config, startDate: new Date(e.target.value) })}
-                disabled={isRunning}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="종료일"
-                type="date"
-                value={config.endDate ? config.endDate.toISOString().split('T')[0] : ''}
-                onChange={(e) => setConfig({ ...config, endDate: new Date(e.target.value) })}
-                disabled={isRunning}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-            </Grid>
-
-            {/* 자본금 설정 */}
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="초기 자본금"
-                type="number"
-                value={config.initialCapital}
-                onChange={(e) => setConfig({ ...config, initialCapital: Number(e.target.value) })}
-                disabled={isRunning}
-                InputProps={{
-                  endAdornment: '원',
-                }}
-              />
-            </Grid>
-
-            {/* 수수료 */}
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="수수료율"
-                type="number"
-                value={config.commission}
-                onChange={(e) => setConfig({ ...config, commission: Number(e.target.value) })}
-                disabled={isRunning}
-                InputProps={{
-                  endAdornment: '%',
-                }}
-                helperText="거래금액 대비 수수료율"
-              />
-            </Grid>
-
-            {/* 슬리피지 */}
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="슬리피지"
-                type="number"
-                value={config.slippage}
-                onChange={(e) => setConfig({ ...config, slippage: Number(e.target.value) })}
-                disabled={isRunning}
-                InputProps={{
-                  endAdornment: '%',
-                }}
-                helperText="예상 체결가와 실제 체결가의 차이"
-              />
-            </Grid>
-
-            {/* 종목 코드 입력 */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="종목 코드 직접 입력 (선택사항)"
-                placeholder="005930, 000660, 035720 (쉼표로 구분)"
-                value={config.stockCodes.join(', ')}
-                onChange={(e) => {
-                  const codes = e.target.value
-                    .split(',')
-                    .map(code => code.trim())
-                    .filter(code => code.length > 0);
-                  setConfig({ ...config, stockCodes: codes });
-                }}
-                disabled={isRunning}
-                helperText={
-                  <Typography variant="caption" component="div">
-                    💡 종목 선택 방법:
-                    <br />
-                    1. 여기에 직접 종목 코드 입력 (수동)
-                    <br />
-                    2. 아래 "필터링 전략 설정"에서 저장된 필터 불러오기 (권장)
-                    <br />
-                    {config.stockCodes.length > 0 
-                      ? `✅ 현재 ${config.stockCodes.length}개 종목 선택됨` 
-                      : '⚠️ 비어있으면 전체 종목 대상'}
+              {strategies.length > 0 && (
+                <>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    총 {strategies.length}개의 전략이 있습니다.
                   </Typography>
-                }
-              />
-            </Grid>
-          </Grid>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="caption">
+                      ⚠️ 백테스트를 실행하기 전에 전략에 매수/매도 조건이 설정되어 있는지 확인하세요.
+                      조건이 없는 전략은 백테스트를 실행할 수 없습니다.
+                    </Typography>
+                  </Alert>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* 필터링 전략 설정 섹션 */}
-          <Accordion sx={{ mt: 3 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">
-                필터링 전략 설정
-                {currentFilters && (
-                  <Chip 
-                    label="필터 로드됨" 
-                    size="small" 
-                    color="success" 
-                    sx={{ ml: 2 }}
-                  />
-                )}
+          {/* 백테스트 설정 카드 */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                백테스트 설정
               </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <FilteringStrategy
-                currentFilters={currentFilters}
-                onFilteringModeChange={(mode, filterData) => {
-                  setFilteringMode(mode)
-                  setConfig({ ...config, filteringMode: mode })
-                  
-                  // 필터 데이터가 있고 사전 필터링 모드인 경우 처리
-                  if (filterData && mode.mode === 'pre-filter') {
-                    console.log('Pre-filter mode with filter data:', filterData)
-                    
-                    // Filter ID 설정
-                    if (mode.filterId) {
-                      console.log('Setting currentFilterId from FilteringStrategy:', mode.filterId)
-                      setCurrentFilterId(mode.filterId)
-                    }
-                    
-                    // 종목 코드 설정
-                    if (filterData.stock_codes && filterData.stock_codes.length > 0) {
-                      console.log('Setting stock codes from filter:', filterData.stock_codes.length, 'stocks')
-                      setConfig(prev => ({ ...prev, stockCodes: filterData.stock_codes }))
-                    } else if (mode.stockCodes && mode.stockCodes.length > 0) {
-                      console.log('Setting stock codes from mode:', mode.stockCodes.length, 'stocks')
-                      setConfig(prev => ({ ...prev, stockCodes: mode.stockCodes || [] }))
-                    }
-                    
-                    // 필터 데이터도 업데이트
-                    if (filterData.filters) {
-                      setCurrentFilters(filterData.filters)
-                    }
-                    
-                    // 성공 메시지
-                    const stockCount = filterData.stock_codes?.length || mode.stockCodes?.length || 0
-                    setSuccess(`사전 필터링 모드: "${filterData.name}" 필터가 적용되었습니다. (${stockCount}개 종목)`)
-                  }
-                }}
-              />
-            </AccordionDetails>
-          </Accordion>
+              <Grid container spacing={3}>
 
-          <Grid container spacing={3}>
-            {/* 진행 상황 */}
-            {isRunning && (
-              <Grid item xs={12}>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    백테스트 진행 중... {progress}%
-                  </Typography>
-                  <LinearProgress variant="determinate" value={progress} />
-                </Box>
-              </Grid>
-            )}
-
-            {/* 진행 상황 표시 */}
-            {isRunning && (
-              <Grid item xs={12}>
-                <Box sx={{ mt: 2, mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Box sx={{ width: '100%', mr: 1 }}>
-                      <LinearProgress 
-                        variant={progress > 0 ? "determinate" : "indeterminate"}
-                        value={progress}
-                      />
-                    </Box>
-                    {progress > 0 && (
-                      <Box sx={{ minWidth: 35 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {`${Math.round(progress)}%`}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    {progress > 0 
-                      ? `처리 중... (${Math.round(progress)}% 완료)`
-                      : '백테스트 실행 중... 서버 콘솔에서 진행 상황을 확인할 수 있습니다.'}
-                  </Typography>
-                  <Typography variant="caption" color="info.main" display="block" sx={{ mt: 1 }}>
-                    💡 팁: 서버 콘솔 창에서 각 종목별 처리 상황을 실시간으로 확인할 수 있습니다.
-                  </Typography>
-                </Box>
-              </Grid>
-            )}
-
-            {/* 실행 버튼 */}
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <Stack direction="row" spacing={2} justifyContent="flex-end">
-                {!isRunning ? (
-                  <>
-                    <Button
-                      variant="contained"
-                      size="large"
-                      startIcon={<PlayArrowIcon />}
-                      onClick={runBacktest}
-                      disabled={!config.strategyId}
+                {/* 데이터 간격 */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>데이터 간격</InputLabel>
+                    <Select
+                      value={config.dataInterval}
+                      label="데이터 간격"
+                      onChange={(e) => setConfig({ ...config, dataInterval: e.target.value })}
+                      disabled={isRunning}
                     >
-                      백테스트 실행
-                    </Button>
-                    {backtestId && (
-                      <Button
-                        variant="outlined"
-                        size="large"
-                        startIcon={<AssessmentIcon />}
-                        onClick={viewResults}
-                      >
-                        결과 보기
-                      </Button>
+                      <MenuItem value="1d">일봉 (Daily)</MenuItem>
+                      <MenuItem value="1w">주봉 (Weekly)</MenuItem>
+                      <MenuItem value="1M">월봉 (Monthly)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+
+                {/* 기간 선택 단축 버튼 */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-end', height: '100%', pb: 0.5 }}>
+                    <ToggleButtonGroup
+                      size="small"
+                      value={selectedPeriod}
+                      exclusive
+                      onChange={(e, value) => {
+                        if (!value) return;
+                        setSelectedPeriod(value);
+
+                        const end = new Date();
+                        const start = new Date(end); // create copy
+
+                        switch (value) {
+                          case '1M': start.setMonth(end.getMonth() - 1); break;
+                          case '3M': start.setMonth(end.getMonth() - 3); break;
+                          case '6M': start.setMonth(end.getMonth() - 6); break;
+                          case '1Y': start.setFullYear(end.getFullYear() - 1); break;
+                          case '3Y': start.setFullYear(end.getFullYear() - 3); break;
+                          case '5Y': start.setFullYear(end.getFullYear() - 5); break;
+                          case '7Y': start.setFullYear(end.getFullYear() - 7); break;
+                          case '10Y': start.setFullYear(end.getFullYear() - 10); break;
+                          case 'Max': start.setFullYear(end.getFullYear() - 20); break; // 20년 전
+                          case 'YTD': start.setMonth(0, 1); break; // 1월 1일
+                        }
+
+                        setConfig({ ...config, startDate: start, endDate: end });
+
+                        const startDateStr = start.toLocaleDateString('ko-KR');
+                        const endDateStr = end.toLocaleDateString('ko-KR');
+                        setSuccess(`기간 설정: ${startDateStr} ~ ${endDateStr}`);
+                      }}
+                      aria-label="기간 선택"
+                      disabled={isRunning}
+                    >
+                      <ToggleButton value="1M">1개월</ToggleButton>
+                      <ToggleButton value="3M">3개월</ToggleButton>
+                      <ToggleButton value="6M">6개월</ToggleButton>
+                      <ToggleButton value="YTD">올해</ToggleButton>
+                      <ToggleButton value="1Y">1년</ToggleButton>
+                      <ToggleButton value="3Y">3년</ToggleButton>
+                      <ToggleButton value="5Y">5년</ToggleButton>
+                      <ToggleButton value="7Y">7년</ToggleButton>
+                      <ToggleButton value="10Y">10년</ToggleButton>
+                      <ToggleButton value="Max">최대</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Box>
+                </Grid>
+
+                {/* 시작일 */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="시작일"
+                    type="date"
+                    value={config.startDate ? config.startDate.toISOString().split('T')[0] : ''}
+                    onChange={(e) => {
+                      const date = new Date(e.target.value);
+                      if (!isNaN(date.getTime())) {
+                        setConfig({ ...config, startDate: date });
+                        setSelectedPeriod(null); // 수동 변경 시 기간 선택 해제
+                      }
+                    }}
+                    disabled={isRunning}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="종료일"
+                    type="date"
+                    value={config.endDate ? config.endDate.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setConfig({ ...config, endDate: new Date(e.target.value) })}
+                    disabled={isRunning}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                  />
+                </Grid>
+
+                {/* 자본금 설정 */}
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="초기 자본금"
+                    type="number"
+                    value={config.initialCapital}
+                    onChange={(e) => setConfig({ ...config, initialCapital: Number(e.target.value) })}
+                    disabled={isRunning}
+                    InputProps={{
+                      endAdornment: '원',
+                    }}
+                  />
+                </Grid>
+
+                {/* 수수료 */}
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="수수료율"
+                    type="number"
+                    value={config.commission}
+                    onChange={(e) => setConfig({ ...config, commission: Number(e.target.value) })}
+                    disabled={isRunning}
+                    InputProps={{
+                      endAdornment: '%',
+                    }}
+                    helperText="거래금액 대비 수수료율"
+                  />
+                </Grid>
+
+                {/* 슬리피지 */}
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="슬리피지"
+                    type="number"
+                    value={config.slippage}
+                    onChange={(e) => setConfig({ ...config, slippage: Number(e.target.value) })}
+                    disabled={isRunning}
+                    InputProps={{
+                      endAdornment: '%',
+                    }}
+                    helperText="예상 체결가와 실제 체결가의 차이"
+                  />
+                </Grid>
+
+                {/* 종목 코드 입력 */}
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="종목 코드 직접 입력 (선택사항)"
+                    placeholder="005930, 000660, 035720 (쉼표로 구분)"
+                    value={config.stockCodes.join(', ')}
+                    onChange={(e) => {
+                      const codes = e.target.value
+                        .split(',')
+                        .map(code => code.trim())
+                        .filter(code => code.length > 0);
+                      setConfig({ ...config, stockCodes: codes });
+                    }}
+                    disabled={isRunning}
+                    helperText={
+                      <Typography variant="caption" component="div">
+                        💡 종목 선택 방법:
+                        <br />
+                        1. 여기에 직접 종목 코드 입력 (수동)
+                        <br />
+                        2. 아래 "필터링 전략 설정"에서 저장된 필터 불러오기 (권장)
+                        <br />
+                        {config.stockCodes.length > 0
+                          ? `✅ 현재 ${config.stockCodes.length}개 종목 선택됨`
+                          : '⚠️ 비어있으면 전체 종목 대상'}
+                      </Typography>
+                    }
+                  />
+                </Grid>
+              </Grid>
+
+              {/* 필터링 전략 설정 섹션 */}
+              <Accordion sx={{ mt: 3 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6">
+                    필터링 전략 설정
+                    {currentFilters && (
+                      <Chip
+                        label="필터 로드됨"
+                        size="small"
+                        color="success"
+                        sx={{ ml: 2 }}
+                      />
                     )}
-                    {backtestResults && (
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <FilteringStrategy
+                    currentFilters={currentFilters}
+                    onFilteringModeChange={(mode, filterData) => {
+                      setFilteringMode(mode)
+                      setConfig({ ...config, filteringMode: mode })
+
+                      // 필터 데이터가 있고 사전 필터링 모드인 경우 처리
+                      if (filterData && mode.mode === 'pre-filter') {
+                        console.log('Pre-filter mode with filter data:', filterData)
+
+                        // Filter ID 설정
+                        if (mode.filterId) {
+                          console.log('Setting currentFilterId from FilteringStrategy:', mode.filterId)
+                          setCurrentFilterId(mode.filterId)
+                        }
+
+                        // 종목 코드 설정
+                        if (filterData.stock_codes && filterData.stock_codes.length > 0) {
+                          console.log('Setting stock codes from filter:', filterData.stock_codes.length, 'stocks')
+                          setConfig(prev => ({ ...prev, stockCodes: filterData.stock_codes }))
+                        } else if (mode.stockCodes && mode.stockCodes.length > 0) {
+                          console.log('Setting stock codes from mode:', mode.stockCodes.length, 'stocks')
+                          setConfig(prev => ({ ...prev, stockCodes: mode.stockCodes || [] }))
+                        }
+
+                        // 필터 데이터도 업데이트
+                        if (filterData.filters) {
+                          setCurrentFilters(filterData.filters)
+                        }
+
+                        // 성공 메시지
+                        const stockCount = filterData.stock_codes?.length || mode.stockCodes?.length || 0
+                        setSuccess(`사전 필터링 모드: "${filterData.name}" 필터가 적용되었습니다. (${stockCount}개 종목)`)
+                      }
+                    }}
+                  />
+                </AccordionDetails>
+              </Accordion>
+
+              <Grid container spacing={3}>
+                {/* 진행 상황 */}
+                {isRunning && (
+                  <Grid item xs={12}>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        백테스트 진행 중... {progress}%
+                      </Typography>
+                      <LinearProgress variant="determinate" value={progress} />
+                    </Box>
+                  </Grid>
+                )}
+
+                {/* 진행 상황 표시 */}
+                {isRunning && (
+                  <Grid item xs={12}>
+                    <Box sx={{ mt: 2, mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Box sx={{ width: '100%', mr: 1 }}>
+                          <LinearProgress
+                            variant={progress > 0 ? "determinate" : "indeterminate"}
+                            value={progress}
+                          />
+                        </Box>
+                        {progress > 0 && (
+                          <Box sx={{ minWidth: 35 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {`${Math.round(progress)}%`}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        {progress > 0
+                          ? `처리 중... (${Math.round(progress)}% 완료)`
+                          : '백테스트 실행 중... 서버 콘솔에서 진행 상황을 확인할 수 있습니다.'}
+                      </Typography>
+                      <Typography variant="caption" color="info.main" display="block" sx={{ mt: 1 }}>
+                        💡 팁: 서버 콘솔 창에서 각 종목별 처리 상황을 실시간으로 확인할 수 있습니다.
+                      </Typography>
+                    </Box>
+                  </Grid>
+                )}
+
+                {/* 실행 버튼 */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Stack direction="row" spacing={2} justifyContent="flex-end">
+                    {!isRunning ? (
                       <>
                         <Button
                           variant="contained"
-                          color="secondary"
                           size="large"
-                          startIcon={<AssessmentIcon />}
-                          onClick={() => setShowResultDialog(true)}
+                          startIcon={<PlayArrowIcon />}
+                          onClick={runBacktest}
+                          disabled={!config.strategyId}
                         >
-                          상세 결과 보기
+                          백테스트 실행
                         </Button>
-                        {!savedResultId && (
+                        {backtestId && (
                           <Button
                             variant="outlined"
                             size="large"
-                            startIcon={<SaveIcon />}
-                            onClick={saveBacktestResult}
-                            disabled={isSaving}
+                            startIcon={<AssessmentIcon />}
+                            onClick={viewResults}
                           >
-                            {isSaving ? '저장 중...' : '결과 저장'}
+                            결과 보기
                           </Button>
                         )}
-                        <Button
-                          variant="outlined"
-                          size="large"
-                          startIcon={<CompareArrowsIcon />}
-                          onClick={navigateToComparison}
-                        >
-                          결과 비교
-                        </Button>
+                        {backtestResults && (
+                          <>
+                            <Button
+                              variant="contained"
+                              color="secondary"
+                              size="large"
+                              startIcon={<AssessmentIcon />}
+                              onClick={() => setShowResultDialog(true)}
+                            >
+                              상세 결과 보기
+                            </Button>
+                            {!savedResultId && (
+                              <Button
+                                variant="outlined"
+                                size="large"
+                                startIcon={<SaveIcon />}
+                                onClick={saveBacktestResult}
+                                disabled={isSaving}
+                              >
+                                {isSaving ? '저장 중...' : '결과 저장'}
+                              </Button>
+                            )}
+                            <Button
+                              variant="outlined"
+                              size="large"
+                              startIcon={<CompareArrowsIcon />}
+                              onClick={navigateToComparison}
+                            >
+                              결과 비교
+                            </Button>
+                          </>
+                        )}
                       </>
-                    )}
-                  </>
-                ) : (
-                  <Button
-                    variant="contained"
-                    color="error"
-                    size="large"
-                    startIcon={<StopIcon />}
-                    onClick={stopBacktest}
-                  >
-                    백테스트 중단
-                  </Button>
-                )}
-              </Stack>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* 전략이 없을 때 안내 */}
-      {strategies.length === 0 && (
-        <Card sx={{ mt: 2 }}>
-          <CardContent sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              아직 저장된 전략이 없습니다
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              전략빌더에서 새로운 전략을 만들어 저장한 후 백테스트를 실행할 수 있습니다.
-            </Typography>
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-              (로그인 상태와 전략 데이터를 확인 중입니다. 콘솔을 확인해주세요.)
-            </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              href="/strategy-builder"
-              startIcon={<AssessmentIcon />}
-            >
-              전략빌더로 이동
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 전략 정보 표시 */}
-      {config.strategyId && (
-        <Card sx={{ mt: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              선택한 전략 정보
-            </Typography>
-            {strategies
-              .filter(s => s.id === config.strategyId)
-              .map(strategy => (
-                <Box key={strategy.id}>
-                  <Typography variant="body1" gutterBottom>
-                    <strong>{strategy.name}</strong>
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" paragraph>
-                    {strategy.description}
-                  </Typography>
-                  <Stack direction="row" spacing={1}>
-                    <Chip label={strategy.type} size="small" color="primary" />
-                    {strategy.parameters && Object.keys(strategy.parameters)
-                      .filter(key => typeof strategy.parameters[key] !== 'object')
-                      .slice(0, 5)
-                      .map(key => (
-                        <Chip 
-                          key={key}
-                          label={`${key}: ${strategy.parameters[key]}`}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ))}
-                    {Object.keys(strategy.parameters || {}).length > 5 && (
-                      <Chip 
-                        label={`+${Object.keys(strategy.parameters).length - 5} more`}
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                      />
+                    ) : (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="large"
+                        startIcon={<StopIcon />}
+                        onClick={stopBacktest}
+                      >
+                        백테스트 중단
+                      </Button>
                     )}
                   </Stack>
-                </Box>
-              ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 필터 불러오기 다이얼로그 */}
-      <LoadFilterDialog
-        open={showLoadFilterDialog}
-        onClose={() => setShowLoadFilterDialog(false)}
-        onLoadFilter={handleFilterLoad}
-      />
-
-      {/* 템플릿 선택 다이얼로그 */}
-      <Dialog
-        open={showTemplateDialog}
-        onClose={() => setShowTemplateDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            전략 템플릿 선택
-            <IconButton onClick={() => setShowTemplateDialog(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            검증된 전략 템플릿을 선택하여 백테스트를 진행하세요
-          </Typography>
-          <Grid container spacing={2}>
-            {strategies
-              .filter(s => s.name && s.name.startsWith('[템플릿]') && !s.user_id)
-              .map((template) => (
-              <Grid item xs={12} sm={6} md={4} key={template.id}>
-                <Card 
-                  sx={{ 
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    border: selectedTemplate?.id === template.id ? 2 : 0,
-                    borderColor: 'primary.main',
-                    '&:hover': { 
-                      transform: 'translateY(-4px)',
-                      boxShadow: 3 
-                    }
-                  }}
-                  onClick={() => setSelectedTemplate(template)}
-                >
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {template.name.replace('[템플릿] ', '')}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {template.description || '전략 설명 없음'}
-                    </Typography>
-                  </CardContent>
-                </Card>
+                </Grid>
               </Grid>
-            ))}
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowTemplateDialog(false)}>
-            취소
-          </Button>
-          <Button 
-            onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
-            variant="contained"
-            disabled={!selectedTemplate}
-          >
-            템플릿 적용
-          </Button>
-        </DialogActions>
-      </Dialog>
+            </CardContent>
+          </Card>
 
-      {/* 백테스트 결과 다이얼로그 */}
-      <Dialog
-        open={showResultDialog}
-        onClose={handleCloseDialog}
-        maxWidth="xl"
-        fullWidth
-        PaperProps={{
-          sx: { minHeight: '80vh' }
-        }}
-      >
-        <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h5">백테스트 결과</Typography>
-            <IconButton onClick={handleCloseDialog}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers>
-          {/* 저장 성공/실패 메시지 */}
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-              {success}
+          {/* 전략이 없을 때 안내 */}
+          {strategies.length === 0 && (
+            <Card sx={{ mt: 2 }}>
+              <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="h6" gutterBottom>
+                  아직 저장된 전략이 없습니다
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  전략빌더에서 새로운 전략을 만들어 저장한 후 백테스트를 실행할 수 있습니다.
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                  (로그인 상태와 전략 데이터를 확인 중입니다. 콘솔을 확인해주세요.)
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  href="/strategy-builder"
+                  startIcon={<AssessmentIcon />}
+                >
+                  전략빌더로 이동
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 전략 정보 표시 */}
+          {config.strategyId && (
+            <Card sx={{ mt: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  선택한 전략 정보
+                </Typography>
+                {strategies
+                  .filter(s => s.id === config.strategyId)
+                  .map(strategy => (
+                    <Box key={strategy.id}>
+                      <Typography variant="body1" gutterBottom>
+                        <strong>{strategy.name}</strong>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        {strategy.description}
+                      </Typography>
+                      <Stack direction="row" spacing={1}>
+                        <Chip label={strategy.type} size="small" color="primary" />
+                        {strategy.parameters && Object.keys(strategy.parameters)
+                          .filter(key => typeof strategy.parameters[key] !== 'object')
+                          .slice(0, 5)
+                          .map(key => (
+                            <Chip
+                              key={key}
+                              label={`${key}: ${strategy.parameters[key]}`}
+                              size="small"
+                              variant="outlined"
+                            />
+                          ))}
+                        {Object.keys(strategy.parameters || {}).length > 5 && (
+                          <Chip
+                            label={`+${Object.keys(strategy.parameters).length - 5} more`}
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                          />
+                        )}
+                      </Stack>
+                    </Box>
+                  ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 필터 불러오기 다이얼로그 */}
+          <LoadFilterDialog
+            open={showLoadFilterDialog}
+            onClose={() => setShowLoadFilterDialog(false)}
+            onLoadFilter={handleFilterLoad}
+          />
+
+          {/* 템플릿 선택 다이얼로그 */}
+          <Dialog
+            open={showTemplateDialog}
+            onClose={() => setShowTemplateDialog(false)}
+            maxWidth="md"
+            fullWidth
+          >
+            <DialogTitle>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                전략 템플릿 선택
+                <IconButton onClick={() => setShowTemplateDialog(false)}>
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+            </DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                검증된 전략 템플릿을 선택하여 백테스트를 진행하세요
+              </Typography>
+              <Grid container spacing={2}>
+                {strategies
+                  .filter(s => s.name && s.name.startsWith('[템플릿]') && !s.user_id)
+                  .map((template) => (
+                    <Grid item xs={12} sm={6} md={4} key={template.id}>
+                      <Card
+                        sx={{
+                          cursor: 'pointer',
+                          transition: 'all 0.3s',
+                          border: selectedTemplate?.id === template.id ? 2 : 0,
+                          borderColor: 'primary.main',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: 3
+                          }
+                        }}
+                        onClick={() => setSelectedTemplate(template)}
+                      >
+                        <CardContent>
+                          <Typography variant="h6" gutterBottom>
+                            {template.name.replace('[템플릿] ', '')}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {template.description || '전략 설명 없음'}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShowTemplateDialog(false)}>
+                취소
+              </Button>
+              <Button
+                onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
+                variant="contained"
+                disabled={!selectedTemplate}
+              >
+                템플릿 적용
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* 백테스트 결과 다이얼로그 */}
+          <Dialog
+            open={showResultDialog}
+            onClose={handleCloseDialog}
+            maxWidth="xl"
+            fullWidth
+            PaperProps={{
+              sx: { minHeight: '80vh' }
+            }}
+          >
+            <DialogTitle>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="h5">백테스트 결과</Typography>
+                <IconButton onClick={handleCloseDialog}>
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+            </DialogTitle>
+            <DialogContent dividers>
+              {/* 저장 성공/실패 메시지 */}
+              {success && (
+                <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+                  {success}
+                </Alert>
+              )}
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                  {error}
+                </Alert>
+              )}
+
+              {backtestResults && (
+                <BacktestResultViewer
+                  result={backtestResults}
+                  onRefresh={() => {
+                    // 필요시 결과 새로고침 로직 추가
+                    console.log('Refreshing backtest results...');
+                  }}
+                />
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<SaveIcon />}
+                onClick={saveBacktestResult}
+                disabled={isSaving || !backtestResults}
+              >
+                {isSaving ? '저장 중...' : '결과 저장'}
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleCloseDialog}
+              >
+                닫기
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* 저장 성공 Snackbar (다이얼로그가 닫혀도 보이도록) */}
+          <Snackbar
+            open={!!savedResultId && !showResultDialog}
+            autoHideDuration={3000}
+            onClose={() => setSavedResultId(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert severity="success" sx={{ width: '100%' }}>
+              ✅ 백테스트 결과가 성공적으로 저장되었습니다!
             </Alert>
-          )}
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-
-          {backtestResults && (
-            <BacktestResultViewer
-              result={backtestResults}
-              onRefresh={() => {
-                // 필요시 결과 새로고침 로직 추가
-                console.log('Refreshing backtest results...');
-              }}
-            />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<SaveIcon />}
-            onClick={saveBacktestResult}
-            disabled={isSaving || !backtestResults}
-          >
-            {isSaving ? '저장 중...' : '결과 저장'}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handleCloseDialog}
-          >
-            닫기
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* 저장 성공 Snackbar (다이얼로그가 닫혀도 보이도록) */}
-      <Snackbar
-        open={!!savedResultId && !showResultDialog}
-        autoHideDuration={3000}
-        onClose={() => setSavedResultId(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="success" sx={{ width: '100%' }}>
-          ✅ 백테스트 결과가 성공적으로 저장되었습니다!
-        </Alert>
-      </Snackbar>
+          </Snackbar>
         </Box>
       ) : (
         // 결과 보기 탭
         <BacktestComparison />
-      )}
-    </Box>
+      )
+      }
+    </Box >
   );
 };
 

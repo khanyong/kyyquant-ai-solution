@@ -1,0 +1,82 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "React",
+    "Vite",
+    "Redux Toolkit",
+    "Material UI",
+    "Supabase",
+    "Lightweight Charts"
+  ],
+  "features": [
+    {
+      "name": "Authentication",
+      "description": "User login and session management using Supabase and Redux.",
+      "files": [
+        "src/contexts/AuthContext.tsx",
+        "src/store/authSlice.ts",
+        "src/services/auth.ts",
+        "src/components/common/LoginDialog.tsx",
+        "src/AppWithRouter.tsx"
+      ]
+    },
+    {
+      "name": "Strategy Builder",
+      "description": "Interface for users to create and manage trading strategies.",
+      "files": [
+        "src/components/StrategyBuilder.tsx"
+      ]
+    },
+    {
+      "name": "Backtesting",
+      "description": "Running backtests on strategies and viewing results.",
+      "files": [
+        "src/components/BacktestRunner.tsx",
+        "src/components/BacktestResults.tsx",
+        "src/components/BacktestResultsList.tsx"
+      ]
+    },
+    {
+      "name": "Realtime Signal Monitor",
+      "description": "Monitoring realtime trading signals.",
+      "files": [
+        "src/components/SignalMonitor.tsx"
+      ]
+    },
+    {
+      "name": "Auto Trading",
+      "description": "Automated trading dashboard and control panels.",
+      "files": [
+        "src/components/trading/AutoTradingPanelV2.tsx",
+        "src/components/trading/OrderPanel.tsx",
+        "src/components/trading/PortfolioPanel.tsx",
+        "src/components/trading/KiwoomTradingPanel.tsx"
+      ]
+    },
+    {
+      "name": "Market Overview",
+      "description": "Dashboard for general market status.",
+      "files": [
+        "src/components/trading/MarketOverview.tsx",
+        "src/components/MarketMonitor.tsx"
+      ]
+    },
+    {
+      "name": "Investment Settings",
+      "description": "Configuration for investment parameters.",
+      "files": [
+        "src/pages/TradingSettings.tsx",
+        "src/components/TradingSettingsWithUniverse.tsx",
+        "src/pages/InvestmentSettings.tsx"
+      ]
+    },
+    {
+      "name": "Performance Dashboard",
+      "description": "Visualizing trading performance metrics.",
+      "files": [
+        "src/components/PerformanceDashboard.tsx",
+        "src/pages/DebugPortfolio.tsx"
+      ]
+    }
+  ]
+}

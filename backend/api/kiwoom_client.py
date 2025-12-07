@@ -161,34 +161,24 @@ class KiwoomAPIClient:
             print(f"[KiwoomAPI] Unexpected error: {e}")
             return None
 
-    def get_historical_price(self, stock_code: str, period: int = 100) -> Optional[list]:
+    def get_historical_price(self, stock_code: str, period: int = 100, base_date: Optional[str] = None) -> Optional[list]:
         """
         과거 일봉 데이터 조회 (모의투자 전용)
 
         Args:
             stock_code: 종목코드
             period: 조회 기간 (일) - 최대 600일
+            base_date: 기준일자 (YYYYMMDD, None이면 오늘) - 과거 데이터 조회용
 
         Returns:
             일봉 데이터 리스트
-            [
-                {
-                    'stck_bsop_date': '20250927',  # 영업일자
-                    'stck_clpr': '77000',  # 종가
-                    'stck_oprc': '76500',  # 시가
-                    'stck_hgpr': '77500',  # 고가
-                    'stck_lwpr': '76000',  # 저가
-                    'acml_vol': '12345678',  # 거래량
-                    'prdy_ctrt': '1.5'  # 전일대비율
-                },
-                ...
-            ]
         """
         try:
             token = self._get_access_token()
 
-            # 기준일자 (오늘)
-            base_date = datetime.now().strftime('%Y%m%d')
+            # 기준일자 (기본값: 오늘)
+            if not base_date:
+                base_date = datetime.now().strftime('%Y%m%d')
 
             # 모의투자 전용 API
             url = f"{self.base_url}/api/dostk/chart"
@@ -221,6 +211,10 @@ class KiwoomAPIClient:
             elif isinstance(data, list):
                 output = data
             else:
+                # 데이터가 없는 경우 (정상적인 경우도 있음 - 예를 들어 너무 먼 과거)
+                if isinstance(data, dict) and data.get('rt_cd') == '0':
+                     return [] # 빈 리스트 반환
+                
                 print(f"[KiwoomAPI] Historical price inquiry failed: Unexpected response structure")
                 print(f"[KiwoomAPI] Response keys: {list(data.keys())}")
                 return None
@@ -228,7 +222,7 @@ class KiwoomAPIClient:
             # 요청한 기간만큼만 반환 (최신순으로 정렬되어 있음)
             result = output[:period] if len(output) > period else output
 
-            print(f"[KiwoomAPI] {stock_code} 일봉 데이터 조회: {len(result)}일치")
+            print(f"[KiwoomAPI] {stock_code} 일봉 데이터 조회 (기준: {base_date}): {len(result)}일치")
             return result
 
         except Exception as e:

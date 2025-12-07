@@ -1,0 +1,137 @@
+{
+  "meta": {
+    "project": "Trading Platform Web App",
+    "date": "2025-12-04",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "A web-based trading platform offering users comprehensive tools for strategy creation, backtesting, real-time signal monitoring, automated trading, and market overview with secure authentication and responsive design.",
+  "core_goals": [
+    "Provide users with an intuitive interface to create and manage trading strategies.",
+    "Enable backtesting of trading strategies with clear result visualization.",
+    "Support real-time monitoring of trading signals to aid timely decision-making.",
+    "Facilitate automated trading with control panels and order management.",
+    "Ensure secure user authentication and session management with persistent login state.",
+    "Offer a responsive and user-friendly market overview dashboard.",
+    "Allow users to configure investment settings and parameters easily."
+  ],
+  "key_features": [
+    "Authentication system using Supabase and Redux for login, session persistence, and profile management.",
+    "Strategy Builder component enabling users to create, save, and manage multiple trading strategies with localStorage support.",
+    "Backtesting modules to run historical tests on strategies and display results clearly.",
+    "Realtime Signal Monitor to receive and display live trading signals effectively.",
+    "Auto Trading panels including order and portfolio management interfaces for seamless automated trading operations.",
+    "Market Overview dashboard providing updated information on market conditions and trends.",
+    "Investment Settings pages to adjust parameters impacting trading behavior and strategy execution.",
+    "Performance Dashboard to visualize trading metrics and overall user portfolio performance.",
+    "Responsive landing page for non-logged-in users with optimized asset loading and interactive login CTA buttons."
+  ],
+  "user_flow_summary": [
+    "User visits landing page; can navigate via CTA buttons or choose to login.",
+    "Upon login via Supabase authentication, user session is established and persisted; user profile info is loaded or defaulted appropriately.",
+    "User navigates to Strategy Builder to create or modify trading strategies; saved strategies are stored locally and managed via app state.",
+    "User runs backtests on strategies; backtest results are displayed with options to review history.",
+    "User monitors real-time trading signals via the Signal Monitor component.",
+    "User accesses Auto Trading panels to execute orders, monitor portfolio, and control automated trading features.",
+    "User uses Market Overview for general market status insights and updates.",
+    "User configures investment parameters in dedicated settings pages affecting trading algorithms.",
+    "Admin users have additional access to admin tabs and routes, controlled by authentication state.",
+    "Application handles navigation and route protection with sync between tab states and browser history."
+  ],
+  "validation_criteria": [
+    "Landing page loads correctly and is responsive across desktop, tablet, and mobile devices.",
+    "LoginDialog opens upon clicking login buttons and successfully authenticates users with Supabase.",
+    "Redux state updates correctly upon authentication events, including loginSuccess and logout actions.",
+    "User sessions persist across page reloads using Supabase session management APIs.",
+    "Routing/navigation responds correctly to tab changes, admin access restrictions, and redirects for invalid routes.",
+    "Strategy Builder saves and loads strategies accurately from localStorage with proper error handling.",
+    "Backtest processes complete successfully with results displayed in the UI.",
+    "Realtime Signal Monitor receives and updates live signals without failure or delay.",
+    "Auto Trading panels reflect accurate real-time data and support order placement and portfolio management.",
+    "Investment settings changes are saved and applied correctly to influence trading behavior.",
+    "Performance Dashboard metrics update accurately based on trading activity.",
+    "Network calls to Supabase and other APIs are monitored for error rates and handled gracefully.",
+    "Landing page and app components avoid unnecessary re-renders to maintain performance standards."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "React",
+      "Vite",
+      "Redux Toolkit",
+      "Material UI",
+      "Supabase",
+      "Lightweight Charts"
+    ],
+    "features": [
+      {
+        "name": "Authentication",
+        "description": "User login and session management using Supabase and Redux.",
+        "files": [
+          "src/contexts/AuthContext.tsx",
+          "src/store/authSlice.ts",
+          "src/services/auth.ts",
+          "src/components/common/LoginDialog.tsx",
+          "src/AppWithRouter.tsx"
+        ]
+      },
+      {
+        "name": "Strategy Builder",
+        "description": "Interface for users to create and manage trading strategies.",
+        "files": [
+          "src/components/StrategyBuilder.tsx"
+        ]
+      },
+      {
+        "name": "Backtesting",
+        "description": "Running backtests on strategies and viewing results.",
+        "files": [
+          "src/components/BacktestRunner.tsx",
+          "src/components/BacktestResults.tsx",
+          "src/components/BacktestResultsList.tsx"
+        ]
+      },
+      {
+        "name": "Realtime Signal Monitor",
+        "description": "Monitoring realtime trading signals.",
+        "files": [
+          "src/components/SignalMonitor.tsx"
+        ]
+      },
+      {
+        "name": "Auto Trading",
+        "description": "Automated trading dashboard and control panels.",
+        "files": [
+          "src/components/trading/AutoTradingPanelV2.tsx",
+          "src/components/trading/OrderPanel.tsx",
+          "src/components/trading/PortfolioPanel.tsx",
+          "src/components/trading/KiwoomTradingPanel.tsx"
+        ]
+      },
+      {
+        "name": "Market Overview",
+        "description": "Dashboard for general market status.",
+        "files": [
+          "src/components/trading/MarketOverview.tsx",
+          "src/components/MarketMonitor.tsx"
+        ]
+      },
+      {
+        "name": "Investment Settings",
+        "description": "Configuration for investment parameters.",
+        "files": [
+          "src/pages/TradingSettings.tsx",
+          "src/components/TradingSettingsWithUniverse.tsx",
+          "src/pages/InvestmentSettings.tsx"
+        ]
+      },
+      {
+        "name": "Performance Dashboard",
+        "description": "Visualizing trading performance metrics.",
+        "files": [
+          "src/components/PerformanceDashboard.tsx",
+          "src/pages/DebugPortfolio.tsx"
+        ]
+      }
+    ]
+  }
+}
