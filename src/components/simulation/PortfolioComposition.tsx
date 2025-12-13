@@ -36,9 +36,9 @@ const PortfolioComposition: React.FC<PortfolioCompositionProps> = ({
     }));
 
     return (
-        <Box sx={{ display: 'flex', gap: 2, height: '100%' }}>
-            {/* Left: Table */}
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
+            {/* Top: Table */}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <TableContainer component={Paper} sx={{ bgcolor: 'transparent', boxShadow: 'none', flex: 1, overflowY: 'auto' }}>
                     <Table size="small" stickyHeader>
                         <TableHead>
@@ -59,9 +59,9 @@ const PortfolioComposition: React.FC<PortfolioCompositionProps> = ({
                             )}
                             {assets.map((row) => (
                                 <TableRow key={row.asset.id} sx={{ '& td': { color: THEME.text, borderBottom: '1px solid ' + THEME.border } }}>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>{row.asset.id}</TableCell>
-                                    <TableCell>{row.asset.name}</TableCell>
-                                    <TableCell align="right">
+                                    <TableCell sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{row.asset.id}</TableCell>
+                                    <TableCell sx={{ fontSize: '0.8rem' }}>{row.asset.name}</TableCell>
+                                    <TableCell align="right" sx={{ fontSize: '0.8rem' }}>
                                         {((row.amount / totalValue) * 100).toFixed(2)}%
                                     </TableCell>
                                     <TableCell align="center">
@@ -75,30 +75,31 @@ const PortfolioComposition: React.FC<PortfolioCompositionProps> = ({
                     </Table>
                 </TableContainer>
 
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                     <Button
                         variant="outlined"
                         startIcon={<Save />}
                         onClick={onSave}
+                        size="small"
                         sx={{ color: THEME.primary, borderColor: THEME.primary }}
                     >
-                        Save Portfolio
+                        Save
                     </Button>
                 </Box>
             </Box>
 
-            {/* Right: Pie Chart */}
-            <Paper sx={{ width: 300, bgcolor: 'transparent', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Bottom: Pie Chart */}
+            <Paper sx={{ height: 250, bgcolor: 'transparent', boxShadow: 'none', borderTop: '1px solid ' + THEME.border, pt: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {assets.length > 0 ? (
-                    <Box sx={{ width: '100%', height: 300 }}>
+                    <Box sx={{ width: '100%', height: '100%' }}>
                         <ResponsiveContainer>
                             <PieChart>
                                 <Pie
                                     data={pieData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
+                                    innerRadius={50}
+                                    outerRadius={70}
                                     paddingAngle={5}
                                     dataKey="value"
                                 >
@@ -113,9 +114,9 @@ const PortfolioComposition: React.FC<PortfolioCompositionProps> = ({
                                 />
                                 <Legend
                                     layout="vertical"
-                                    verticalAlign="bottom"
-                                    align="center"
-                                    wrapperStyle={{ fontSize: '12px', color: THEME.textDim }}
+                                    verticalAlign="middle"
+                                    align="right"
+                                    wrapperStyle={{ fontSize: '11px', color: THEME.textDim }}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
