@@ -241,3 +241,7 @@ export const calculateRetirementPlan = (
         isBankrupt: false
     };
 };
+
+export const formatLargeNumber = (num: number): string => {
+    return `₩ ${Math.round(num).toLocaleString()}`;
+};

@@ -9,14 +9,16 @@ import {
   useTheme,
   Grid
 } from '@mui/material'
-import { ArrowForward, Terminal, AutoGraph, Bolt } from '@mui/icons-material'
+import { ArrowForward, Terminal, AutoGraph, Bolt, Speed } from '@mui/icons-material'
 import VideoPlayerModal from './VideoPlayerModal'
+import { useNavigate } from 'react-router-dom'
 
 interface HeroSectionProps {
   onLoginClick: () => void
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
+  const navigate = useNavigate()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [videoOpen, setVideoOpen] = useState(false)
   const [typedText, setTypedText] = useState('')
@@ -241,6 +243,26 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onLoginClick }) => {
                   }}
                 >
                   ACCESS TERMINAL
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => navigate('/consulting')}
+                  startIcon={<Speed />}
+                  sx={{
+                    borderColor: '#FF4081',
+                    color: '#FF4081',
+                    fontWeight: 700,
+                    px: 4,
+                    py: 1.8,
+                    borderRadius: 0,
+                    '&:hover': {
+                      borderColor: '#FF4081',
+                      bgcolor: alpha('#FF4081', 0.1),
+                    }
+                  }}
+                >
+                  IPC SIMULATION
                 </Button>
                 <Button
                   variant="outlined"

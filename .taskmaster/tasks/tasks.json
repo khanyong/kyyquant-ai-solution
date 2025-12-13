@@ -939,7 +939,9 @@
       "progress": 77,
       "projectName": "KyyQuant AI Solution",
       "description": "React + TypeScript + Vite 기반 자동매매 시스템",
-      "note": "최신 로드맵은 MASTER_ROADMAP.md를 참조하세요"
+      "note": "최신 로드맵은 MASTER_ROADMAP.md를 참조하세요",
+      "created": "2025-12-10T06:39:44.193Z",
+      "updated": "2025-12-10T06:39:44.194Z"
     }
   }
 }

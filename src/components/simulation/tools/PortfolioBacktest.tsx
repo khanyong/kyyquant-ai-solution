@@ -11,11 +11,12 @@ import {
 import AssetSelector from '../AssetSelector';
 import AssetDetailDialog from '../AssetDetailDialog';
 import AllocationDialog from '../AllocationDialog';
-import { AssetProfile, AssetAllocation, calculatePortfolioStats } from '../../../utils/SimulationEngine';
+import { AssetProfile, AssetAllocation, calculatePortfolioStats, formatLargeNumber } from '../../../utils/SimulationEngine';
 import { runBacktest } from '../../../utils/BacktestEngine';
 import PortfolioSettings from '../PortfolioSettings';
 import AnalysisPanel, { NamedResult } from '../AnalysisPanel';
 import PortfolioComposition from '../PortfolioComposition';
+import { Portfolio, SimulationParams } from '../types';
 
 const THEME = {
     bg: '#0B0E14',
@@ -28,30 +29,23 @@ const THEME = {
     border: '#2A2F3A'
 };
 
-interface Portfolio {
-    id: number;
-    name: string;
-    allocations: AssetAllocation[];
+interface PortfolioBacktestProps {
+    portfolios: Portfolio[];
+    setPortfolios: (p: Portfolio[]) => void;
+    activePortfolioId: number;
+    setActivePortfolioId: (id: number) => void;
+    params: SimulationParams;
+    setParams: (p: SimulationParams) => void;
 }
 
-const PortfolioBacktest: React.FC = () => {
-    // --- State: Simulation Params ---
-    const [totalCapital, setTotalCapital] = useState<number>(100000000);
-    const [simYears, setSimYears] = useState(20);
-    const [monthlyContribution, setMonthlyContribution] = useState(1000000);
-    const [rebalanceFreq, setRebalanceFreq] = useState('Annually');
-    const [benchmark, setBenchmark] = useState('SPY');
-
-    // --- State: Portfolios ---
-    const [portfolios, setPortfolios] = useState<Portfolio[]>([
-        { id: 1, name: 'Portfolio 1', allocations: [] }
-    ]);
-    const [activePortfolioId, setActivePortfolioId] = useState(1);
-
+const PortfolioBacktest: React.FC<PortfolioBacktestProps> = ({
+    portfolios, setPortfolios, activePortfolioId, setActivePortfolioId,
+    params, setParams
+}) => {
     // Helpers
     const activePortfolio = portfolios.find(p => p.id === activePortfolioId) || portfolios[0];
     const updateActiveAllocations = (newAllocations: AssetAllocation[]) => {
-        setPortfolios(prev => prev.map(p =>
+        setPortfolios(portfolios.map(p =>
             p.id === activePortfolioId ? { ...p, allocations: newAllocations } : p
         ));
     };
@@ -64,7 +58,7 @@ const PortfolioBacktest: React.FC = () => {
 
     // Derived Stats
     const portfolioStats = calculatePortfolioStats(activePortfolio.allocations);
-    const remainingCash = totalCapital - portfolioStats.totalAmount;
+    const remainingCash = params.totalCapital - portfolioStats.totalAmount;
 
     // --- Logic: Backtest ---
     const comparisonResults: NamedResult[] = portfolios.map(p => ({
@@ -72,10 +66,10 @@ const PortfolioBacktest: React.FC = () => {
         name: p.name,
         result: runBacktest(
             p.allocations,
-            totalCapital,
-            simYears,
-            monthlyContribution,
-            rebalanceFreq !== 'No Rebalancing'
+            params.totalCapital,
+            params.simYears,
+            params.monthlyContribution,
+            params.rebalanceFreq !== 'No Rebalancing'
         )
     }));
 
@@ -106,6 +100,10 @@ const PortfolioBacktest: React.FC = () => {
         setActivePortfolioId(newId);
     };
 
+    const updateParam = (key: keyof SimulationParams, value: any) => {
+        setParams({ ...params, [key]: value });
+    };
+
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* Header / Stats Overlay */}
@@ -118,7 +116,7 @@ const PortfolioBacktest: React.FC = () => {
                         <Box sx={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                             <Box>
                                 <Typography variant="caption" color={THEME.textDim}>Total Capital</Typography>
-                                <Typography variant="h6" fontWeight="bold">₩ {totalCapital.toLocaleString()}</Typography>
+                                <Typography variant="h6" fontWeight="bold">{formatLargeNumber(params.totalCapital)}</Typography>
                             </Box>
                             <Box>
                                 <Typography variant="caption" color={THEME.textDim}>Expected Return</Typography>
@@ -127,7 +125,7 @@ const PortfolioBacktest: React.FC = () => {
                             <Box>
                                 <Typography variant="caption" color={THEME.textDim}>Remaining Cash</Typography>
                                 <Typography variant="h6" fontWeight="bold" color={remainingCash < 0 ? '#ef4444' : THEME.text}>
-                                    {((remainingCash / totalCapital) * 100).toFixed(1)}%
+                                    {((remainingCash / params.totalCapital) * 100).toFixed(1)}%
                                 </Typography>
                             </Box>
                         </Box>
@@ -137,7 +135,7 @@ const PortfolioBacktest: React.FC = () => {
 
             <Grid container spacing={2} sx={{ flex: 1, overflow: 'hidden' }}>
                 {/* 1. Asset Library */}
-                <Grid item xs={12} md={2} sx={{ height: '100%' }}>
+                <Grid item xs={12} md={3} sx={{ height: '100%' }}>
                     <Paper sx={{ height: '100%', bgcolor: THEME.panel, border: '1px solid ' + THEME.border, display: 'flex', flexDirection: 'column' }}>
                         <Box sx={{ p: 1.5, borderBottom: '1px solid ' + THEME.border }}>
                             <TextField
@@ -164,10 +162,10 @@ const PortfolioBacktest: React.FC = () => {
                 <Grid item xs={12} md={5} sx={{ height: '100%' }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 2 }}>
                         <PortfolioSettings
-                            years={simYears} setYears={setSimYears}
-                            monthlyContribution={monthlyContribution} setMonthlyContribution={setMonthlyContribution}
-                            rebalanceFreq={rebalanceFreq} setRebalanceFreq={setRebalanceFreq}
-                            benchmark={benchmark} setBenchmark={setBenchmark}
+                            years={params.simYears} setYears={(v) => updateParam('simYears', v)}
+                            monthlyContribution={params.monthlyContribution} setMonthlyContribution={(v) => updateParam('monthlyContribution', v)}
+                            rebalanceFreq={params.rebalanceFreq} setRebalanceFreq={(v) => updateParam('rebalanceFreq', v)}
+                            benchmark={params.benchmark} setBenchmark={(v) => updateParam('benchmark', v)}
                         />
 
                         <Paper sx={{ flex: 1, bgcolor: THEME.panel, border: '1px solid ' + THEME.border, display: 'flex', flexDirection: 'column' }}>
@@ -190,7 +188,7 @@ const PortfolioBacktest: React.FC = () => {
                             >
                                 <PortfolioComposition
                                     assets={activePortfolio.allocations}
-                                    totalValue={totalCapital}
+                                    totalValue={params.totalCapital}
                                     onRemove={handleRemoveAsset}
                                     onSave={() => alert('Saved')}
                                 />
@@ -200,7 +198,7 @@ const PortfolioBacktest: React.FC = () => {
                 </Grid>
 
                 {/* 3. Analysis */}
-                <Grid item xs={12} md={5} sx={{ height: '100%' }}>
+                <Grid item xs={12} md={4} sx={{ height: '100%' }}>
                     <AnalysisPanel results={comparisonResults} />
                 </Grid>
             </Grid>
@@ -216,3 +214,4 @@ const PortfolioBacktest: React.FC = () => {
 };
 
 export default PortfolioBacktest;
+

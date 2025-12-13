@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Box, Typography, Grid, Paper, CardActionArea } from '@mui/material';
-import { ShowChart, TrendingUp, ScatterPlot, Tune } from '@mui/icons-material';
+import { Box, Paper, Typography, Grid, Card, CardActionArea, Divider } from '@mui/material';
+import { ShowChart, BarChart, TrendingUp, PieChart, ArrowForward, AccessTime } from '@mui/icons-material';
 
 const THEME = {
     bg: '#0B0E14',
@@ -9,95 +9,112 @@ const THEME = {
     text: '#E0E6ED',
     textDim: '#94A1B2',
     primary: '#00D1FF',
+    secondary: '#7F5AF0',
     border: '#2A2F3A'
 };
 
-interface ToolCardProps {
-    title: string;
-    desc: string;
-    icon: React.ReactNode;
-    onClick: () => void;
-}
-
-const ToolCard: React.FC<ToolCardProps> = ({ title, desc, icon, onClick }) => (
-    <Paper
-        sx={{
-            height: '100%',
-            bgcolor: THEME.panel,
-            border: '1px solid ' + THEME.border,
-            transition: '0.2s',
-            '&:hover': { borderColor: THEME.primary, transform: 'translateY(-2px)' }
-        }}
-    >
-        <CardActionArea onClick={onClick} sx={{ height: '100%', p: 3, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
-            <Box sx={{ p: 1, bgcolor: 'rgba(0, 209, 255, 0.1)', borderRadius: 2, mb: 2, color: THEME.primary }}>
-                {icon}
-            </Box>
-            <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: THEME.text }}>
-                {title}
-            </Typography>
-            <Typography variant="body2" sx={{ color: THEME.textDim }}>
-                {desc}
-            </Typography>
-        </CardActionArea>
-    </Paper>
-);
-
 interface IPCHomeProps {
-    onNavigate: (toolId: string) => void;
+    setActiveTool: (tool: string) => void;
 }
 
-const IPCHome: React.FC<IPCHomeProps> = ({ onNavigate }) => {
-    return (
-        <Box sx={{ p: 4, height: '100%', overflowY: 'auto' }}>
-            <Typography variant="h4" fontWeight="bold" sx={{ color: THEME.text, mb: 1 }}>
-                Welcome to IPC Terminal
-            </Typography>
-            <Typography variant="body1" sx={{ color: THEME.textDim, mb: 4 }}>
-                Select a tool to begin your quantitative analysis.
-            </Typography>
+const TOOLS = [
+    {
+        id: 'backtest',
+        title: 'Backtest Portfolio',
+        desc: 'Test portfolio asset allocation based on historical returns.',
+        icon: <ShowChart sx={{ fontSize: 40, color: THEME.primary }} />,
+        tag: 'Most Popular'
+    },
+    {
+        id: 'montecarlo',
+        title: 'Monte Carlo Simulation',
+        desc: 'Run Monte Carlo simulations to test long term expected portfolio growth and survival.',
+        icon: <TrendingUp sx={{ fontSize: 40, color: '#2CB67D' }} />,
+        tag: 'Planning'
+    },
+    {
+        id: 'allocation',
+        title: 'Portfolio Optimization',
+        desc: 'Chart the efficient frontier to explore risk vs. return trade-offs.',
+        icon: <PieChart sx={{ fontSize: 40, color: THEME.secondary }} />,
+        tag: 'Optimization'
+    },
+    {
+        id: 'factor',
+        title: 'Factor Analysis',
+        desc: 'Analyze the sources of risk and return of manager returns.',
+        icon: <BarChart sx={{ fontSize: 40, color: '#FFBB28' }} />,
+        tag: 'Research'
+    }
+];
 
-            <Typography variant="h6" sx={{ color: THEME.primary, mb: 2, fontWeight: 'bold' }}>
-                Simulation & Analysis
-            </Typography>
-            <Grid container spacing={3} sx={{ mb: 5 }}>
-                <Grid item xs={12} sm={6} md={4}>
-                    <ToolCard
-                        title="Backtest Portfolio"
-                        desc="Analyze portfolio asset allocation strategies based on statistical profiles."
-                        icon={<ShowChart fontSize="large" />}
-                        onClick={() => onNavigate('backtest')}
-                    />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                    <ToolCard
-                        title="Monte Carlo Simulation"
-                        desc="Run 10,000+ scenarios to test portfolio survival probabilities."
-                        icon={<TrendingUp fontSize="large" />}
-                        onClick={() => onNavigate('montecarlo')}
-                    />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                    <ToolCard
-                        title="Factor Analysis"
-                        desc="Evaluate exposure to Fama-French factors and risk premiums."
-                        icon={<ScatterPlot fontSize="large" />}
-                        onClick={() => onNavigate('factor')}
-                    />
-                </Grid>
+const IPCHome: React.FC<IPCHomeProps> = ({ setActiveTool }) => {
+    return (
+        <Box sx={{ p: 4, maxWidth: 1200, margin: '0 auto', height: '100%', overflowY: 'auto' }}>
+            {/* Header Section */}
+            <Box sx={{ mb: 6, textAlign: 'center' }}>
+                <Typography variant="h3" fontWeight="900" sx={{ mb: 2, letterSpacing: -1, color: THEME.text }}>
+                    IPC <span style={{ color: THEME.primary }}>Analysis Tools</span>
+                </Typography>
+                <Typography variant="h6" sx={{ color: THEME.textDim, maxWidth: 700, mx: 'auto' }}>
+                    Quantitative investment analysis tools for portfolio construction, backtesting, and risk management. No login required for standard features.
+                </Typography>
+            </Box>
+
+            {/* Tools Grid */}
+            <Grid container spacing={3}>
+                {TOOLS.map((tool) => (
+                    <Grid item xs={12} sm={6} md={6} key={tool.id}>
+                        <Card sx={{ bgcolor: THEME.panel, border: '1px solid ' + THEME.border, borderRadius: 2, height: '100%' }}>
+                            <CardActionArea
+                                onClick={() => setActiveTool(tool.id)}
+                                sx={{ height: '100%', p: 3, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}
+                            >
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', mb: 2 }}>
+                                    {tool.icon}
+                                    <Paper sx={{ px: 1, py: 0.5, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
+                                        <Typography variant="caption" sx={{ color: THEME.textDim, fontWeight: 'bold' }}>
+                                            {tool.tag}
+                                        </Typography>
+                                    </Paper>
+                                </Box>
+                                <Typography variant="h5" fontWeight="bold" sx={{ mb: 1.5, color: THEME.text }}>
+                                    {tool.title}
+                                </Typography>
+                                <Typography variant="body1" sx={{ color: THEME.textDim, mb: 3, flex: 1 }}>
+                                    {tool.desc}
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', color: THEME.primary, gap: 1 }}>
+                                    <Typography variant="button" fontWeight="bold">Open Analysis</Typography>
+                                    <ArrowForward fontSize="small" />
+                                </Box>
+                            </CardActionArea>
+                        </Card>
+                    </Grid>
+                ))}
             </Grid>
 
-            <Typography variant="h6" sx={{ color: THEME.primary, mb: 2, fontWeight: 'bold' }}>
-                Optimization
-            </Typography>
-            <Grid container spacing={3}>
-                <Grid item xs={12} sm={6} md={4}>
-                    <ToolCard
-                        title="Efficient Frontier"
-                        desc="Find the optimal portfolio mix for a given risk level."
-                        icon={<Tune fontSize="large" />}
-                        onClick={() => onNavigate('allocation')}
-                    />
+            <Divider sx={{ my: 6, borderColor: THEME.border }} />
+
+            {/* Quick Links / Footerish */}
+            <Grid container spacing={4}>
+                <Grid item xs={12} md={4}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1 }}>
+                        <AccessTime sx={{ color: THEME.textDim }} />
+                        <Typography variant="h6" fontWeight="bold" color={THEME.text}>Recent Updates</Typography>
+                    </Box>
+                    <Typography variant="body2" color={THEME.textDim}>
+                        Added Factor Analysis tool for deeper risk decomposition.
+                    </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1 }}>
+                        <TrendingUp sx={{ color: THEME.textDim }} />
+                        <Typography variant="h6" fontWeight="bold" color={THEME.text}>Market Data</Typography>
+                    </Box>
+                    <Typography variant="body2" color={THEME.textDim}>
+                        Data updated as of {new Date().toLocaleDateString()}.
+                    </Typography>
                 </Grid>
             </Grid>
         </Box>
