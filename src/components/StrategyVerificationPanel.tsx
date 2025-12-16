@@ -82,7 +82,8 @@ export default function StrategyVerificationPanel() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/strategy/verify-all', {
+            const apiUrl = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${apiUrl}/api/strategy/verify-all`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({})

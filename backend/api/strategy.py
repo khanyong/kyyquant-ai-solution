@@ -123,7 +123,7 @@ async def verify_all_strategies():
         
         # 1. 활성 전략 + 유니버스 조회 (RPC 사용)
         print("[VerifyAll] Calling RPC: get_active_strategies_with_universe")
-        rpc_response = supabase.rpc('get_active_strategies_with_universe').execute()
+        rpc_response = supabase.rpc('get_active_strategies_with_universe', {}).execute()
         print(f"[VerifyAll] RPC Response: {rpc_response}")
         strategies_data = rpc_response.data
         
@@ -234,15 +234,7 @@ async def verify_all_strategies():
                     print(f"[Verify] Error processing {stock_code}: {e}")
                     return None
 
-        # 1. 활성 전략 + 유니버스 조회 (RPC 사용)
-        print("[VerifyAll] Calling RPC: get_active_strategies_with_universe")
-        rpc_response = supabase.rpc('get_active_strategies_with_universe').execute()
-        print(f"[VerifyAll] RPC Response: {rpc_response}")
-        strategies_data = rpc_response.data
-        
-        if not strategies_data:
-            print("[VerifyAll] No strategies data found.")
-            return []
+
             
         # 디버깅: 파일로 데이터 구조 저장
         try:
