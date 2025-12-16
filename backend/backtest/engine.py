@@ -142,6 +142,96 @@ class BacktestEngine:
         # 결과 정리
         return self._prepare_results(results, temp_strategy['id'], start_date, end_date)
 
+    async def evaluate_snapshot(
+        self,
+        stock_code: str,
+        df: pd.DataFrame,
+        strategy_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        단일 시점(현시점)에 대한 매매 신호 평가 (Real-time Evaluation)
+        API에서 호출하여 현재가의 매수/매도 여부를 판단
+        
+        Args:
+            stock_code: 종목 코드
+            df: OHLCV 데이터 (최소 200일 치 권장)
+            strategy_config: 전략 설정
+            
+        Returns:
+            신호 평가 결과 (signal, reason, indicators 등)
+        """
+        if df.empty:
+            return {'signal': 'none', 'reason': 'No data'}
+            
+        # 1. 지표 계산
+        # print(f"[Engine] Calculating indicators for snapshot: {stock_code}")
+        df = await self._calculate_indicators(df, strategy_config, stock_code)
+        
+        # 2. 신호 평가
+        # print(f"[Engine] Evaluating signals for snapshot: {stock_code}")
+        use_stage_based = strategy_config.get('useStageBasedStrategy', False)
+        
+        if use_stage_based:
+            buy_stages = strategy_config.get('buyStageStrategy', {}).get('stages', [])
+            sell_stages = strategy_config.get('sellStageStrategy', {}).get('stages', [])
+            # positions는 snapshot에서는 비어있다고 가정 (신규 진입 평가용)
+            # 보유 중인 경우의 매도 평가는 별도 로직 필요하지만, 일단 신호 자체만 평가
+            df = await self._evaluate_staged_signals(df, buy_stages, sell_stages, {}, stock_code)
+        else:
+            buy_conditions = strategy_config.get('buyConditions', [])
+            sell_conditions = strategy_config.get('sellConditions', [])
+            df = await self._evaluate_signals(df, buy_conditions, sell_conditions, {}, stock_code)
+            
+        # 3. 최신 데이터(마지막 행) 추출
+        last_row = df.iloc[-1]
+        
+        # 결과 구성
+        result = {
+            'stock_code': stock_code,
+            'date': last_row.name.isoformat() if isinstance(last_row.name, (datetime, pd.Timestamp)) else str(last_row.name),
+            'current_price': float(last_row['close']),
+            'signal': 'hold',
+            'action': 'none', # buy, sell, none
+            'reasons': [],
+            'score': 0,
+            'indicators': self._collect_indicators_at_trade(last_row)
+        }
+        
+        # 매수 신호 확인
+        buy_signal = last_row.get('buy_signal')
+        if buy_signal:
+            result['signal'] = 'buy'
+            result['action'] = 'buy'
+            result['score'] = 100
+            
+            if isinstance(buy_signal, dict):
+                result['reasons'].append(buy_signal.get('reason', 'Buy Signal'))
+                result['stage_info'] = buy_signal
+            else:
+                result['reasons'].append(last_row.get('buy_reason', 'Buy Signal'))
+                
+        # 매도 신호 확인 (보유 중이라고 가정하고 체크할 수도 있음)
+        sell_signal = last_row.get('sell_signal')
+        if sell_signal:
+            # 매수보다 매도 신호가 있으면 매도 우선 (보유 중이라면)
+            # 하지만 스냅샷 평가는 주로 진입 여부를 보므로, 매수는 진입, 매도는 '진입 금지' 또는 '청산' 의미
+            if result['signal'] == 'buy':
+                # 매수/매도 동시 발생 시 처리 (보통 매도 우선)
+                result['signal'] = 'conflict'
+                result['reasons'].append("Sell signal also present: " + str(last_row.get('sell_reason', '')))
+            else:
+                result['signal'] = 'sell'
+                result['action'] = 'sell'  # 보유 시 매도
+                
+            if isinstance(sell_signal, dict):
+                result['reasons'].append(sell_signal.get('reason', 'Sell Signal'))
+                result['stage_info'] = sell_signal
+            else:
+                result['reasons'].append(last_row.get('sell_reason', 'Sell Signal'))
+
+        return result
+
+
     async def _load_price_data(
         self,
         stock_codes: List[str],
@@ -1390,3 +1480,153 @@ class BacktestEngine:
         print(f"[Engine] API Response prepared: {final_results['total_trades']} trades, {final_results['total_return_rate']:.2f}% return")
 
         return final_results
+
+    def evaluate_snapshot(self, stock_code: str, df: pd.DataFrame, strategy_config: Dict) -> Dict[str, Any]:
+        """
+        단일 종목에 대해 현재 시점(Snapshot)의 전략 평가 (Verification용)
+        - df: 이미 준비된 DataFrame (최신가 포함)
+        - strategy_config: 전략 설정
+        """
+        try:
+            # 1. 지표 계산
+            if df is None or df.empty:
+                return {'signal': 'hold', 'score': 0, 'reasons': ['No data']}
+                
+            # strategy_config에서 indicators 추출
+            indicators_config = strategy_config.get('indicators', [])
+            
+            # 지표 계산기 호출 (표준 loop 처리)
+            # indicators_config는 List[Dict]이므로 순회하며 계산
+            df_indicators = df.copy()
+            for ind_conf in indicators_config:
+                try:
+                    # calculate returns IndicatorResult(columns={...})
+                    result = self.indicator_calculator.calculate(df, ind_conf)
+                    for col_name, series in result.columns.items():
+                        df_indicators[col_name] = series
+                except Exception as ie:
+                    print(f"[Engine] Indicator calc failed for {ind_conf.get('name')}: {ie}")
+                    
+            # df_indicators는 이제 지표 컬럼이 추가된 DataFrame임
+            
+            # 마지막 행(현재 시점) 추출
+            if df_indicators.empty:
+                 return {'signal': 'hold', 'score': 0, 'reasons': ['Calculation failed']}
+                 
+            last_row = df_indicators.iloc[-1]
+            
+            # 2. 매수/매도 조건 평가
+            buy_conditions = strategy_config.get('buyConditions', [])
+            sell_conditions = strategy_config.get('sellConditions', [])
+            
+            # 매수 점수
+            buy_score = 0
+            buy_satisfied = []
+            if buy_conditions:
+                market_condition = {'conditions': buy_conditions} # 가짜 래퍼
+                # check_market_condition returns (bool, list<str>, float)
+                # 하지만 check_market_condition은 self.strategy_manager에 있음
+                # StrategyManager.check_entry_conditions(row, conditions)
+                
+                
+                # 내부 헬퍼 함수 사용
+                is_buy, satisfied_reasons, score_val = self._check_conditions(last_row, buy_conditions)
+                buy_score = score_val
+                if is_buy:
+                    buy_satisfied = satisfied_reasons
+            
+            # 매도 점수
+            sell_score = 0
+            sell_satisfied = []
+            if sell_conditions:
+                 # 내부 헬퍼 함수 사용
+                 is_sell, satisfied_reasons, _ = self._check_conditions(last_row, sell_conditions)
+                 if is_sell:
+                     sell_satisfied = satisfied_reasons
+                     sell_score = 100 # 매도 조건은 점수가 따로 없으면 True시 100
+            
+            # 3. 결과 판정
+            signal = 'hold'
+            final_reasons = []
+            final_score = 0
+            
+            if sell_satisfied:
+                signal = 'sell'
+                final_reasons = sell_satisfied
+                final_score = sell_score
+            elif buy_satisfied:
+                signal = 'buy'
+                final_reasons = buy_satisfied
+                final_score = buy_score
+                
+            return {
+                'signal': signal,
+                'score': final_score,
+                'reasons': final_reasons,
+                'indicators': last_row.to_dict() # 디버깅용 스냅샷
+            }
+            
+        except Exception as e:
+            print(f"[Engine] Evaluate snapshot failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'signal': 'error', 'score': 0, 'reasons': [str(e)]}
+
+    def _check_conditions(self, row: pd.Series, conditions: List[Dict]) -> Tuple[bool, List[str], float]:
+        """
+        조건 목록 평가 헬퍼
+        """
+        if not conditions:
+            return False, [], 0
+            
+        satisfied_count = 0
+        reasons = []
+        total_score = 0
+        
+        # 모든 조건이 AND로 만족해야 한다고 가정 (또는 전략에 따라 다름)
+        # 여기서는 단순히 하나라도 만족하지 않으면 False 처리 (AND 로직)
+        all_met = True
+        
+        for cond in conditions:
+            indicator_name = cond.get('indicator')
+            operator = cond.get('operator')
+            threshold = cond.get('threshold', cond.get('value')) # threshold or value
+            
+            if not indicator_name or indicator_name not in row:
+                # 지표가 없으면 실패 처리
+                all_met = False
+                break
+                
+            current_val = row[indicator_name]
+            
+            try:
+                threshold = float(threshold)
+                current_val = float(current_val)
+                
+                is_met = False
+                if operator == '>':
+                    is_met = current_val > threshold
+                elif operator == '>=':
+                    is_met = current_val >= threshold
+                elif operator == '<':
+                    is_met = current_val < threshold
+                elif operator == '<=':
+                    is_met = current_val <= threshold
+                elif operator == '==':
+                    is_met = abs(current_val - threshold) < 1e-6
+                
+                if is_met:
+                    satisfied_count += 1
+                    reasons.append(f"{indicator_name} {operator} {threshold} ({current_val:.2f})")
+                else:
+                    all_met = False
+                    # 디버깅용: 실패 이유도 알고 싶다면 여기서 로깅
+                    
+            except Exception:
+                all_met = False
+        
+        # 점수 계산 (단순 개수 or 가중치)
+        # 여기서는 만족한 조건 수 * 10점 등 임의 배정
+        total_score = satisfied_count * 10
+        
+        return all_met, reasons, total_score

@@ -1889,133 +1889,133 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
         }
       ]
     },
+    {
+      id: 31,
+      title: '워크플로우 B: 자동매매 실행 시스템',
+      status: 'done',
+      priority: 'high',
+      icon: <AutoGraph />,
+      period: '2025.11.11',
+      description: 'n8n 워크플로우 B 구축 - 5분마다 실시간 매매 신호 생성 및 주문 실행',
+      subtasks: [
         {
-          id: 31,
-          title: '워크플로우 B: 자동매매 실행 시스템',
-          status: 'done',
-          priority: 'high',
-          icon: <AutoGraph />,
-          period: '2025.11.11',
-          description: 'n8n 워크플로우 B 구축 - 5분마다 실시간 매매 신호 생성 및 주문 실행',
-          subtasks: [
-            {
-              title: '✅ 주문 가격 전략 설계',
-              details: [
-                'best_ask, best_bid, mid_price, market 4가지 전략 설계',
-                'offset 조정 기능 (±원 단위)',
-                'strategies 테이블에 order_price_strategy JSONB 컬럼 추가',
-                'SQL 기본값 설정 (매수=매도1호가+10원, 매도=매수1호가-10원)',
-                '기존 전략에 자동으로 기본값 적용'
-              ]
-            },
-            {
-              title: '✅ OrderPriceStrategySelector 컴포넌트',
-              details: [
-                '매수/매도 가격 기준 선택 UI',
-                'offset 입력 필드',
-                '실시간 가격 예시 표시',
-                '추천 설정 가이드',
-                'Material-UI Paper 기반 디자인'
-              ]
-            },
-            {
-              title: '✅ AddStrategyDialog 통합',
-              details: [
-                '4단계로 주문 가격 전략 선택 추가',
-                '전략 저장 시 order_price_strategy 포함',
-                '선택 요약에 주문 가격 전략 표시',
-                '기본값: 빠른 체결 우선 전략',
-                'Dialog 닫을 때 상태 초기화'
-              ]
-            },
-            {
-              title: '✅ 워크플로우 B JSON 생성 및 디버깅',
-              details: [
-                '12개 노드 구조 설계 (트리거 → 전략조회 → 가격조회 → 신호생성 → 주문실행)',
-                '5분마다 자동 실행 스케줄 설정',
-                'DB 캐시 데이터 활용 (워크플로우 A가 수집한 현재가)',
-                '투자유니버스 필터링 (stock_code 매핑 방식)',
-                'Supabase API URL/키 하드코딩 (n8n 표현식 이슈 해결)',
-                'trading_signals 테이블 스키마 확인 및 컬럼 매핑'
-              ]
-            },
-            {
-              title: '✅ trading_signals 테이블 설정',
-              details: [
-                'current_price, change_rate, volume 컬럼 확인',
-                'signal_strength 사용 (confidence 대신)',
-                'processed 필드 사용 (status 대신)',
-                'RLS 정책 수정 (anon 키 INSERT 허용)',
-                'signal_type CHECK 제약 조건 수정 (buy, sell 허용)',
-                '기존 데이터 TRUNCATE 후 재시작'
-              ]
-            },
-            {
-              title: '✅ 워크플로우 B 신호 생성 성공',
-              details: [
-                '활성 전략 조회 (get_active_strategies_with_universe RPC)',
-                '현재가 데이터 병합 (stock_code 맵핑)',
-                '매수 신호 생성 (3% 이상 하락 시)',
-                'trading_signals 테이블에 신호 저장 완료',
-                'KG스틸, 대우건설, 동양생명 매수 신호 생성 확인',
-                '주문 실행은 장중 테스트 예정 (Rate Limit 이슈)'
-              ]
-            },
-            {
-              title: '✅ 워크플로우 아키텍처 분리',
-              details: [
-                '워크플로우 A: 1시간마다 Kiwoom API 실시간 시세 수집',
-                '워크플로우 B: 5분마다 DB 기반 신호 생성',
-                '전략별 독립 실행 (96개 종목×전략 조합 처리)',
-                '중복 종목도 전략별로 다른 지표로 계산',
-                '2개 워크플로우 동시 active 운영',
-                '키움 토큰 Rate Limit 해결 필요 (장중 테스트 예정)'
-              ]
-            }
+          title: '✅ 주문 가격 전략 설계',
+          details: [
+            'best_ask, best_bid, mid_price, market 4가지 전략 설계',
+            'offset 조정 기능 (±원 단위)',
+            'strategies 테이블에 order_price_strategy JSONB 컬럼 추가',
+            'SQL 기본값 설정 (매수=매도1호가+10원, 매도=매수1호가-10원)',
+            '기존 전략에 자동으로 기본값 적용'
           ]
         },
         {
-          id: 32,
-          title: '자동매매 포트폴리오 통계 및 시그널 UI 개선',
-          status: 'done',
-          priority: 'high',
-          icon: <Dashboard />,
-          period: '2025.11.13',
-          description: '포트폴리오 현황 표시 오류 수정 및 시그널 상세 정보 가시성 향상',
-          subtasks: [
-            {
-              title: '✅ 포트폴리오 통계 표시 오류 수정',
-              details: [
-                'Database 컬럼명 불일치 해결 (status → position_status, avg_price → avg_buy_price)',
-                'AutoTradingPanelV2.tsx의 loadPortfolioStats() 쿼리 수정',
-                'StrategyCard.tsx의 포지션 조회 쿼리 수정',
-                '포트폴리오 요약 카드에 정확한 통계 표시 (총 할당 자금, 투자 중, 평가액, 수익률)',
-                'Console 로깅으로 데이터 흐름 검증'
-              ]
-            },
-            {
-              title: '✅ 전략별 할당 자금 중복 계산 해결',
-              details: [
-                'RPC 함수 get_active_strategies_with_universe가 전략-유니버스 조합마다 행 반환',
-                'Map 자료구조로 전략별 중복 제거 로직 구현',
-                'uniqueStrategies Map으로 전략 ID 기준 중복 필터링',
-                'totalAllocated 정확한 합계 계산',
-                '활성 전략 수 정확한 카운트 (uniqueStrategies.size)'
-              ]
-            },
-            {
-              title: '✅ 매도 시그널 필터링 로직 개선',
-              details: [
-                '보유하지 않은 종목에 대한 매도 시그널 제외',
-                'holdingStockCodes Set 생성 (보유 종목 코드 목록)',
-                '매도 시그널 필터링: 보유 종목만 포함',
-                '매수 시그널은 모든 종목 포함',
-                '의미 없는 매도 예정 종목 표시 제거'
-              ]
-            },
-{
-    title: '✅ 시그널 상세 정보 아코디언 UI 구현',
-        details: [
+          title: '✅ OrderPriceStrategySelector 컴포넌트',
+          details: [
+            '매수/매도 가격 기준 선택 UI',
+            'offset 입력 필드',
+            '실시간 가격 예시 표시',
+            '추천 설정 가이드',
+            'Material-UI Paper 기반 디자인'
+          ]
+        },
+        {
+          title: '✅ AddStrategyDialog 통합',
+          details: [
+            '4단계로 주문 가격 전략 선택 추가',
+            '전략 저장 시 order_price_strategy 포함',
+            '선택 요약에 주문 가격 전략 표시',
+            '기본값: 빠른 체결 우선 전략',
+            'Dialog 닫을 때 상태 초기화'
+          ]
+        },
+        {
+          title: '✅ 워크플로우 B JSON 생성 및 디버깅',
+          details: [
+            '12개 노드 구조 설계 (트리거 → 전략조회 → 가격조회 → 신호생성 → 주문실행)',
+            '5분마다 자동 실행 스케줄 설정',
+            'DB 캐시 데이터 활용 (워크플로우 A가 수집한 현재가)',
+            '투자유니버스 필터링 (stock_code 매핑 방식)',
+            'Supabase API URL/키 하드코딩 (n8n 표현식 이슈 해결)',
+            'trading_signals 테이블 스키마 확인 및 컬럼 매핑'
+          ]
+        },
+        {
+          title: '✅ trading_signals 테이블 설정',
+          details: [
+            'current_price, change_rate, volume 컬럼 확인',
+            'signal_strength 사용 (confidence 대신)',
+            'processed 필드 사용 (status 대신)',
+            'RLS 정책 수정 (anon 키 INSERT 허용)',
+            'signal_type CHECK 제약 조건 수정 (buy, sell 허용)',
+            '기존 데이터 TRUNCATE 후 재시작'
+          ]
+        },
+        {
+          title: '✅ 워크플로우 B 신호 생성 성공',
+          details: [
+            '활성 전략 조회 (get_active_strategies_with_universe RPC)',
+            '현재가 데이터 병합 (stock_code 맵핑)',
+            '매수 신호 생성 (3% 이상 하락 시)',
+            'trading_signals 테이블에 신호 저장 완료',
+            'KG스틸, 대우건설, 동양생명 매수 신호 생성 확인',
+            '주문 실행은 장중 테스트 예정 (Rate Limit 이슈)'
+          ]
+        },
+        {
+          title: '✅ 워크플로우 아키텍처 분리',
+          details: [
+            '워크플로우 A: 1시간마다 Kiwoom API 실시간 시세 수집',
+            '워크플로우 B: 5분마다 DB 기반 신호 생성',
+            '전략별 독립 실행 (96개 종목×전략 조합 처리)',
+            '중복 종목도 전략별로 다른 지표로 계산',
+            '2개 워크플로우 동시 active 운영',
+            '키움 토큰 Rate Limit 해결 필요 (장중 테스트 예정)'
+          ]
+        }
+      ]
+    },
+    {
+      id: 32,
+      title: '자동매매 포트폴리오 통계 및 시그널 UI 개선',
+      status: 'done',
+      priority: 'high',
+      icon: <Dashboard />,
+      period: '2025.11.13',
+      description: '포트폴리오 현황 표시 오류 수정 및 시그널 상세 정보 가시성 향상',
+      subtasks: [
+        {
+          title: '✅ 포트폴리오 통계 표시 오류 수정',
+          details: [
+            'Database 컬럼명 불일치 해결 (status → position_status, avg_price → avg_buy_price)',
+            'AutoTradingPanelV2.tsx의 loadPortfolioStats() 쿼리 수정',
+            'StrategyCard.tsx의 포지션 조회 쿼리 수정',
+            '포트폴리오 요약 카드에 정확한 통계 표시 (총 할당 자금, 투자 중, 평가액, 수익률)',
+            'Console 로깅으로 데이터 흐름 검증'
+          ]
+        },
+        {
+          title: '✅ 전략별 할당 자금 중복 계산 해결',
+          details: [
+            'RPC 함수 get_active_strategies_with_universe가 전략-유니버스 조합마다 행 반환',
+            'Map 자료구조로 전략별 중복 제거 로직 구현',
+            'uniqueStrategies Map으로 전략 ID 기준 중복 필터링',
+            'totalAllocated 정확한 합계 계산',
+            '활성 전략 수 정확한 카운트 (uniqueStrategies.size)'
+          ]
+        },
+        {
+          title: '✅ 매도 시그널 필터링 로직 개선',
+          details: [
+            '보유하지 않은 종목에 대한 매도 시그널 제외',
+            'holdingStockCodes Set 생성 (보유 종목 코드 목록)',
+            '매도 시그널 필터링: 보유 종목만 포함',
+            '매수 시그널은 모든 종목 포함',
+            '의미 없는 매도 예정 종목 표시 제거'
+          ]
+        },
+        {
+          title: '✅ 시그널 상세 정보 아코디언 UI 구현',
+          details: [
             '매수 대기, 보유 중, 매도 예정 칩을 클릭 가능하게 변경',
             'Collapse 컴포넌트로 확장/축소 애니메이션 구현',
             '각 섹션별 최대 5개 종목 표시 (초과 시 "외 N종목" 안내)',
@@ -2023,428 +2023,474 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
             '보유 중: 종목명, 보유 수량, 수익률 표시',
             '매도 예정: 종목명, 현재가, 보유 종목 수익률 표시',
             'showBuySignals, showHoldings, showSellSignals state 관리'
-        ]
-},
-{
-    title: '✅ 사용자 질문 답변 시스템',
-        details: [
+          ]
+        },
+        {
+          title: '✅ 사용자 질문 답변 시스템',
+          details: [
             '매수대기 종목 vs 대기중인 주문 개념 차이 설명',
             '매수대기 종목 = trading_signals 테이블의 시그널 (추천)',
             '대기중인 주문 = 증권사에 실제 주문 넣었으나 미체결',
             '워크플로우: 시그널 생성 → 주문 생성 → 체결 대기 → 포지션',
             'PendingOrdersPanel에서 실제 주문 상태 확인 가능'
-        ]
-}
+          ]
+        }
+      ]
+    },
+    {
+      id: 33,
+      title: '문서화 및 배포',
+      status: 'pending',
+      priority: 'low',
+      icon: <Description />,
+      period: '2026.12 예정',
+      description: '프로젝트 문서화 및 프로덕션 배포',
+      subtasks: [
+        {
+          title: 'API 문서화',
+          details: [
+            'OpenAPI 3.0 스펙 작성',
+            'Swagger UI 통합',
+            'API 예제 코드',
+            'Rate limit 문서화',
+            'WebSocket API 문서'
           ]
         },
-{
-    id: 33,
-        title: '문서화 및 배포',
-            status: 'pending',
-                priority: 'low',
-                    icon: <Description />,
-                        period: '2026.12 예정',
-                            description: '프로젝트 문서화 및 프로덕션 배포',
-                                subtasks: [
-                                    {
-                                        title: 'API 문서화',
-                                        details: [
-                                            'OpenAPI 3.0 스펙 작성',
-                                            'Swagger UI 통합',
-                                            'API 예제 코드',
-                                            'Rate limit 문서화',
-                                            'WebSocket API 문서'
-                                        ]
-                                    },
-                                    {
-                                        title: '사용자 가이드',
-                                        details: [
-                                            '온보딩 튜토리얼',
-                                            '기능별 사용 설명서',
-                                            '비디오 가이드 제작',
-                                            'FAQ 섹션',
-                                            '트러블슈팅 가이드'
-                                        ]
-                                    },
-                                    {
-                                        title: '개발자 문서',
-                                        details: [
-                                            '아키텍처 문서',
-                                            '컴포넌트 문서 (Storybook)',
-                                            '코드 컨벤션 가이드',
-                                            'Git 브랜치 전략',
-                                            'CI/CD 파이프라인 문서'
-                                        ]
-                                    },
-                                    {
-                                        title: 'Vercel 배포',
-                                        details: [
-                                            'Vercel 프로젝트 설정',
-                                            '환경 변수 설정',
-                                            'Custom domain 연결',
-                                            'Preview deployments',
-                                            'Production 배포'
-                                        ]
-                                    },
-                                    {
-                                        title: '모니터링 설정',
-                                        details: [
-                                            'Sentry 에러 트래킹',
-                                            'Google Analytics',
-                                            'Performance monitoring',
-                                            'Uptime monitoring',
-                                            'Log aggregation'
-                                        ]
-                                    }
-                                ]
-},
-{
-    id: 34,
-        title: '다국어 지원 및 UI 개선',
-            status: 'done',
-                priority: 'medium',
-                    icon: <Settings />,
-                        period: '2025.11.30',
-                            description: '글로벌 사용자를 위한 다국어(i18n) 지원 및 포트폴리오 UI 개선',
-                                subtasks: [
-                                    {
-                                        title: '✅ i18n 다국어 시스템 구축',
-                                        details: [
-                                            'react-i18next 라이브러리 도입',
-                                            '한국어(ko)/영어(en) 언어팩 구성',
-                                            'LanguageSwitcher 컴포넌트 구현',
-                                            '주요 메뉴 및 메시지 다국어 적용',
-                                            '브라우저 언어 자동 감지'
-                                        ]
-                                    },
-                                    {
-                                        title: '✅ 포트폴리오 패널 UI 개선',
-                                        details: [
-                                            'PortfolioPanel.tsx 리팩토링',
-                                            '계좌 자산 현황 시각화 개선',
-                                            '반응형 디자인 적용',
-                                            '실시간 데이터 연동 최적화'
-                                        ]
-                                    },
-                                    {
-                                        title: '✅ 전략 카드 UI 개선',
-                                        details: [
-                                            'StrategyCard.tsx 디자인 고도화',
-                                            '전략 상태 표시 직관성 개선',
-                                            '모바일 환경 최적화'
-                                        ]
-                                    }
-                                ]
-},
-{
-    id: 36,
-        title: '백테스트 기간 확장 및 차트 개선',
-            status: 'done',
-                priority: 'medium',
-                    icon: <Assessment />,
-                        period: '2025.12.07',
-                            description: '백테스트 기간 선택 옵션 확장 및 결과 차트 가시성 개선',
-                                subtasks: [
-                                    {
-                                        title: '✅ 백테스트 기간 선택 옵션 확장',
-                                        details: [
-                                            '기존 1년 제한에서 3Y, 5Y, 7Y, 10Y, Max(20년) 옵션 추가',
-                                            '기간 선택 로직 개선 및 Start Date/End Date 자동 계산',
-                                            'UI 버튼 그룹 확장 및 반응형 배치'
-                                        ]
-                                    },
-                                    {
-                                        title: '✅ 차트 시각화 개선',
-                                        details: [
-                                            '결과 차트 X축 날짜 형식 변경 (MM/dd → yyyy-MM-dd)',
-                                            '장기 백테스트 시 연도별 데이터 식별 용이성 확보',
-                                            'ToolTip 날짜 포맷 통일'
-                                        ]
-                                    },
-                                    {
-                                        title: '✅ 빌드 안정성 검증',
-                                        details: [
-                                            'npm run build 성공 (Exit Code 0)',
-                                            '기존 기능 회귀 테스트 완료',
-                                            '생산성/안정성 확보'
-                                        ]
-                                    }
-                                ]
-},
-{
-    id: 35,
-        title: '복수 계좌 지원 시스템 (Multi-Account)',
-            status: 'pending',
-                priority: 'high',
-                    icon: <Security />,
-                        period: '2025.12 예정',
-                            description: '다중 키움증권 계좌 동시 운용 및 관리 시스템 구축',
-                                subtasks: [
-                                    {
-                                        title: '데이터베이스 스키마 확장',
-                                        details: [
-                                            'trading_accounts 테이블 생성',
-                                            '계좌별 API 키/시크릿 안전한 저장',
-                                            '계좌별 설정 및 상태 관리 필드 추가'
-                                        ]
-                                    },
-                                    {
-                                        title: '백엔드 멀티 계정 아키텍처',
-                                        details: [
-                                            'KiwoomClientManager 구현 (다중 세션 관리)',
-                                            '계좌별 독립적인 주문/조회 처리',
-                                            'API 엔드포인트 계좌 파라미터 지원',
-                                            '실시간 시세 분배 로직 최적화'
-                                        ]
-                                    },
-                                    {
-                                        title: '프론트엔드 계좌 관리 UI',
-                                        details: [
-                                            '계좌 선택 및 전환 기능',
-                                            '계좌별 포트폴리오 분리 표시',
-                                            '계좌별 자동매매 전략 할당 UI',
-                                            '통합 자산 현황 대시보드'
-                                        ]
-                                    }
-                                ]
-}
-      ];
+        {
+          title: '사용자 가이드',
+          details: [
+            '온보딩 튜토리얼',
+            '기능별 사용 설명서',
+            '비디오 가이드 제작',
+            'FAQ 섹션',
+            '트러블슈팅 가이드'
+          ]
+        },
+        {
+          title: '개발자 문서',
+          details: [
+            '아키텍처 문서',
+            '컴포넌트 문서 (Storybook)',
+            '코드 컨벤션 가이드',
+            'Git 브랜치 전략',
+            'CI/CD 파이프라인 문서'
+          ]
+        },
+        {
+          title: 'Vercel 배포',
+          details: [
+            'Vercel 프로젝트 설정',
+            '환경 변수 설정',
+            'Custom domain 연결',
+            'Preview deployments',
+            'Production 배포'
+          ]
+        },
+        {
+          title: '모니터링 설정',
+          details: [
+            'Sentry 에러 트래킹',
+            'Google Analytics',
+            'Performance monitoring',
+            'Uptime monitoring',
+            'Log aggregation'
+          ]
+        }
+      ]
+    },
+    {
+      id: 34,
+      title: '다국어 지원 및 UI 개선',
+      status: 'done',
+      priority: 'medium',
+      icon: <Settings />,
+      period: '2025.11.30',
+      description: '글로벌 사용자를 위한 다국어(i18n) 지원 및 포트폴리오 UI 개선',
+      subtasks: [
+        {
+          title: '✅ i18n 다국어 시스템 구축',
+          details: [
+            'react-i18next 라이브러리 도입',
+            '한국어(ko)/영어(en) 언어팩 구성',
+            'LanguageSwitcher 컴포넌트 구현',
+            '주요 메뉴 및 메시지 다국어 적용',
+            '브라우저 언어 자동 감지'
+          ]
+        },
+        {
+          title: '✅ 포트폴리오 패널 UI 개선',
+          details: [
+            'PortfolioPanel.tsx 리팩토링',
+            '계좌 자산 현황 시각화 개선',
+            '반응형 디자인 적용',
+            '실시간 데이터 연동 최적화'
+          ]
+        },
+        {
+          title: '✅ 전략 카드 UI 개선',
+          details: [
+            'StrategyCard.tsx 디자인 고도화',
+            '전략 상태 표시 직관성 개선',
+            '모바일 환경 최적화'
+          ]
+        }
+      ]
+    },
+    {
+      id: 35,
+      title: '복수 계좌 지원 시스템 (Multi-Account)',
+      status: 'pending',
+      priority: 'high',
+      icon: <Security />,
+      period: '2025.12 예정',
+      description: '다중 키움증권 계좌 동시 운용 및 관리 시스템 구축',
+      subtasks: [
+        {
+          title: '데이터베이스 스키마 확장',
+          details: [
+            'trading_accounts 테이블 생성',
+            '계좌별 API 키/시크릿 안전한 저장',
+            '계좌별 설정 및 상태 관리 필드 추가'
+          ]
+        },
+        {
+          title: '백엔드 멀티 계정 아키텍처',
+          details: [
+            'KiwoomClientManager 구현 (다중 세션 관리)',
+            '계좌별 독립적인 주문/조회 처리',
+            'API 엔드포인트 계좌 파라미터 지원',
+            '실시간 시세 분배 로직 최적화'
+          ]
+        },
+        {
+          title: '프론트엔드 계좌 관리 UI',
+          details: [
+            '계좌 선택 및 전환 기능',
+            '계좌별 포트폴리오 분리 표시',
+            '계좌별 자동매매 전략 할당 UI',
+            '통합 자산 현황 대시보드'
+          ]
+        }
+      ]
+    },
+    {
+      id: 36,
+      title: '백테스트 기간 확장 및 차트 개선',
+      status: 'done',
+      priority: 'medium',
+      icon: <Assessment />,
+      period: '2025.12.07',
+      description: '백테스트 기간 선택 옵션 확장 및 결과 차트 가시성 개선',
+      subtasks: [
+        {
+          title: '✅ 백테스트 기간 선택 옵션 확장',
+          details: [
+            '기존 1년 제한에서 3Y, 5Y, 7Y, 10Y, Max(20년) 옵션 추가',
+            '기간 선택 로직 개선 및 Start Date/End Date 자동 계산',
+            'UI 버튼 그룹 확장 및 반응형 배치'
+          ]
+        },
+        {
+          title: '✅ 차트 시각화 개선',
+          details: [
+            '결과 차트 X축 날짜 형식 변경 (MM/dd → yyyy-MM-dd)',
+            '장기 백테스트 시 연도별 데이터 식별 용이성 확보',
+            'ToolTip 날짜 포맷 통일'
+          ]
+        },
+        {
+          title: '✅ 빌드 안정성 검증',
+          details: [
+            'npm run build 성공 (Exit Code 0)',
+            '기존 기능 회귀 테스트 완료',
+            '생산성/안정성 확보'
+          ]
+        }
+      ]
+    },
+    {
+      id: 37,
+      title: 'IPC(은퇴 설계) 컨설팅 솔루션 구축',
+      status: 'done',
+      priority: 'high',
+      icon: <Assignment />,
+      period: '2025.12.14',
+      description: '단순 뱅킹 기능을 제거하고 자산 관리와 생애 재무 설계를 위한 종합 컨설팅 도구로 고도화',
+      subtasks: [
+        {
+          title: '✅ 메뉴 구조 전면 개편',
+          details: [
+            '기존 뱅킹/대출 트랜잭션 메뉴 제거',
+            '자산/부채 관리로 카테고리 재정의',
+            '생애/리스크 설계 카테고리 신설',
+            '사이드바 아이콘 및 레이아웃 최적화'
+          ]
+        },
+        {
+          title: '✅ 자산/부채 관리 도구 개발',
+          details: [
+            'CashAssets: 현금/예적금 관리 시뮬레이션',
+            'RealEstate: 부동산 자산 가치 및 임대 수익 관리',
+            'OtherAssets: 금/코인 등 대체 자산 관리',
+            'DebtManagement: 대출 상환 스케줄 및 현금 흐름 분석'
+          ]
+        },
+        {
+          title: '✅ 생애 재무 설계 도구 개발',
+          details: [
+            'CashFlowAnalysis: 월간 수입/지출 및 잉여 자금 분석',
+            'InsuranceAnalysis: 보험 보장 범위 및 리스크 분석',
+            'LifeGoalPlanning: 생애 주요 이벤트(결혼/주택/교육) 목표 설계'
+          ]
+        },
+        {
+          title: '✅ UI/UX 고도화',
+          details: [
+            '포트폴리오 구성 화면 반응형 레이아웃 개선 (Vertical Layout)',
+            '각 도구별 직관적인 대시보드 UI 적용',
+            '다크 모드 최적화 및 일관된 테마 적용'
+          ]
+        }
+      ]
+    }
+  ];
 
-const completedTasks = tasks.filter(t => t.status === 'done').length
-const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
-const totalTasks = tasks.length
-const progress = 93 // 2025-12-07 기준 진행률 (백테스트 기간 확장 및 차트 개선 완료)
+  const completedTasks = tasks.filter(t => t.status === 'done').length
+  const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
+  const totalTasks = tasks.length
+  const progress = 93 // 2025-12-07 기준 진행률 (백테스트 기간 확장 및 차트 개선 완료)
 
-const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-        case 'done': return <CheckCircle color="success" />
-        case 'in-progress': return <Schedule color="warning" />
-        default: return <Schedule color="disabled" />
+      case 'done': return <CheckCircle color="success" />
+      case 'in-progress': return <Schedule color="warning" />
+      default: return <Schedule color="disabled" />
     }
-}
+  }
 
-const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
-        case 'high': return 'error'
-        case 'medium': return 'warning'
-        case 'low': return 'info'
-        default: return 'default'
+      case 'high': return 'error'
+      case 'medium': return 'warning'
+      case 'low': return 'info'
+      default: return 'default'
     }
-}
+  }
 
-const activeStep = tasks.findIndex(task => task.status === 'in-progress')
+  const activeStep = tasks.findIndex(task => task.status === 'in-progress')
 
-return (
+  return (
     <Dialog
-        open={open}
-        onClose={onClose}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-            sx: {
-                maxHeight: '95vh',
-                height: '95vh'
-            }
-        }}
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: '95vh',
+          height: '95vh'
+        }
+      }}
     >
-        <DialogTitle>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h5">
-                    🚀 KyyQuant AI Solution 개발 로드맵
-                </Typography>
-                <IconButton onClick={onClose} size="small">
-                    <Close />
-                </IconButton>
-            </Box>
-            <Alert severity="info" sx={{ mt: 2 }}>
-                📌 최신 상세 로드맵은 프로젝트 루트의 <strong>MASTER_ROADMAP.md</strong> 파일을 참조하세요
-            </Alert>
-        </DialogTitle>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h5">
+            🚀 KyyQuant AI Solution 개발 로드맵
+          </Typography>
+          <IconButton onClick={onClose} size="small">
+            <Close />
+          </IconButton>
+        </Box>
+        <Alert severity="info" sx={{ mt: 2 }}>
+          📌 최신 상세 로드맵은 프로젝트 루트의 <strong>MASTER_ROADMAP.md</strong> 파일을 참조하세요
+        </Alert>
+      </DialogTitle>
 
-        <DialogContent dividers>
-            {/* 전체 진행률 */}
-            <Paper sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                    <Typography variant="h6" fontWeight="bold">전체 프로젝트 진행률</Typography>
-                    <Typography variant="h4" color="primary" fontWeight="bold">
-                        {progress.toFixed(1)}%
-                    </Typography>
-                </Stack>
-                <LinearProgress
-                    variant="determinate"
-                    value={progress}
-                    sx={{ height: 12, borderRadius: 6 }}
-                />
-                <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                    <Chip label={`총 ${totalTasks}개 작업`} size="medium" />
-                    <Chip label={`완료: ${completedTasks}개`} color="success" size="medium" />
-                    <Chip label={`진행중: ${inProgressTasks}개`} color="warning" size="medium" />
-                    <Chip label={`대기: ${totalTasks - completedTasks - inProgressTasks}개`} size="medium" />
-                </Stack>
-            </Paper>
-
-            {/* 현재 진행 상황 알림 */}
-            {tasks.filter(t => t.status === 'in-progress').length > 0 && (
-                <Alert severity="info" sx={{ mb: 3 }}>
-                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                        💡 현재 진행 중인 작업
-                    </Typography>
-                    <Stack spacing={1} sx={{ mt: 1 }}>
-                        {tasks.filter(t => t.status === 'in-progress').map(task => (
-                            <Box key={task.id}>
-                                <Typography variant="body1" fontWeight="500">
-                                    • Task #{task.id}: {task.title}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-                                    {task.description}
-                                </Typography>
-                            </Box>
-                        ))}
-                    </Stack>
-                </Alert>
-            )}
-
-            {/* 작업 목록 */}
-            <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                📊 상세 개발 일정
+      <DialogContent dividers>
+        {/* 전체 진행률 */}
+        <Paper sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+            <Typography variant="h6" fontWeight="bold">전체 프로젝트 진행률</Typography>
+            <Typography variant="h4" color="primary" fontWeight="bold">
+              {progress.toFixed(1)}%
             </Typography>
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{ height: 12, borderRadius: 6 }}
+          />
+          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+            <Chip label={`총 ${totalTasks}개 작업`} size="medium" />
+            <Chip label={`완료: ${completedTasks}개`} color="success" size="medium" />
+            <Chip label={`진행중: ${inProgressTasks}개`} color="warning" size="medium" />
+            <Chip label={`대기: ${totalTasks - completedTasks - inProgressTasks}개`} size="medium" />
+          </Stack>
+        </Paper>
 
-            {tasks.map((task, index) => (
-                <Accordion key={task.id} defaultExpanded={task.status === 'in-progress'}>
-                    <AccordionSummary expandIcon={<ExpandMore />}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                {getStatusIcon(task.status)}
-                                {task.icon}
-                            </Box>
-                            <Box sx={{ flexGrow: 1 }}>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography variant="subtitle1" fontWeight="bold">
-                                        #{task.id} {task.title}
-                                    </Typography>
-                                    <Chip
-                                        label={task.priority === 'high' ? '높음' :
-                                            task.priority === 'medium' ? '중간' : '낮음'}
-                                        size="small"
-                                        color={getPriorityColor(task.priority) as any}
-                                    />
-                                    {task.status === 'done' && (
-                                        <Chip label="완료" size="small" color="success" />
-                                    )}
-                                    {task.status === 'in-progress' && (
-                                        <Chip label="진행중" size="small" color="warning" />
-                                    )}
-                                    {task.status === 'pending' && (
-                                        <Chip label="대기" size="small" />
-                                    )}
-                                </Stack>
-                                <Typography variant="body2" color="text.secondary">
-                                    {task.period} | {task.description}
-                                </Typography>
-                            </Box>
-                        </Box>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Stack spacing={3}>
-                            {task.subtasks.map((subtask, idx) => (
-                                <Box key={idx}>
-                                    <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                                        {subtask.title}
-                                    </Typography>
-                                    {'details' in subtask && (
-                                        <List dense sx={{ ml: 2 }}>
-                                            {(subtask as any).details.map((detail: string, didx: number) => (
-                                                <ListItem key={didx} sx={{ py: 0.5 }}>
-                                                    <ListItemText
-                                                        primary={`• ${detail}`}
-                                                        primaryTypographyProps={{
-                                                            variant: 'body2',
-                                                            color: task.status === 'done' ? 'text.secondary' : 'text.primary'
-                                                        }}
-                                                    />
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    )}
-                                </Box>
-                            ))}
-                        </Stack>
-                    </AccordionDetails>
-                </Accordion>
-            ))}
+        {/* 현재 진행 상황 알림 */}
+        {tasks.filter(t => t.status === 'in-progress').length > 0 && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              💡 현재 진행 중인 작업
+            </Typography>
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              {tasks.filter(t => t.status === 'in-progress').map(task => (
+                <Box key={task.id}>
+                  <Typography variant="body1" fontWeight="500">
+                    • Task #{task.id}: {task.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                    {task.description}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Alert>
+        )}
 
-            <Divider sx={{ my: 4 }} />
+        {/* 작업 목록 */}
+        <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+          📊 상세 개발 일정
+        </Typography>
 
-            {/* 기술 스택 */}
-            <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
-                <Typography variant="h6" gutterBottom>
-                    🛠️ 기술 스택
-                </Typography>
-                <Stack spacing={3}>
-                    <Box>
-                        <Typography variant="subtitle1" fontWeight="bold" color="primary" gutterBottom>
-                            Frontend
-                        </Typography>
-                        <Stack direction="row" flexWrap="wrap" gap={1}>
-                            <Chip label="React 18.2" size="small" />
-                            <Chip label="TypeScript 5.0" size="small" />
-                            <Chip label="Vite 4.5" size="small" />
-                            <Chip label="Material-UI v5.14" size="small" />
-                            <Chip label="Redux Toolkit 1.9" size="small" />
-                            <Chip label="React Router v6" size="small" />
-                            <Chip label="Chart.js 4.4" size="small" />
-                            <Chip label="Axios" size="small" />
-                            <Chip label="date-fns" size="small" />
-                        </Stack>
-                    </Box>
+        {tasks.map((task, index) => (
+          <Accordion key={task.id} defaultExpanded={task.status === 'in-progress'}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {getStatusIcon(task.status)}
+                  {task.icon}
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      #{task.id} {task.title}
+                    </Typography>
+                    <Chip
+                      label={task.priority === 'high' ? '높음' :
+                        task.priority === 'medium' ? '중간' : '낮음'}
+                      size="small"
+                      color={getPriorityColor(task.priority) as any}
+                    />
+                    {task.status === 'done' && (
+                      <Chip label="완료" size="small" color="success" />
+                    )}
+                    {task.status === 'in-progress' && (
+                      <Chip label="진행중" size="small" color="warning" />
+                    )}
+                    {task.status === 'pending' && (
+                      <Chip label="대기" size="small" />
+                    )}
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary">
+                    {task.period} | {task.description}
+                  </Typography>
+                </Box>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Stack spacing={3}>
+                {task.subtasks.map((subtask, idx) => (
+                  <Box key={idx}>
+                    <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                      {subtask.title}
+                    </Typography>
+                    {'details' in subtask && (
+                      <List dense sx={{ ml: 2 }}>
+                        {(subtask as any).details.map((detail: string, didx: number) => (
+                          <ListItem key={didx} sx={{ py: 0.5 }}>
+                            <ListItemText
+                              primary={`• ${detail}`}
+                              primaryTypographyProps={{
+                                variant: 'body2',
+                                color: task.status === 'done' ? 'text.secondary' : 'text.primary'
+                              }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
+        ))}
 
-                    <Box>
-                        <Typography variant="subtitle1" fontWeight="bold" color="success.main" gutterBottom>
-                            Backend & Database
-                        </Typography>
-                        <Stack direction="row" flexWrap="wrap" gap={1}>
-                            <Chip label="Supabase" size="small" color="success" />
-                            <Chip label="PostgreSQL 15" size="small" color="success" />
-                            <Chip label="Supabase Auth" size="small" color="success" />
-                            <Chip label="Supabase Realtime" size="small" color="success" />
-                            <Chip label="Row Level Security" size="small" color="success" />
-                            <Chip label="PostgREST" size="small" color="success" />
-                        </Stack>
-                    </Box>
 
-                    <Box>
-                        <Typography variant="subtitle1" fontWeight="bold" color="warning.main" gutterBottom>
-                            Algorithm & Trading
-                        </Typography>
-                        <Stack direction="row" flexWrap="wrap" gap={1}>
-                            <Chip label="Technical Analysis" size="small" color="warning" />
-                            <Chip label="Kiwoom OpenAPI" size="small" color="warning" />
-                            <Chip label="KOA Studio" size="small" color="warning" />
-                            <Chip label="FastAPI (Python)" size="small" color="warning" />
-                        </Stack>
-                    </Box>
+        <Divider sx={{ my: 4 }} />
 
-                    <Box>
-                        <Typography variant="subtitle1" fontWeight="bold" color="info.main" gutterBottom>
-                            Infrastructure
-                        </Typography>
-                        <Stack direction="row" flexWrap="wrap" gap={1}>
-                            <Chip label="Synology NAS (Docker)" size="small" color="info" />
-                            <Chip label="GitHub Actions" size="small" color="info" />
-                            <Chip label="Vercel" size="small" color="info" />
-                            <Chip label="Google Analytics" size="small" color="info" />
-                        </Stack>
-                    </Box>
-                </Stack>
-            </Paper>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-            <Button onClick={onClose} variant="contained" size="large">
-                닫기
-            </Button>
-        </DialogActions>
+        {/* 기술 스택 */}
+        <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+          <Typography variant="h6" gutterBottom>
+            🛠️ 기술 스택
+          </Typography>
+          <Stack spacing={3}>
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold" color="primary" gutterBottom>
+                Frontend
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                <Chip label="React 18.2" size="small" />
+                <Chip label="TypeScript 5.0" size="small" />
+                <Chip label="Vite 4.5" size="small" />
+                <Chip label="Material-UI v5.14" size="small" />
+                <Chip label="Redux Toolkit 1.9" size="small" />
+                <Chip label="React Router v6" size="small" />
+                <Chip label="Chart.js 4.4" size="small" />
+                <Chip label="Axios" size="small" />
+                <Chip label="date-fns" size="small" />
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold" color="success.main" gutterBottom>
+                Backend & Database
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                <Chip label="Supabase" size="small" color="success" />
+                <Chip label="PostgreSQL 15" size="small" color="success" />
+                <Chip label="Supabase Auth" size="small" color="success" />
+                <Chip label="Supabase Realtime" size="small" color="success" />
+                <Chip label="Row Level Security" size="small" color="success" />
+                <Chip label="PostgREST" size="small" color="success" />
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold" color="warning.main" gutterBottom>
+                Algorithm & Trading
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                <Chip label="Technical Analysis" size="small" color="warning" />
+                <Chip label="Kiwoom OpenAPI" size="small" color="warning" />
+                <Chip label="KOA Studio" size="small" color="warning" />
+                <Chip label="FastAPI (Python)" size="small" color="warning" />
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold" color="info.main" gutterBottom>
+                Infrastructure
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                <Chip label="Synology NAS (Docker)" size="small" color="info" />
+                <Chip label="GitHub Actions" size="small" color="info" />
+                <Chip label="Vercel" size="small" color="info" />
+                <Chip label="Google Analytics" size="small" color="info" />
+              </Stack>
+            </Box>
+          </Stack>
+        </Paper>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onClose} variant="contained" size="large">
+          닫기
+        </Button>
+      </DialogActions>
     </Dialog>
-)
-    }
+  )
+}
 
 export default RoadmapDialog

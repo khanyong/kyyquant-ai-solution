@@ -59,6 +59,9 @@ def main():
         try:
             print(f"\n[{i}/{total_stocks}] {stock_code} 처리 중...")
             
+            # Rate limiting
+            time.sleep(0.5)
+            
             # Pagination Logic
             # 목표: 약 3년치 (약 1200거래일)
             # 1회 최대 600일이므로 3번 반복 (600 + 600 + X)

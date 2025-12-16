@@ -18,6 +18,7 @@ import StrategyCard from './StrategyCard'
 import PendingOrdersPanel from './PendingOrdersPanel'
 import AddStrategyDialog from './AddStrategyDialog'
 import EditStrategyDialog from './EditStrategyDialog'
+import StrategyVerificationPanel from '../StrategyVerificationPanel'
 
 interface ActiveStrategy {
   strategy_id: string
@@ -387,6 +388,9 @@ export default function AutoTradingPanelV2() {
           </Stack>
         )}
       </Box>
+
+      {/* 전략 검증 패널 (전체 종목 스캔) */}
+      <StrategyVerificationPanel />
 
       {/* 새 자동매매 시작 */}
       <Box sx={{ mb: 3 }}>

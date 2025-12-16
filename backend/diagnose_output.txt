@@ -1,0 +1,124 @@
+============================================================
+DIAGNOSING STRATEGY, CONDITIONS, AND DATA
+============================================================
+
+[1] Active Strategy Logic
+Strategy: kyy_short_term_v01 (ID: f72eab97-ef68-4723-b49f-1e731554a576)
+Buy Conditions:
+{
+  "buy": [
+    {
+      "id": "ind_1765761647367",
+      "left": "close",
+      "type": "buy",
+      "right": "ichimoku_cloud_top",
+      "value": "",
+      "operator": ">",
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1765761659376",
+      "left": "ichimoku_senkou_a",
+      "type": "buy",
+      "right": "ichimoku_senkou_b",
+      "value": "",
+      "operator": ">",
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1765761738724",
+      "left": "close",
+      "type": "buy",
+      "right": 30,
+      "value": 30,
+      "operator": "sar_below_price",
+      "combineWith": "AND"
+    },
+    {
+      "id": "ind_1765761774841",
+      "left": "close",
+      "type": "buy",
+      "right": "",
+      "value": "",
+      "operator": "stoch_k_above_d",
+      "combineWith": "AND"
+    }
+  ]
+}
+Universe Size: 275
+
+[2] Data Check for Sample Stock: 103140
+Found 3 recent records.
+ - Date: 2025-10-27 | Close: 120000.0 | Vol: 259285
+ - Date: 2025-10-24 | Close: 119800.0 | Vol: 228574
+ - Date: 2025-10-23 | Close: 119000.0 | Vol: 209142
+
+[3] Debug Indicators for Monitored Stocks (Score 0)
+Stock: 100250 | Score: 0.0
+Row Keys: ['id', 'strategy_id', 'stock_code', 'stock_name', 'current_price', 'condition_match_score', 'conditions_met', 'is_near_entry', 'created_at', 'updated_at', 'exit_condition_match_score', 'exit_conditions_met', 'is_near_exit', 'is_held']
+Conditions Met: {
+  "condition_0": {
+    "met": true,
+    "field": "close",
+    "current": "3265.00 > 0.00",
+    "progress": "0.00",
+    "required": "close > ichimoku_cloud_top"
+  },
+  "condition_1": {
+    "met": false,
+    "field": "ichimoku_senkou_a",
+    "current": "0.00 > 0.00",
+    "progress": "0.00",
+    "required": "ichimoku_senkou_a > ichimoku_senkou_b"
+  },
+  "condition_2": {
+    "met": false,
+    "field": "close",
+    "current": "3265.00 sar_below_price 30.00",
+    "progress": "0.00",
+    "required": "close sar_below_price 30"
+  },
+  "condition_3": {
+    "met": false,
+    "field": "close",
+    "current": "3265.00 stoch_k_above_d 0.00",
+    "progress": "0.00",
+    "required": "close stoch_k_above_d "
+  }
+}
+Stock: 108320 | Score: 0.0
+Row Keys: ['id', 'strategy_id', 'stock_code', 'stock_name', 'current_price', 'condition_match_score', 'conditions_met', 'is_near_entry', 'created_at', 'updated_at', 'exit_condition_match_score', 'exit_conditions_met', 'is_near_exit', 'is_held']
+Conditions Met: {
+  "condition_0": {
+    "met": false,
+    "field": "close",
+    "current": "58700.00 < 20.00",
+    "progress": "0.00",
+    "required": "close < 20"
+  },
+  "condition_1": {
+    "met": false,
+    "field": "close",
+    "current": "58700.00 < 12.00",
+    "progress": "0.00",
+    "required": "close < 12"
+  }
+}
+Stock: 101530 | Score: 0.0
+Row Keys: ['id', 'strategy_id', 'stock_code', 'stock_name', 'current_price', 'condition_match_score', 'conditions_met', 'is_near_entry', 'created_at', 'updated_at', 'exit_condition_match_score', 'exit_conditions_met', 'is_near_exit', 'is_held']
+Conditions Met: {
+  "condition_0": {
+    "met": false,
+    "field": "close",
+    "current": "6870.00 < 20.00",
+    "progress": "0.00",
+    "required": "close < 20"
+  },
+  "condition_1": {
+    "met": false,
+    "field": "close",
+    "current": "6870.00 < 12.00",
+    "progress": "0.00",
+    "required": "close < 12"
+  }
+}

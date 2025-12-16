@@ -1,0 +1,21 @@
+============================================================
+TRADING PIPELINE VERIFICATION REPORT
+============================================================
+Time: 2025-12-15 16:24:55
+
+[1] Strategy Monitoring Status
+   - Total Monitored Stocks: 3
+   - Stocks with Positive Score: 0
+   - Details of Monitored Stocks:
+     * 100250 (100250): Score 0.0 | Updated: 2025-12-15T06:50:59.949098+00:00
+     * LX세미콘 (108320): Score 0.0 | Updated: 2025-12-03T01:22:08.069962+00:00
+     * 해태제과식품 (101530): Score 0.0 | Updated: 2025-12-15T01:20:15.498959+00:00
+
+[2] Recent Trading Signals (Last 24h)
+   - No signals generated in the last 24 hours.
+
+[3] Recent Orders (Last 24h)
+   - No orders created in the last 24 hours.
+
+[4] Testing RPC: get_buy_candidates
+   - RPC returned NO candidates.
