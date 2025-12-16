@@ -2252,13 +2252,51 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         }
       ]
+    },
+    {
+      id: 38,
+      title: '전략 검증 시스템 및 배포 최적화',
+      status: 'done',
+      priority: 'high',
+      icon: <BugReport />,
+      period: '2025.12.17',
+      description: '전략 유효성 검증 시스템 구축 및 운영 환경 배포 안정화',
+      subtasks: [
+        {
+          title: '✅ 전략 검증 백엔드 구축',
+          details: [
+            'API: POST /api/strategy/verify-all 구현',
+            'Engine: BacktestEngine 조건 검증 로직 분리',
+            'Performance: Asyncio 기반 병렬 처리로 속도 개선',
+            'Fix: Supabase RPC 파라미터 호환성 문제 해결 (500 Error)'
+          ]
+        },
+        {
+          title: '✅ 검증 UI/UX 개발',
+          details: [
+            'Panel: StrategyVerificationPanel 컴포넌트 개발',
+            'UI: 전략별 카드 뷰 및 JSON 상세 보기 다이얼로그',
+            'UX: 다크 모드 가독성 최적화 및 로딩 피드백',
+            'Fix: Vercel 배포 환경 절대 경로 API 설정 (404 Error)'
+          ]
+        },
+        {
+          title: '✅ 크로스 플랫폼 배포 안정화',
+          details: [
+            'NAS: Docker 컨테이너 환경 변수 및 볼륨 마운트 검증',
+            'Vercel: Production 환경 프록시 설정 최적화',
+            'Monitor: main.py 내장 Import 에러 진단 기능 추가',
+            'Test: cURL 및 브라우저 통합 테스트 완수'
+          ]
+        }
+      ]
     }
   ];
 
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 93 // 2025-12-07 기준 진행률 (백테스트 기간 확장 및 차트 개선 완료)
+  const progress = 96 // 2025-12-17 기준 진행률 (전략 검증 시스템 및 배포 최적화 완료)
 
   const getStatusIcon = (status: string) => {
     switch (status) {
