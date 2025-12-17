@@ -529,6 +529,93 @@ class KiwoomAPIClient:
             }
 
 
+            print(f"[KiwoomAPI] Unexpected error: {e}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+
+    def cancel_order(self, stock_code: str, order_no: str, quantity: int = 0) -> Optional[Dict[str, Any]]:
+        """
+        주문 취소
+
+        Args:
+            stock_code: 종목코드
+            order_no: 원 주문번호
+            quantity: 취소 수량 (0이면 전량 취소)
+
+        Returns:
+            {
+                'status': 'success',
+                'message': '취소 주문 완료'
+            }
+        """
+        try:
+            token = self._get_access_token()
+            
+            # 모의투자/실전투자 구분
+            tr_id = "VTTC0803U" if self.is_demo else "TTTC0803U"  # 주식 현금 취소 주문
+
+            url = f"{self.base_url}/uapi/domestic-stock/v1/trading/order-rvsecncl"
+            headers = {
+                "Content-Type": "application/json;charset=UTF-8",
+                "authorization": f"Bearer {token}",
+                "appkey": self.app_key,
+                "appsecret": self.app_secret,
+                "tr_id": tr_id
+            }
+
+            # 주문번호 파싱 (앞자리가 있으면 KRX_FWDG_ORD_ORGNO, 뒷자리가 ODNO)
+            # KIS API는 OrgNo(5자리/10자리?) + OrderNo 로 구분될 수 있는데
+            # 보통 주문번호 전체를 ORGN_ODNO에 넣으면 됨 (단, 시스템에 따라 다름)
+            # 여기서는 전달받은 order_no를 그대로 ORGN_ODNO에 사용
+            
+            body = {
+                "CANO": self.account_no.split('-')[0] if '-' in self.account_no else self.account_no[:8],
+                "ACNT_PRDT_CD": self.account_no.split('-')[1] if '-' in self.account_no else self.account_no[8:],
+                "KRX_FWDG_ORD_ORGNO": "",   # 거래소전송주문조직번호 (필수는 아님, 빈값 가능)
+                "ORGN_ODNO": order_no,      # 원주문번호
+                "ORD_DVSN": "00",           # 주문구분 (00:지정가)
+                "RVSE_CNCL_DVSN_CD": "02",  # 정정취소구분코드 (01:정정, 02:취소)
+                "ORD_QTY": str(quantity) if quantity > 0 else "0", # 주문수량 (0이면 전량)
+                "ORD_UNPR": "0",            # 주문단가 (취소는 0)
+                "QTY_ALL_ORD_YN": "Y" if quantity == 0 else "N" # 잔량전부주문여부
+            }
+
+            response = requests.post(url, headers=headers, json=body, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+
+            if data.get('rt_cd') != '0':
+                error_msg = data.get('msg1', 'Unknown error')
+                print(f"[KiwoomAPI] Cancel failed: {error_msg}")
+                return {
+                    'status': 'error',
+                    'message': error_msg
+                }
+
+            print(f"[KiwoomAPI] 주문 취소 완료: {stock_code} (원주문: {order_no})")
+
+            return {
+                'status': 'success',
+                'message': data.get('msg1', '주문 취소가 접수되었습니다'),
+                'timestamp': datetime.now().isoformat()
+            }
+
+        except requests.exceptions.RequestException as e:
+            print(f"[KiwoomAPI] HTTP request failed: {e}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+        except Exception as e:
+            print(f"[KiwoomAPI] Unexpected error: {e}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+
 # 싱글톤 인스턴스
 _kiwoom_client = None
 

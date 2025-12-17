@@ -205,6 +205,47 @@ async def market_sell(stock_code: str, quantity: int):
     return await sell_stock(request)
 
 
+class CancelOrderRequest(BaseModel):
+    """주문 취소 요청"""
+    stock_code: str = Field(..., description="종목코드")
+    order_no: str = Field(..., description="원 주문번호")
+    quantity: int = Field(0, description="취소 수량 (0이면 전량 취소)")
+
+
+@router.post("/cancel")
+async def cancel_order_endpoint(request: CancelOrderRequest):
+    """
+    주문 취소
+    
+    Args:
+        request: 취소 요청 정보 (종목코드, 주문번호, 수량)
+    
+    Returns:
+        취소 결과
+    """
+    try:
+        kiwoom_client = get_kiwoom_client()
+        
+        result = kiwoom_client.cancel_order(
+            stock_code=request.stock_code,
+            order_no=request.order_no,
+            quantity=request.quantity
+        )
+        
+        if not result or result['status'] == 'error':
+             raise HTTPException(
+                status_code=400, 
+                detail=result['message'] if result else "취소 요청 실패"
+            )
+            
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"주문 취소 오류: {str(e)}")
+
+
 @router.get("/test")
 async def test_order_api():
     """
