@@ -142,8 +142,9 @@ async def verify_all_strategies():
         
         engine = BacktestEngine()
         
-        # 동시성 제어 (Supabase 연결 제한 고려)
-        sem = asyncio.Semaphore(50)  # 동시에 50개까지만 처리
+        # 동시성 제어 (Supabase 연결 제한 고려: 50 -> 20으로 감소)
+        # 너무 많은 동시 연결은 DB Pool 고갈을 유발할 수 있음 (총 550개 쿼리 발생)
+        sem = asyncio.Semaphore(20)
 
         async def process_single_stock(stock_code: str, strategy_name: str, strategy_config: dict) -> Optional[StrategyVerificationResult]:
             async with sem:
@@ -200,8 +201,8 @@ async def verify_all_strategies():
                         else:
                             return None
                             
-                    # 엔진 평가 (Sync -> Thread Offload)
-                    eval_result = await asyncio.to_thread(engine.evaluate_snapshot, stock_code, df, strategy_config)
+                    # 엔진 평가 (Async)
+                    eval_result = await engine.evaluate_snapshot(stock_code, df, strategy_config)
                     
                     # 결과 포맷팅 (Safety Checks)
                     score = eval_result.get('score', 0)
@@ -228,12 +229,9 @@ async def verify_all_strategies():
                             'indicators': _sanitize_for_json(eval_result.get('indicators', {}))
                         }
                     )
-                    # print(f"[Verify] Processed {stock_code}") # Too noisy for 275 items, maybe print every 10?
-                    return result
                 except Exception as e:
                     print(f"[Verify] Error processing {stock_code}: {e}")
                     return None
-
 
             
         # 디버깅: 파일로 데이터 구조 저장
@@ -306,7 +304,7 @@ async def verify_all_strategies():
         # 병렬 실행
         if tasks:
             results_raw = await asyncio.gather(*tasks)
-            # None 제외
+            # None 제외 (타임아웃 등 고려)
             results = [r for r in results_raw if r is not None]
         
         print(f"[VerifyAll] Completed. Total results: {len(results)}")
@@ -412,6 +410,22 @@ async def check_strategy_signal(request: StrategySignalRequest):
                         detail=f"실시간 시세 조회 실패 및 DB 데이터 부재 (종목: {request.stock_code})"
                     )
             
+        # Ensure stock name is present (for N8N / Reporting)
+        if not stock_name:
+            try:
+                # 1. Try kw_stock_master
+                name_resp = supabase.table('kw_stock_master').select('stock_name').eq('stock_code', request.stock_code).execute()
+                if name_resp.data and len(name_resp.data) > 0:
+                    stock_name = name_resp.data[0].get('stock_name')
+                
+                # 2. Try kw_price_current as fallback
+                if not stock_name:
+                    price_resp = supabase.table('kw_price_current').select('stock_name').eq('stock_code', request.stock_code).execute()
+                    if price_resp.data and len(price_resp.data) > 0:
+                        stock_name = price_resp.data[0].get('stock_name')
+            except Exception as e:
+                print(f"[Strategy] 종목명 조회 실패: {e}")
+
         # 최신 데이터 행 추가 (Real-time Evaluation용)
         # 마지막 데이터 날짜 확인
         last_date = df.index[-1]
@@ -457,6 +471,33 @@ async def check_strategy_signal(request: StrategySignalRequest):
         if signal_type == 'SELL':
              for r in result.get('reasons', []):
                 exit_met[str(r)] = True
+
+        # [PERSISTENCE FIX] DB에 신호 저장 (프론트엔드 '실시간 매매신호' 표시용)
+        if signal_type in ['BUY', 'SELL']:
+            try:
+                # DB에는 소문자로 저장 (기존 데이터 일관성)
+                db_signal_type = signal_type.lower()
+                
+                signal_record = {
+                    'strategy_id': request.strategy_id,
+                    'stock_code': request.stock_code,
+                    'stock_name': stock_name or request.stock_code,
+                    'signal_type': db_signal_type,
+                    'signal_strength': result.get('score', 0),
+                    'current_price': current_price,
+                    'strategy_name': strategy.get('name', 'Unknown'),
+                    'conditions_met': entry_met if signal_type == 'BUY' else exit_met,
+                    'status': 'new',
+                    'created_at': datetime.now().isoformat()
+                }
+                
+                # 비동기 상황이지만 supabase-py는 동기 호출이므로 바로 실행
+                # (성능 영향이 클 경우 background task로 분리 고려)
+                supabase.table('trading_signals').insert(signal_record).execute()
+                print(f"[Strategy] Signal saved to DB: {request.stock_code} {signal_type}")
+                
+            except Exception as e:
+                print(f"[Strategy] Failed to save signal to DB: {e}")
 
         return StrategySignalResponse(
             strategy_id=request.strategy_id,
@@ -511,6 +552,14 @@ async def batch_check_signals(request: BatchSignalRequest):
             continue
 
     return results
+
+
+@router.post("/check-signal", response_model=StrategySignalResponse)
+async def check_signal_endpoint(request: StrategySignalRequest):
+    """
+    단일 종목 전략 신호 확인 (n8n 호환용)
+    """
+    return await check_strategy_signal(request)
 
 
 @router.post("/check-position-exit", response_model=PositionExitResponse)
