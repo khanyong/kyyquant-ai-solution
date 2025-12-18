@@ -14,6 +14,7 @@ import {
 } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import PortfolioOverview from './PortfolioOverview'
+import PortfolioHoldingsTable from './PortfolioHoldingsTable'
 import StrategyCard from './StrategyCard'
 import PendingOrdersPanel from './PendingOrdersPanel'
 import AddStrategyDialog from './AddStrategyDialog'
@@ -38,6 +39,7 @@ export default function AutoTradingPanelV2() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editingStrategy, setEditingStrategy] = useState<ActiveStrategy | null>(null)
+  const [positions, setPositions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [portfolioStats, setPortfolioStats] = useState({
     totalCapital: 0,
@@ -63,6 +65,29 @@ export default function AutoTradingPanelV2() {
       ])
     } catch (error) {
       console.error('데이터 로드 실패:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSyncAccount = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8001'}/api/sync/account`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('Sync failed')
+      }
+
+      const result = await response.json()
+      alert(`동기화 완료!\n보유종목 업데이트: ${result.holdings_updated}건\n잔고 업데이트: ${result.balance_updated ? '성공' : '실패'}`)
+
+      await loadData()
+    } catch (error) {
+      console.error('계좌 동기화 실패:', error)
+      alert('계좌 동기화에 실패했습니다. 백엔드 로그를 확인해주세요.')
     } finally {
       setLoading(false)
     }
@@ -131,32 +156,57 @@ export default function AutoTradingPanelV2() {
       console.log('Total allocated:', totalAllocated)
       console.log('Active strategies count:', activeStrategiesCount)
 
-      // 2. 전체 포지션 조회 (position_status = 'open' 인 것만)
-      const { data: positions, error: posError } = await supabase
-        .from('positions')
+      // 1.5 Fetch Real Account Balance
+      const { data: balanceData } = await supabase
+        .from('account_balance')
         .select('*')
-        .eq('position_status', 'open')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      const realTotalAssets = parseFloat(balanceData?.total_assets) || 0
+      const realCash = parseFloat(balanceData?.available_cash) || 0
+
+      // 2. 전체 포지션 조회
+      const { data: positions, error: posError } = await supabase
+        .from('portfolio')
+        .select('*')
+      // .eq('quantity', 'gt.0') # If needed, but portfolio usually implies ownership
 
       if (posError) throw posError
 
       // 3. 현재가 정보와 조인하여 평가액 계산
       let totalInvested = 0
       let totalValue = 0
+      let positionsWithPrice: any[] = []
 
       if (positions && positions.length > 0) {
-        const positionsWithPrice = await Promise.all(
+        positionsWithPrice = await Promise.all(
           positions.map(async (pos: any) => {
             const { data: priceData } = await supabase
               .from('kw_price_current')
-              .select('current_price')
+              .select('current_price, stock_name') // Fetch stock_name too if needed?
               .eq('stock_code', pos.stock_code)
               .single()
 
-            const currentPrice = priceData?.current_price || pos.avg_buy_price
-            const invested = pos.avg_buy_price * pos.quantity
+            const currentPrice = priceData?.current_price || pos.avg_price
+            // Ensure we have a name
+            const stockName = priceData?.stock_name || pos.stock_name || 'Unknown'
+
+            const invested = pos.avg_price * pos.quantity
             const value = currentPrice * pos.quantity
 
-            return { invested, value }
+            return {
+              stock_code: pos.stock_code,
+              stock_name: stockName,
+              quantity: pos.quantity,
+              avg_price: pos.avg_price,
+              current_price: currentPrice,
+              profit_loss: value - invested, // Recalculate based on current price
+              profit_loss_rate: invested > 0 ? ((value - invested) / invested) * 100 : 0,
+              invested,
+              value
+            }
           })
         )
 
@@ -168,30 +218,32 @@ export default function AutoTradingPanelV2() {
       const totalProfitRate = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0
 
       const newStats = {
-        totalCapital: totalAllocated, // 임시: 실제로는 계좌 정보에서 가져와야 함
+        totalCapital: realTotalAssets || totalAllocated,
         totalAllocated,
         totalInvested,
         totalValue,
         totalProfit,
         totalProfitRate,
         activeStrategiesCount,
-        totalPositions: positions?.length || 0
+        totalPositions: positions?.length || 0,
+        realCash: realCash // Optional: Pass cash if needed by Overview component
       }
 
-      console.log('Setting portfolio stats:', newStats)
       setPortfolioStats(newStats)
+      setPositions(positionsWithPrice || [])
     } catch (error) {
       console.error('포트폴리오 통계 로드 실패:', error)
     }
   }
 
+  // ... (Strategies handlers same as before)
   const handleStopStrategy = async (strategyId: string) => {
+    // ... (Keep existing implementation)
     if (!confirm('정말 이 전략을 중지하시겠습니까?\n\n자동매매가 중지되지만 전략은 유지됩니다.')) {
       return
     }
 
     try {
-      // 1. 현재 전략 할당 금액 조회
       const { data: strategy, error: fetchError } = await supabase
         .from('strategies')
         .select('allocated_capital, user_id')
@@ -202,7 +254,6 @@ export default function AutoTradingPanelV2() {
 
       const releasedCapital = strategy.allocated_capital || 0
 
-      // 2. 자동매매만 중지 (is_active는 유지)
       const { error: strategyError } = await supabase
         .from('strategies')
         .update({
@@ -215,7 +266,6 @@ export default function AutoTradingPanelV2() {
 
       if (strategyError) throw strategyError
 
-      // 3. available_cash에 금액 반환
       if (releasedCapital > 0) {
         const { data: balance, error: balanceError } = await supabase
           .from('kw_account_balance')
@@ -238,7 +288,6 @@ export default function AutoTradingPanelV2() {
         if (cashError) throw cashError
       }
 
-      // 4. 연결된 유니버스 비활성화
       const { error: universeError } = await supabase
         .from('strategy_universes')
         .update({ is_active: false })
@@ -246,7 +295,6 @@ export default function AutoTradingPanelV2() {
 
       if (universeError) throw universeError
 
-      // 5. 데이터 새로고침
       loadData()
     } catch (error: any) {
       console.error('전략 중지 실패:', error)
@@ -260,7 +308,6 @@ export default function AutoTradingPanelV2() {
     }
 
     try {
-      // 1. 현재 전략 할당 금액 조회
       const { data: strategy, error: fetchError } = await supabase
         .from('strategies')
         .select('allocated_capital, user_id')
@@ -271,7 +318,6 @@ export default function AutoTradingPanelV2() {
 
       const releasedCapital = strategy.allocated_capital || 0
 
-      // 2. 전략 완전 비활성화 (soft delete)
       const { error: strategyError } = await supabase
         .from('strategies')
         .update({
@@ -285,7 +331,6 @@ export default function AutoTradingPanelV2() {
 
       if (strategyError) throw strategyError
 
-      // 3. available_cash에 금액 반환
       if (releasedCapital > 0) {
         const { data: balance, error: balanceError } = await supabase
           .from('kw_account_balance')
@@ -308,7 +353,6 @@ export default function AutoTradingPanelV2() {
         if (cashError) throw cashError
       }
 
-      // 4. 연결된 유니버스 비활성화
       const { error: universeError } = await supabase
         .from('strategy_universes')
         .update({ is_active: false })
@@ -316,7 +360,6 @@ export default function AutoTradingPanelV2() {
 
       if (universeError) throw universeError
 
-      // 5. 데이터 새로고침
       loadData()
     } catch (error: any) {
       console.error('전략 삭제 실패:', error)
@@ -347,18 +390,32 @@ export default function AutoTradingPanelV2() {
         <Typography variant="h5" fontWeight="bold">
           💼 자동매매 포트폴리오
         </Typography>
-        <Button
-          startIcon={<Refresh />}
-          onClick={loadData}
-          variant="outlined"
-          size="small"
-        >
-          새로고침
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            startIcon={<Refresh />}
+            onClick={handleSyncAccount}
+            variant="contained"
+            color="secondary"
+            size="small"
+          >
+            계좌 동기화
+          </Button>
+          <Button
+            startIcon={<Refresh />}
+            onClick={loadData}
+            variant="outlined"
+            size="small"
+          >
+            새로고침
+          </Button>
+        </Stack>
       </Stack>
 
       {/* 포트폴리오 요약 */}
       <PortfolioOverview stats={portfolioStats} />
+
+      {/* 보유 종목 현황 리스트 (NEW) */}
+      <PortfolioHoldingsTable positions={positions} />
 
       {/* 활성 전략 목록 */}
       <Box sx={{ mb: 3 }}>

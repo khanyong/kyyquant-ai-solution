@@ -82,15 +82,15 @@ export default function StrategyCard({
     try {
       setLoading(true)
 
-      // 포지션 조회 (실제 보유 종목)
+      // 포지션 조회 (실제 계좌 연동 데이터 사용 - portfolio 테이블)
+      // 기존 positions 테이블은 봇 내부 로직용이나, 계좌 동기화된 현황을 우선 표시
       const { data: positionData, error: positionError } = await supabase
-        .from('positions')
+        .from('portfolio') // Changed from 'positions'
         .select('*')
-        .eq('strategy_id', strategyId)
-        .eq('position_status', 'open')
+      // .eq('strategy_id', strategyId) // portfolio table has no strategy_id
 
       if (!positionError && positionData) {
-        // 현재가 정보와 조인하여 수익률 계산
+        // 현재가 정보와 조인하여 계산 (이미 portfolio에 sync된 데이터가 있지만 최신가 확인)
         const positionsWithPrice = await Promise.all(
           positionData.map(async (pos: any) => {
             const { data: priceData } = await supabase
@@ -99,15 +99,17 @@ export default function StrategyCard({
               .eq('stock_code', pos.stock_code)
               .single()
 
-            const currentPrice = priceData?.current_price || pos.avg_buy_price
-            const profitAmount = (currentPrice - pos.avg_buy_price) * pos.quantity
-            const profitRate = ((currentPrice - pos.avg_buy_price) / pos.avg_buy_price) * 100
+            const currentPrice = priceData?.current_price || pos.current_price // Use sync price as fallback
+            const avgPrice = pos.avg_price
+            const profitAmount = (currentPrice - avgPrice) * pos.quantity
+            const profitRate = avgPrice > 0 ? ((currentPrice - avgPrice) / avgPrice) * 100 : 0
 
+            // Map portfolio fields to Position interface
             return {
               stock_code: pos.stock_code,
-              stock_name: priceData?.stock_name || pos.stock_code,
+              stock_name: priceData?.stock_name || pos.stock_name,
               quantity: pos.quantity,
-              avg_price: pos.avg_buy_price,
+              avg_price: avgPrice,
               current_price: currentPrice,
               profit_rate: profitRate,
               profit_amount: profitAmount
@@ -129,9 +131,6 @@ export default function StrategyCard({
       if (!monitoringError && monitoringData) {
         setMonitoringSignals(monitoringData)
       }
-
-      // 기존 시그널 조회 (히스토리용, 혹은 제거 가능)
-      // ... (Keeping logic simple, focusing on monitoringData for status)
 
     } catch (error) {
       console.error('전략 데이터 로드 실패:', error)

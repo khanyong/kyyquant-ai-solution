@@ -33,10 +33,10 @@ interface AccountBalance {
   total_cash: number
   available_cash: number
   order_cash: number
-  total_asset: number
-  stock_value: number
-  profit_loss: number
-  profit_loss_rate: number
+  total_assets: number
+  total_evaluation_amount: number
+  total_profit_loss: number
+  total_profit_loss_rate: number
   updated_at: string
 }
 
@@ -71,9 +71,11 @@ const PortfolioPanel: React.FC = () => {
 
       // 계좌 잔고 조회
       const { data: balanceData, error: balanceError } = await supabase
-        .from('kw_account_balance')
+        .from('account_balance')
         .select('*')
         .eq('user_id', user.id)
+        .order('updated_at', { ascending: false }) // Added order/limit to get latest
+        .limit(1)
         .single()
 
       console.log('Balance Data:', balanceData)
@@ -87,10 +89,10 @@ const PortfolioPanel: React.FC = () => {
 
       // 보유 주식 조회
       const { data: portfolioData, error: portfolioError } = await supabase
-        .from('kw_portfolio')
+        .from('portfolio')
         .select('*')
         .eq('user_id', user.id)
-        .order('evaluated_amount', { ascending: false })
+        .order('stock_code', { ascending: true }) // Changed from 'evaluated_amount' which doesn't exist
 
       if (portfolioError) throw portfolioError
 
@@ -300,7 +302,7 @@ const PortfolioPanel: React.FC = () => {
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        ₩{formatNumber(balance.total_asset)}
+                        ₩{formatNumber(balance.total_assets)}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -308,7 +310,7 @@ const PortfolioPanel: React.FC = () => {
                   <Grid item xs={12} sm={6} md={3}>
                     <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <Typography variant="caption" color="text.secondary" gutterBottom>
-                        보유 현금
+                        가능 현금
                       </Typography>
                       <Typography
                         variant="h6"
@@ -320,10 +322,7 @@ const PortfolioPanel: React.FC = () => {
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        ₩{formatNumber(balance.total_cash)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        주문가능: ₩{formatNumber(balance.order_cash)}
+                        ₩{formatNumber(balance.available_cash)}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -344,7 +343,7 @@ const PortfolioPanel: React.FC = () => {
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        ₩{formatNumber(balance.stock_value)}
+                        ₩{formatNumber(balance.total_evaluation_amount)}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -355,7 +354,7 @@ const PortfolioPanel: React.FC = () => {
                         평가손익
                       </Typography>
                       <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-                        {balance.profit_loss >= 0 ? (
+                        {balance.total_profit_loss >= 0 ? (
                           <TrendingUp color="success" fontSize="small" />
                         ) : (
                           <TrendingDown color="error" fontSize="small" />
@@ -363,7 +362,7 @@ const PortfolioPanel: React.FC = () => {
                         <Typography
                           variant="h6"
                           fontWeight="bold"
-                          color={balance.profit_loss >= 0 ? 'success.main' : 'error.main'}
+                          color={balance.total_profit_loss >= 0 ? 'success.main' : 'error.main'}
                           sx={{
                             fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1rem' },
                             whiteSpace: 'nowrap',
@@ -371,13 +370,13 @@ const PortfolioPanel: React.FC = () => {
                             textOverflow: 'ellipsis'
                           }}
                         >
-                          {balance.profit_loss >= 0 ? '+' : ''}
-                          ₩{formatNumber(balance.profit_loss)}
+                          {balance.total_profit_loss >= 0 ? '+' : ''}
+                          ₩{formatNumber(balance.total_profit_loss)}
                         </Typography>
                       </Stack>
                       <Chip
-                        label={`${balance.profit_loss >= 0 ? '+' : ''}${balance.profit_loss_rate.toFixed(2)}%`}
-                        color={balance.profit_loss >= 0 ? 'success' : 'error'}
+                        label={`${balance.total_profit_loss >= 0 ? '+' : ''}${balance.total_profit_loss_rate.toFixed(2)}%`}
+                        color={balance.total_profit_loss >= 0 ? 'success' : 'error'}
                         size="small"
                         sx={{ mt: 1 }}
                       />
@@ -417,65 +416,71 @@ const PortfolioPanel: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {holdings.map((holding) => (
-                        <TableRow key={holding.stock_code} hover>
-                          <TableCell>
-                            <Stack>
-                              <Typography variant="body2" fontWeight="medium">
-                                {holding.stock_name}
+                      {holdings.map((holding) => {
+                        // Calculate missing fields if DB doesn't provide them
+                        const evaluatedAmount = holding.evaluated_amount || (holding.current_price * holding.quantity)
+                        const availableQty = holding.available_quantity ?? holding.quantity // Default to total quantity
+
+                        return (
+                          <TableRow key={holding.stock_code} hover>
+                            <TableCell>
+                              <Stack>
+                                <Typography variant="body2" fontWeight="medium">
+                                  {holding.stock_name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {holding.stock_code}
+                                </Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2">
+                                {formatNumber(holding.quantity)}주
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                {holding.stock_code}
+                                (매도가능: {formatNumber(availableQty)}주)
                               </Typography>
-                            </Stack>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography variant="body2">
-                              {formatNumber(holding.quantity)}주
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              (매도가능: {formatNumber(holding.available_quantity)}주)
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            ₩{formatNumber(holding.avg_price)}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography variant="body2" fontWeight="medium">
-                              ₩{formatNumber(holding.current_price)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography variant="body2" fontWeight="medium">
-                              ₩{formatNumber(holding.evaluated_amount)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={0.5} justifyContent="flex-end" alignItems="center">
-                              {holding.profit_loss >= 0 ? (
-                                <TrendingUp fontSize="small" color="success" />
-                              ) : (
-                                <TrendingDown fontSize="small" color="error" />
-                              )}
-                              <Typography
-                                variant="body2"
-                                fontWeight="bold"
-                                color={holding.profit_loss >= 0 ? 'success.main' : 'error.main'}
-                              >
-                                {holding.profit_loss >= 0 ? '+' : ''}
-                                ₩{formatNumber(holding.profit_loss)}
+                            </TableCell>
+                            <TableCell align="right">
+                              ₩{formatNumber(holding.avg_price)}
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2" fontWeight="medium">
+                                ₩{formatNumber(holding.current_price)}
                               </Typography>
-                            </Stack>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Chip
-                              label={`${holding.profit_loss_rate >= 0 ? '+' : ''}${holding.profit_loss_rate.toFixed(2)}%`}
-                              color={holding.profit_loss_rate >= 0 ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2" fontWeight="medium">
+                                ₩{formatNumber(evaluatedAmount)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Stack direction="row" spacing={0.5} justifyContent="flex-end" alignItems="center">
+                                {holding.profit_loss >= 0 ? (
+                                  <TrendingUp fontSize="small" color="success" />
+                                ) : (
+                                  <TrendingDown fontSize="small" color="error" />
+                                )}
+                                <Typography
+                                  variant="body2"
+                                  fontWeight="bold"
+                                  color={holding.profit_loss >= 0 ? 'success.main' : 'error.main'}
+                                >
+                                  {holding.profit_loss >= 0 ? '+' : ''}
+                                  ₩{formatNumber(holding.profit_loss)}
+                                </Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Chip
+                                label={`${holding.profit_loss_rate >= 0 ? '+' : ''}${holding.profit_loss_rate.toFixed(2)}%`}
+                                color={holding.profit_loss_rate >= 0 ? 'success' : 'error'}
+                                size="small"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>
