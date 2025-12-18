@@ -111,29 +111,22 @@ const PortfolioPanel: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      // Supabase Edge Function 호출
-      const { data, error } = await supabase.functions.invoke('sync-kiwoom-balance', {
-        method: 'POST',
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+      alert(`[PortfolioPanel] 동기화 시작: 요청 주소는 [${apiUrl}] 입니다.`)
+
+      const response = await fetch(`${apiUrl}/api/sync/account`, {
+        method: 'POST'
       })
 
-      console.log('Edge Function raw response:', { data, error })
-
-      if (error) {
-        console.error('Edge Function error:', error)
-        // data가 있으면 상세 에러 메시지 표시
-        if (data) {
-          console.error('Edge Function error details:', data)
-          throw new Error(data.error || error.message)
-        }
-        throw error
+      if (!response.ok) {
+        throw new Error(`Sync Request Failed: ${response.status}`)
       }
 
-      console.log('Edge Function response:', data)
+      const data = await response.json()
+      console.log('Sync Response:', data)
 
-      if (!data || !data.success) {
-        console.error('Edge Function failed:', data)
-        throw new Error(data?.error || '동기화 실패')
-      }
+      // 성공 메시지 및 디버그 정보 표시
+      alert(`동기화 완료!\n종목수: ${data.holdings_updated}\n잔고성공여부: ${data.balance_updated}\n\n[디버그 정보]\n재계산됨: ${data.debug?.recalc_triggered}\n보유종목수(서버): ${data.debug?.holdings_count}\n사용자ID: ${data.debug?.user_id}`)
 
       // 성공 후 데이터 다시 조회
       await fetchPortfolio()
@@ -141,6 +134,7 @@ const PortfolioPanel: React.FC = () => {
       console.log('✅ 키움 계좌 동기화 완료:', data)
     } catch (error: any) {
       console.error('Failed to sync Kiwoom balance:', error)
+      alert(`동기화 실패: ${error.message}`)
       setError(error.message || '키움 계좌 동기화 실패')
     } finally {
       setLoading(false)
