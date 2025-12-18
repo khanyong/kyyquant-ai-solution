@@ -34,7 +34,7 @@ interface AccountBalance {
   available_cash: number
   order_cash: number
   total_assets: number
-  total_evaluation_amount: number
+  total_evaluation: number // Changed from total_evaluation_amount to match DB column
   total_profit_loss: number
   total_profit_loss_rate: number
   updated_at: string
@@ -343,7 +343,7 @@ const PortfolioPanel: React.FC = () => {
                           textOverflow: 'ellipsis'
                         }}
                       >
-                        ₩{formatNumber(balance.total_evaluation_amount)}
+                        ₩{formatNumber(balance.total_evaluation)}
                       </Typography>
                     </Paper>
                   </Grid>
