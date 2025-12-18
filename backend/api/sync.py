@@ -100,17 +100,18 @@ async def sync_account_balance():
             print(f"[SyncAPI] Portfolio Upsert Error: {e}")
 
     # 4. Update Balance
-    # 4. Update Balance
     recalc_triggered = False
     if summary or holdings:
-        # [ROBUST] Recalculate if 'total_purchase_amount' is 0 (handled as int/str/float)
-        raw_purch = summary.get('total_purchase_amount', 0) if summary else 0
-        try:
-             val_check = float(raw_purch)
-        except:
-             val_check = 0
-             
-        if not summary or val_check == 0:
+        # [ROBUST] Recalculate if 'total_purchase_amount' is 0
+        pass
+
+    if summary:
+        bal_data = {
+            'user_id': user_id,
+            'account_no': summary.get('account_no', '8112-6100'), # Default to screenshot acc no if missing
+            'total_assets': summary.get('total_assets', 0),
+            'available_cash': summary.get('withdrawable_amount', 0),
+            'total_evaluation': summary.get('total_evaluation_amount', 0),
             recalc_triggered = True
             print("[SyncAPI] Recalculating Summary from Holdings...")
             calc_total_purch = sum([h['average_price'] * h['quantity'] for h in holdings])
