@@ -85,7 +85,7 @@ export default function AutoTradingPanelV2() {
       }
 
       const result = await response.json()
-      alert(`동기화 완료!\n보유종목 업데이트: ${result.holdings_updated}건\n잔고 업데이트: ${result.balance_updated ? '성공' : '실패'}`)
+      alert(`동기화 완료!\n종목수: ${result.holdings_updated}\n잔고성공여부: ${result.balance_updated}\n\n[디버그 정보]\n재계산됨: ${result.debug?.recalc_triggered}\n보유종목수(서버): ${result.debug?.holdings_count}\n사용자ID: ${result.debug?.user_id}`)
 
       await loadData()
     } catch (error) {
