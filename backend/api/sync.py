@@ -101,9 +101,17 @@ async def sync_account_balance():
 
     # 4. Update Balance
     # 4. Update Balance
+    recalc_triggered = False
     if summary or holdings:
-        # [ROBUST] Recalculate totals if summary is missing or zero (Safety Net)
-        if not summary or summary.get('total_purchase_amount', 0) == 0:
+        # [ROBUST] Recalculate if 'total_purchase_amount' is 0 (handled as int/str/float)
+        raw_purch = summary.get('total_purchase_amount', 0) if summary else 0
+        try:
+             val_check = float(raw_purch)
+        except:
+             val_check = 0
+             
+        if not summary or val_check == 0:
+            recalc_triggered = True
             print("[SyncAPI] Recalculating Summary from Holdings...")
             calc_total_purch = sum([h['average_price'] * h['quantity'] for h in holdings])
             calc_total_eval = sum([h['current_price'] * h['quantity'] for h in holdings])
@@ -113,9 +121,14 @@ async def sync_account_balance():
             summary['total_purchase_amount'] = calc_total_purch
             summary['total_evaluation_amount'] = calc_total_eval
             summary['total_evaluation_profit_loss'] = calc_total_profit
-            # Assume 0 cash if unknown, or keep existing
-            if not summary.get('total_assets'):
-                 summary['total_assets'] = summary.get('withdrawable_amount', 0) + calc_total_eval
+            
+            # Update total_assets if it looks invalid (0)
+            raw_assets = summary.get('total_assets', 0)
+            try:
+                if float(raw_assets) == 0:
+                     summary['total_assets'] = float(summary.get('withdrawable_amount', 0)) + calc_total_eval
+            except:
+                 pass
             
             if calc_total_purch > 0:
                  summary['total_earning_rate'] = (calc_total_profit / calc_total_purch) * 100
@@ -137,5 +150,13 @@ async def sync_account_balance():
             results["balance_updated"] = True
         except Exception as e:
             print(f"[SyncAPI] Balance Upsert Error: {e}")
+            
+    # Add Debug Info to Response
+    results["debug"] = {
+        "recalc_triggered": recalc_triggered,
+        "holdings_count": len(holdings),
+        "user_id": user_id,
+        "final_summary": summary
+    }
             
     return results
