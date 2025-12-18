@@ -74,7 +74,7 @@ export default function AutoTradingPanelV2() {
     try {
       setLoading(true)
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001'
-      // alert('동기화 요청 URL: ' + apiUrl) // Debug: Uncomment if needed
+      alert('동기화 시작: 요청을 보낼 주소는 [' + apiUrl + '] 입니다.') // Debugging
 
       const response = await fetch(`${apiUrl}/api/sync/account`, {
         method: 'POST'
