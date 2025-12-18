@@ -73,7 +73,10 @@ export default function AutoTradingPanelV2() {
   const handleSyncAccount = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8001'}/api/sync/account`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+      // alert('동기화 요청 URL: ' + apiUrl) // Debug: Uncomment if needed
+
+      const response = await fetch(`${apiUrl}/api/sync/account`, {
         method: 'POST'
       })
 
