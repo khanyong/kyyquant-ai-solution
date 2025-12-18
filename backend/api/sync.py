@@ -100,6 +100,7 @@ async def sync_account_balance():
             print(f"[SyncAPI] Portfolio Upsert Error: {e}")
 
     # 4. Update Balance
+    # 4. Update Balance
     if summary or holdings:
         # [ROBUST] Recalculate totals if summary is missing or zero (Safety Net)
         if not summary or summary.get('total_purchase_amount', 0) == 0:
