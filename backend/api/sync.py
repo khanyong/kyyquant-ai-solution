@@ -100,6 +100,25 @@ async def sync_account_balance():
             print(f"[SyncAPI] Portfolio Upsert Error: {e}")
 
     # 4. Update Balance
+    if summary or holdings:
+        # [ROBUST] Recalculate totals if summary is missing or zero (Safety Net)
+        if not summary or summary.get('total_purchase_amount', 0) == 0:
+            print("[SyncAPI] Recalculating Summary from Holdings...")
+            calc_total_purch = sum([h['average_price'] * h['quantity'] for h in holdings])
+            calc_total_eval = sum([h['current_price'] * h['quantity'] for h in holdings])
+            calc_total_profit = calc_total_eval - calc_total_purch
+            
+            if not summary: summary = {}
+            summary['total_purchase_amount'] = calc_total_purch
+            summary['total_evaluation_amount'] = calc_total_eval
+            summary['total_evaluation_profit_loss'] = calc_total_profit
+            # Assume 0 cash if unknown, or keep existing
+            if not summary.get('total_assets'):
+                 summary['total_assets'] = summary.get('withdrawable_amount', 0) + calc_total_eval
+            
+            if calc_total_purch > 0:
+                 summary['total_earning_rate'] = (calc_total_profit / calc_total_purch) * 100
+
     if summary:
         bal_data = {
             'user_id': user_id,
