@@ -101,8 +101,15 @@ export default function StrategyCard({
 
             const currentPrice = priceData?.current_price || pos.current_price // Use sync price as fallback
             const avgPrice = pos.avg_price
-            const profitAmount = (currentPrice - avgPrice) * pos.quantity
-            const profitRate = avgPrice > 0 ? ((currentPrice - avgPrice) / avgPrice) * 100 : 0
+            const invested = avgPrice * pos.quantity
+            const value = currentPrice * pos.quantity
+
+            // [FIX] Use DB value (Net Profit from Kiwoom) if available, otherwise calculate (Gross)
+            const netProfit = pos.profit_loss
+            const calculatedProfit = value - invested
+            const finalProfit = netProfit !== null && netProfit !== undefined ? netProfit : calculatedProfit
+
+            const finalProfitRate = invested > 0 ? (finalProfit / invested) * 100 : 0
 
             // Map portfolio fields to Position interface
             return {
@@ -111,8 +118,8 @@ export default function StrategyCard({
               quantity: pos.quantity,
               avg_price: avgPrice,
               current_price: currentPrice,
-              profit_rate: profitRate,
-              profit_amount: profitAmount
+              profit_rate: finalProfitRate,
+              profit_amount: finalProfit
             }
           })
         )
@@ -158,7 +165,8 @@ export default function StrategyCard({
 
   const totalInvested = positions.reduce((sum, pos) => sum + (pos.avg_price * pos.quantity), 0)
   const totalValue = positions.reduce((sum, pos) => sum + (pos.current_price * pos.quantity), 0)
-  const totalProfit = totalValue - totalInvested
+  // [FIX] Sum individual profits (Net) instead of calculating Gross difference
+  const totalProfit = positions.reduce((sum, pos) => sum + pos.profit_amount, 0)
   const totalProfitRate = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0
   const availableCapital = allocatedCapital - totalInvested
 
