@@ -142,8 +142,9 @@ class KiwoomAPIClient:
                         'total_evaluation_profit_loss': float(result_sum.get('evlu_pfls_smtl_amt', 0)), 
                         'total_earning_rate': float(result_sum.get('tot_evlu_pfls_rt', 0)),
                         'total_assets': float(result_sum.get('tot_asst_amt', 0)), 
-                        'deposit': float(result_sum.get('dnca_tot_amt', 0)),   
-                        'withdrawable_amount': float(result_sum.get('pchs_psbl_amt', 0)) 
+                        'deposit': float(result_sum.get('dnca_tot_amt', 0)),
+                        # [FIX] Use Deposit if Orderable Amount is 0 (Common in Mock API)
+                        'withdrawable_amount': float(result_sum.get('pchs_psbl_amt', 0)) or float(result_sum.get('dnca_tot_amt', 0)) 
                     }
                 else:
                     print(f"[KiwoomAPI] Balance Summary fetch error: {result_sum.get('return_msg')}")
@@ -186,6 +187,30 @@ class KiwoomAPIClient:
             except Exception as e:
                  print(f"[KiwoomAPI] Balance Detail fetch failed: {e}")
             
+            # [FIX] Recalculate Summary if API returns 0 (Common in Mock/Demo)
+            if holdings:
+                calc_total_purch = sum([h['average_price'] * h['quantity'] for h in holdings])
+                calc_total_eval = sum([h['current_price'] * h['quantity'] for h in holdings])
+                calc_total_profit = calc_total_eval - calc_total_purch
+                
+                # Update summary if it's zero
+                if summary.get('total_purchase_amount', 0) == 0:
+                    summary['total_purchase_amount'] = calc_total_purch
+                    
+                if summary.get('total_evaluation_amount', 0) == 0:
+                    summary['total_evaluation_amount'] = calc_total_eval
+                    
+                if summary.get('total_evaluation_profit_loss', 0) == 0:
+                    summary['total_evaluation_profit_loss'] = calc_total_profit
+                    
+                if summary.get('total_assets', 0) == 0:
+                    # Total Assets = Cash (Deposit) + Stock Evaluation
+                    summary['total_assets'] = summary.get('deposit', 0) + calc_total_eval
+                    
+                # Recalculate Profit Rate if needed
+                if summary.get('total_purchase_amount', 0) > 0:
+                     summary['total_earning_rate'] = (summary['total_evaluation_profit_loss'] / summary['total_purchase_amount']) * 100
+
             return {'account_no': self.account_no, 'summary': summary, 'holdings': holdings}
 
         except Exception as e:
