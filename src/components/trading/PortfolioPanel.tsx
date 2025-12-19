@@ -349,14 +349,14 @@ const PortfolioPanel: React.FC = () => {
                       </Typography>
                       <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
                         {balance.total_profit_loss >= 0 ? (
-                          <TrendingUp color="success" fontSize="small" />
+                          <TrendingUp color="error" fontSize="small" />
                         ) : (
-                          <TrendingDown color="error" fontSize="small" />
+                          <TrendingDown color="primary" fontSize="small" />
                         )}
                         <Typography
                           variant="h6"
                           fontWeight="bold"
-                          color={balance.total_profit_loss >= 0 ? 'success.main' : 'error.main'}
+                          color={balance.total_profit_loss >= 0 ? 'error.main' : 'primary.main'}
                           sx={{
                             fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1rem' },
                             whiteSpace: 'nowrap',
@@ -370,7 +370,7 @@ const PortfolioPanel: React.FC = () => {
                       </Stack>
                       <Chip
                         label={`${balance.total_profit_loss >= 0 ? '+' : ''}${balance.total_profit_loss_rate.toFixed(2)}%`}
-                        color={balance.total_profit_loss >= 0 ? 'success' : 'error'}
+                        color={balance.total_profit_loss >= 0 ? 'error' : 'primary'}
                         size="small"
                         sx={{ mt: 1 }}
                       />
