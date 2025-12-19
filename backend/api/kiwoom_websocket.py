@@ -89,7 +89,7 @@ class KiwoomWebSocketClient:
 
             self.websocket = await websockets.connect(
                 self.ws_url,
-                additional_headers=headers,
+                extra_headers=headers,
                 ping_interval=30,
                 ping_timeout=10
             )

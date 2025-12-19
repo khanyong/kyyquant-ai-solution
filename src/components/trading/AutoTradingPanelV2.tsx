@@ -195,14 +195,21 @@ export default function AutoTradingPanelV2() {
             const invested = pos.avg_price * pos.quantity
             const value = currentPrice * pos.quantity
 
+            // [FIX] Use DB value (Net Profit from Kiwoom) if available, otherwise calculate (Gross)
+            const netProfit = pos.profit_loss
+            const calculatedProfit = value - invested
+            const finalProfit = netProfit !== null && netProfit !== undefined ? netProfit : calculatedProfit
+
+            const finalProfitRate = invested > 0 ? (finalProfit / invested) * 100 : 0
+
             return {
               stock_code: pos.stock_code,
               stock_name: stockName,
               quantity: pos.quantity,
               avg_price: pos.avg_price,
               current_price: currentPrice,
-              profit_loss: value - invested, // Recalculate based on current price
-              profit_loss_rate: invested > 0 ? ((value - invested) / invested) * 100 : 0,
+              profit_loss: finalProfit,
+              profit_loss_rate: finalProfitRate,
               invested,
               value
             }
@@ -213,7 +220,8 @@ export default function AutoTradingPanelV2() {
         totalValue = positionsWithPrice.reduce((sum, p) => sum + p.value, 0)
       }
 
-      const totalProfit = totalValue - totalInvested
+      // [FIX] Sum individual profits (Net) instead of calculating Gross difference
+      const totalProfit = positionsWithPrice.reduce((sum, p) => sum + p.profit_loss, 0)
       const totalProfitRate = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0
 
       const newStats = {

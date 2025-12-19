@@ -158,6 +158,37 @@ async def health():
     """헬스체크"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+# WebSocket 및 Sync 로직 추가
+try:
+    from api.kiwoom_websocket import get_websocket_client
+    from api.sync import perform_account_sync
+    import asyncio
+    
+    # WebSocket 이벤트 콜백
+    async def on_balance_update(data):
+        print(f"\n[Main] ⚡ Real-time Balance Update detected: {data.get('stock_name', 'Unknown')}")
+        print("[Main] Triggering full account sync...")
+        # WebSocket 이벤트 루프 내에서 동기식 perform_account_sync 실행 (DB 작업 포함)
+        # perform_account_sync는 blocking I/O (requests, supabase)를 포함하므로 
+        # 실제로는 thread pool 등에서 실행하는 것이 좋지만, 
+        # 현재 구조상 간단히 직접 호출하거나 to_thread로 감쌀 수 있음.
+        try:
+             # Run sync in a separate thread to avoid blocking the WebSocket loop
+             await asyncio.to_thread(perform_account_sync)
+             print("[Main] ✅ Real-time Sync Complete!")
+        except Exception as e:
+             print(f"[Main] ❌ Real-time Sync Failed: {e}")
+
+    @app.on_event("startup")
+    async def startup_event():
+        print("[Main] Starting Kiwoom WebSocket Client...")
+        ws_client = get_websocket_client(on_balance_update=on_balance_update)
+        # 백그라운드 태스크로 실행
+        asyncio.create_task(ws_client.run())
+        
+except ImportError as e:
+    print(f"[ERROR] Failed to setup WebSocket: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -14,20 +14,20 @@ def get_supabase():
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     return create_client(url, key)
 
-@router.post("/account")
-async def sync_account_balance():
+def perform_account_sync():
     """
-    Syncs Account Balance and Portfolio from Kiwoom to Supabase.
+    Core function to sync Account Balance and Portfolio from Kiwoom to Supabase.
+    Can be called by API or WebSocket event.
     """
     supabase = get_supabase()
     kiwoom = get_kiwoom_client()
-    print("[SyncAPI] Starting Account Sync...")
     
     # 1. Fetch from Kiwoom
     try:
         data = kiwoom.get_account_balance()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Kiwoom API Error: {str(e)}")
+        print(f"[SyncCore] Kiwoom API Error: {str(e)}")
+        return {"error": str(e)}
 
     if isinstance(data, list):
          holdings = data
@@ -36,7 +36,8 @@ async def sync_account_balance():
          holdings = data.get('holdings', [])
          summary = data.get('summary', {})
     else:
-         raise HTTPException(status_code=500, detail="Unknown Kiwoom API response format")
+         print("[SyncCore] Unknown Kiwoom API response format")
+         return {"error": "Unknown format"}
 
     # 2. Get User ID (Robust method)
     user_id = None
@@ -49,7 +50,6 @@ async def sync_account_balance():
         res = supabase.table('profiles').select('id').eq('id', TARGET_USER_ID).execute()
         if res.data:
             user_id = TARGET_USER_ID
-            print(f"[SyncAPI] Using Target User ID: {user_id}")
     except Exception:
         pass
 
@@ -58,12 +58,13 @@ async def sync_account_balance():
              res = supabase.table('profiles').select('id').limit(1).execute()
              if res.data:
                  user_id = res.data[0]['id']
-                 print(f"[SyncAPI] Warning: Using random first user {user_id}")
+                 print(f"[SyncCore] Warning: Using random first user {user_id}")
         except Exception:
              pass
     
     if not user_id:
-        raise HTTPException(status_code=404, detail="No User ID found to sync data to.")
+        print("[SyncCore] No User ID found to sync data to.")
+        return {"error": "No User ID"}
 
     results = {
         "holdings_updated": 0,
@@ -71,10 +72,21 @@ async def sync_account_balance():
     }
 
     # 3. Update Portfolio
+    # First, get current DB holdings to detect deletions (sells)
+    try:
+        current_db_holdings = supabase.table('portfolio').select('stock_code').eq('user_id', user_id).execute()
+        db_codes = set(item['stock_code'] for item in current_db_holdings.data)
+        kiwoom_codes = set()
+    except Exception as e:
+        print(f"[SyncCore] Failed to fetch current DB holdings: {e}")
+        db_codes = set()
+        kiwoom_codes = set()
+
     for h in holdings:
         # [FIX] Strip 'A' prefix from Kiwoom stock codes (e.g. A005930 -> 005930)
         raw_code = h['stock_code']
         stock_code = raw_code[1:] if raw_code.startswith('A') else raw_code
+        kiwoom_codes.add(stock_code)
         
         # Ensure stock exists in 'stocks' table
         try:
@@ -97,46 +109,53 @@ async def sync_account_balance():
            supabase.table('portfolio').upsert(pf_data, on_conflict='user_id, stock_code').execute()
            results["holdings_updated"] += 1
         except Exception as e:
-            print(f"[SyncAPI] Portfolio Upsert Error: {e}")
+            print(f"[SyncCore] Portfolio Upsert Error: {e}")
 
-    # 4. Update Balance
+    # Remove sold items (in DB but not in Kiwoom)
+    sold_codes = db_codes - kiwoom_codes
+    if sold_codes:
+        print(f"[SyncCore] Detected Sold Items: {sold_codes}")
+        try:
+            supabase.table('portfolio').delete().eq('user_id', user_id).in_('stock_code', list(sold_codes)).execute()
+        except Exception as e:
+            print(f"[SyncCore] Portfolio Delete Error: {e}")
+
+    # [IMPROVEMENT] Force Recalculate Summary from Holdings to ensure 'Net' Profit (matching HTS)
+    # Kiwoom's Summary (Type 1) often returns Gross profit, while Holdings (Type 2) return Net.
     recalc_triggered = False
-    
-    # [ROBUST] Recalculate if 'total_purchase_amount' is 0 (handled as int/str/float)
-    raw_purch = summary.get('total_purchase_amount', 0) if summary else 0
-    val_check = 0
-    try:
-         val_check = float(raw_purch)
-    except:
-         val_check = 0
-         
-    if (summary or holdings) and (not summary or val_check == 0):
-        recalc_triggered = True
-        print("[SyncAPI] Recalculating Summary from Holdings...")
+    if holdings:
+        print("[SyncCore] Recalculating Summary Totals from Holdings (Net Profit focus)...")
+        # Use sum of individual Net Profits (evltv_prft) which includes fees/taxes
+        calc_total_profit = sum([h['profit_loss'] for h in holdings])
+        
+        # Standard totals
         calc_total_purch = sum([h['average_price'] * h['quantity'] for h in holdings])
         calc_total_eval = sum([h['current_price'] * h['quantity'] for h in holdings])
-        calc_total_profit = calc_total_eval - calc_total_purch
         
         if not summary: summary = {}
+        
+        # Overwrite with aggregated Net values
         summary['total_purchase_amount'] = calc_total_purch
         summary['total_evaluation_amount'] = calc_total_eval
         summary['total_evaluation_profit_loss'] = calc_total_profit
         
-        # Update total_assets if it looks invalid (0)
+        # Update total_assets safely
         raw_assets = summary.get('total_assets', 0)
-        try:
-            if float(raw_assets) == 0:
-                 summary['total_assets'] = float(summary.get('withdrawable_amount', 0)) + calc_total_eval
-        except:
-             pass
+        chk_deposit = float(summary.get('withdrawable_amount', 0))
+        # Reconstruct Assets = Deposit + Stock Eval
+        summary['total_assets'] = chk_deposit + calc_total_eval
         
         if calc_total_purch > 0:
              summary['total_earning_rate'] = (calc_total_profit / calc_total_purch) * 100
+        else:
+             summary['total_earning_rate'] = 0.0
+             
+        recalc_triggered = True
 
     if summary:
         bal_data = {
             'user_id': user_id,
-            'account_no': summary.get('account_no', '8112-6100'), # Default to screenshot acc no if missing
+            'account_no': summary.get('account_no', '8112-6100'),
             'total_assets': summary.get('total_assets', 0),
             'available_cash': summary.get('withdrawable_amount', 0),
             'total_evaluation': summary.get('total_evaluation_amount', 0),
@@ -150,14 +169,28 @@ async def sync_account_balance():
             supabase.table('account_balance').upsert(bal_data, on_conflict='user_id').execute()
             results["balance_updated"] = True
         except Exception as e:
-            print(f"[SyncAPI] Balance Upsert Error: {e}")
+            print(f"[SyncCore] Balance Upsert Error: {e}")
             
     # Add Debug Info to Response
     results["debug"] = {
         "recalc_triggered": recalc_triggered,
         "holdings_count": len(holdings),
         "user_id": user_id,
-        "final_summary": summary
+        "final_summary": summary,
+        "sold_items": list(sold_codes) if 'sold_codes' in locals() else []
     }
             
     return results
+
+@router.post("/account")
+async def sync_account_balance():
+    """
+    Syncs Account Balance and Portfolio from Kiwoom to Supabase.
+    """
+    print("[SyncAPI] Starting Account Sync via API...")
+    result = perform_account_sync()
+    
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+        
+    return result

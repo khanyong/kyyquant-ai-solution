@@ -106,13 +106,17 @@ const PortfolioPanel: React.FC = () => {
   }
 
   const syncKiwoomBalance = async () => {
-    if (!user) return
+    console.log('Sync button clicked')
+    if (!user) {
+      alert('로그인이 필요합니다 (세션 만료 가능성)')
+      return
+    }
 
     setLoading(true)
     setError(null)
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001'
-      alert(`[PortfolioPanel] 동기화 시작: 요청 주소는 [${apiUrl}] 입니다.`)
+      alert(`[디버그] 동기화 요청 시작\nAPI: ${apiUrl}\n사용자: ${user.id}`)
 
       const response = await fetch(`${apiUrl}/api/sync/account`, {
         method: 'POST'
