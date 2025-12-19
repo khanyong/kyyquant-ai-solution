@@ -57,6 +57,7 @@ import_status = {
     "account": "pending",
     "order": "pending",
     "indicators": "pending",
+    "sync": "pending",
     "errors": {}
 }
 
@@ -123,6 +124,16 @@ except ImportError as e:
     print(f"[ERROR] Failed to import indicators router: {e}")
     import_status["indicators"] = "error"
     import_status["errors"]["indicators"] = str(e)
+
+try:
+    from api.sync import router as sync_router
+    app.include_router(sync_router, prefix="/api/sync", tags=["sync"])
+    print("[OK] Sync router registered")
+    import_status["sync"] = "ok"
+except ImportError as e:
+    print(f"[ERROR] Failed to import sync router: {e}")
+    import_status["sync"] = "error"
+    import_status["errors"]["sync"] = str(e)
 
 @app.get("/")
 async def root():

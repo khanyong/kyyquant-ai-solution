@@ -5,13 +5,31 @@ import {
   Typography,
   Grid,
   Stack,
-  Chip
+  Chip,
+  Card,
+  CardContent,
+  useTheme
 } from '@mui/material'
 import {
   TrendingUp,
   AccountBalance,
-  ShowChart
+  PieChart as PieChartIcon,
+  BarChart as BarChartIcon
 } from '@mui/icons-material'
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  LabelList
+} from 'recharts'
 
 interface PortfolioStats {
   totalCapital: number
@@ -22,87 +40,147 @@ interface PortfolioStats {
   totalProfitRate: number
   activeStrategiesCount: number
   totalPositions: number
+  realCash: number
 }
 
 interface PortfolioOverviewProps {
   stats: PortfolioStats
+  activeStrategies: any[]
+  positions: any[]
+  lastUpdated: Date | null
 }
 
-export default function PortfolioOverview({ stats }: PortfolioOverviewProps) {
-  console.log('PortfolioOverview received stats:', stats)
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('ko-KR').format(value)
+export default function PortfolioOverview({ stats, activeStrategies, positions, lastUpdated }: PortfolioOverviewProps) {
+  const theme = useTheme()
+  const safeStats = stats || {}
+
+  const formatCurrency = (value: number | undefined) => {
+    return new Intl.NumberFormat('ko-KR').format(value || 0)
   }
 
-  const formatPercent = (value: number) => {
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+  const formatPercent = (value: number | undefined) => {
+    const safeValue = value || 0
+    return `${safeValue >= 0 ? '+' : ''}${safeValue.toFixed(2)}%`
   }
 
-  const getProfitColor = (value: number) => {
-    if (value > 0) return 'error.main'
-    if (value < 0) return 'primary.main'
+  const getProfitColor = (value: number | undefined) => {
+    const safeValue = value || 0
+    if (safeValue > 0) return 'error.main' // Red for profit
+    if (safeValue < 0) return 'primary.main' // Blue for loss
     return 'text.secondary'
+  }
+
+  // 데이터 준비: 자산 배분 (현금 vs 투자금)
+  const assetAllocationData = [
+    { name: '보유 주식', value: safeStats.totalValue || 0 },
+    { name: '가용 현금', value: safeStats.realCash || 0 }
+  ]
+
+  // 데이터 준비: 전략별 자금 할당
+  const strategyAllocationData = activeStrategies?.map((s) => ({
+    name: s.strategy_name,
+    value: parseFloat(s.allocated_capital) || 0
+  })) || []
+
+  // 데이터 준비: 보유 비중 Top 5
+  const topHoldingsData = [...(positions || [])]
+    .sort((a, b) => (b.value || 0) - (a.value || 0))
+    .slice(0, 5)
+    .map((p) => {
+      const value = p.value || 0
+      const percent = safeStats.totalValue > 0 ? (value / safeStats.totalValue) * 100 : 0
+      return {
+        name: p.stock_name,
+        value: value,
+        percent: percent,
+        label: `₩${formatCurrency(value)} (${percent.toFixed(1)}%)`
+      }
+    })
+
+  // Custom label for Pie Charts (Inner %)
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+    const RADIAN = Math.PI / 180
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+    if (percent < 0.05) return null // Hide if too small
+
+    return (
+      <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight="bold">
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    )
   }
 
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
+      {/* Header */}
       <Stack direction="row" alignItems="center" spacing={2} mb={3}>
         <AccountBalance fontSize="large" color="primary" />
         <Typography variant="h5" fontWeight="bold">
           📊 내 포트폴리오 현황
+          <Chip label="Source: 내부DB" color="info" size="small" variant="outlined" sx={{ ml: 2, verticalAlign: 'middle', fontSize: '0.8rem' }} />
+          {lastUpdated && (
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1, verticalAlign: 'middle', fontSize: '0.8rem' }}>
+              ({lastUpdated.toLocaleString('ko-KR')})
+            </Typography>
+          )}
         </Typography>
       </Stack>
 
       <Grid container spacing={3}>
+        {/* ... (Summary Cards Section - No Changes) ... */}
         {/* 총 투자금 */}
         <Grid item xs={12} md={3}>
-          <Box>
+          <Box p={2} bgcolor={theme.palette.background.default} borderRadius={2}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
               총 할당 자금
             </Typography>
             <Typography variant="h5" fontWeight="bold">
-              {formatCurrency(stats.totalAllocated)}원
+              {formatCurrency(safeStats.totalAllocated)}원
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              활성 전략 {stats.activeStrategiesCount}개
+              활성 전략 {safeStats.activeStrategiesCount || 0}개
             </Typography>
           </Box>
         </Grid>
 
         {/* 투자 중 */}
         <Grid item xs={12} md={3}>
-          <Box>
+          <Box p={2} bgcolor={theme.palette.background.default} borderRadius={2}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
               투자 중
             </Typography>
             <Typography variant="h5" fontWeight="bold">
-              {formatCurrency(stats.totalInvested)}원
+              {formatCurrency(safeStats.totalInvested)}원
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {stats.totalPositions}개 종목 보유
+              {safeStats.totalPositions || 0}개 종목 보유
             </Typography>
           </Box>
         </Grid>
 
         {/* 현재 평가액 */}
         <Grid item xs={12} md={3}>
-          <Box>
+          <Box p={2} bgcolor={theme.palette.background.default} borderRadius={2}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
               현재 평가액
             </Typography>
             <Typography variant="h5" fontWeight="bold">
-              {formatCurrency(stats.totalValue)}원
+              {formatCurrency(safeStats.totalValue)}원
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              대기 자금: {formatCurrency(stats.totalAllocated - stats.totalInvested)}원
+              대기 자금: {formatCurrency((safeStats.totalAllocated || 0) - (safeStats.totalInvested || 0))}원
             </Typography>
           </Box>
         </Grid>
 
         {/* 수익률 */}
         <Grid item xs={12} md={3}>
-          <Box>
+          <Box p={2} bgcolor={theme.palette.background.default} borderRadius={2}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
               총 수익
             </Typography>
@@ -110,19 +188,134 @@ export default function PortfolioOverview({ stats }: PortfolioOverviewProps) {
               <Typography
                 variant="h5"
                 fontWeight="bold"
-                color={getProfitColor(stats.totalProfit)}
+                color={getProfitColor(safeStats.totalProfit)}
               >
-                {formatCurrency(Math.abs(stats.totalProfit))}원
+                {safeStats.totalProfit > 0 ? '+' : ''}{formatCurrency(safeStats.totalProfit)}원
               </Typography>
               <Chip
-                icon={stats.totalProfitRate > 0 ? <TrendingUp /> : undefined}
-                label={formatPercent(stats.totalProfitRate)}
+                icon={safeStats.totalProfitRate > 0 ? <TrendingUp /> : undefined}
+                label={formatPercent(safeStats.totalProfitRate)}
                 size="small"
-                color={stats.totalProfitRate > 0 ? 'error' : stats.totalProfitRate < 0 ? 'primary' : 'default'}
+                color={safeStats.totalProfitRate > 0 ? 'error' : safeStats.totalProfitRate < 0 ? 'primary' : 'default'} // Red/Blue scheme
                 sx={{ fontWeight: 'bold' }}
               />
             </Stack>
           </Box>
+        </Grid>
+
+
+        {/* === 차트 섹션 === */}
+        {/* 1. 자산 배분 (Pie) */}
+        <Grid item xs={12} md={4}>
+          <Card elevation={0} variant="outlined">
+            <CardContent>
+              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center">
+                <PieChartIcon sx={{ mr: 1, color: 'primary.main' }} /> 자산 배분
+              </Typography>
+              <Box height={250}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={assetAllocationData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={renderCustomizedLabel}
+                      labelLine={false}
+                    >
+                      {assetAllocationData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => `₩${formatCurrency(value)}`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 2. 전략별 자금 할당 (Pie) */}
+        <Grid item xs={12} md={4}>
+          <Card elevation={0} variant="outlined">
+            <CardContent>
+              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center">
+                <PieChartIcon sx={{ mr: 1, color: 'secondary.main' }} /> 전략별 자금 할당
+              </Typography>
+              {strategyAllocationData.length > 0 ? (
+                <Box height={250}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={strategyAllocationData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        fill="#82ca9d"
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={renderCustomizedLabel}
+                        labelLine={false}
+                      >
+                        {strategyAllocationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => `₩${formatCurrency(value)}`} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
+              ) : (
+                <Box height={250} display="flex" alignItems="center" justifyContent="center">
+                  <Typography color="text.secondary">할당된 전략이 없습니다.</Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 3. 보유 비중 Top 5 (Bar) */}
+        <Grid item xs={12} md={4}>
+          <Card elevation={0} variant="outlined">
+            <CardContent>
+              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center">
+                <BarChartIcon sx={{ mr: 1, color: 'success.main' }} /> 보유 비중 Top 5
+              </Typography>
+              {topHoldingsData.length > 0 ? (
+                <Box height={250}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={topHoldingsData}
+                      margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" hide />
+                      <YAxis type="category" dataKey="name" width={60} fontSize={12} />
+                      <Tooltip formatter={(value: number) => `₩${formatCurrency(value)}`} />
+                      <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]}>
+                        <LabelList dataKey="label" position="insideLeft" fill="white" fontSize={11} fontWeight="bold" />
+                        {topHoldingsData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              ) : (
+                <Box height={250} display="flex" alignItems="center" justifyContent="center">
+                  <Typography color="text.secondary">보유 중인 종목이 없습니다.</Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
     </Paper>

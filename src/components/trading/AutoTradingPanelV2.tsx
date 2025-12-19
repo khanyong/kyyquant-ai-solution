@@ -6,7 +6,8 @@ import {
   Button,
   Collapse,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Chip
 } from '@mui/material'
 import {
   Add,
@@ -35,22 +36,14 @@ interface ActiveStrategy {
 }
 
 export default function AutoTradingPanelV2() {
+  const [loading, setLoading] = useState(false)
   const [activeStrategies, setActiveStrategies] = useState<ActiveStrategy[]>([])
+  const [portfolioStats, setPortfolioStats] = useState<any>({})
+  const [positions, setPositions] = useState<any[]>([])
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editingStrategy, setEditingStrategy] = useState<ActiveStrategy | null>(null)
-  const [positions, setPositions] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [portfolioStats, setPortfolioStats] = useState({
-    totalCapital: 0,
-    totalAllocated: 0,
-    totalInvested: 0,
-    totalValue: 0,
-    totalProfit: 0,
-    totalProfitRate: 0,
-    activeStrategiesCount: 0,
-    totalPositions: 0
-  })
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
     loadData()
@@ -63,12 +56,15 @@ export default function AutoTradingPanelV2() {
         loadActiveStrategies(),
         loadPortfolioStats()
       ])
+      setLastUpdated(new Date())
     } catch (error) {
       console.error('데이터 로드 실패:', error)
     } finally {
       setLoading(false)
     }
   }
+
+  // ... (rest of code)
 
   const handleSyncAccount = async () => {
     try {
@@ -400,6 +396,7 @@ export default function AutoTradingPanelV2() {
             variant="contained"
             color="secondary"
             size="small"
+            sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
           >
             계좌 동기화
           </Button>
@@ -408,6 +405,7 @@ export default function AutoTradingPanelV2() {
             onClick={loadData}
             variant="outlined"
             size="small"
+            sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
           >
             새로고침
           </Button>
@@ -415,7 +413,12 @@ export default function AutoTradingPanelV2() {
       </Stack>
 
       {/* 포트폴리오 요약 */}
-      <PortfolioOverview stats={portfolioStats} />
+      <PortfolioOverview
+        stats={portfolioStats}
+        activeStrategies={activeStrategies}
+        positions={positions}
+        lastUpdated={lastUpdated}
+      />
 
       {/* 보유 종목 현황 리스트 (NEW) */}
       <PortfolioHoldingsTable positions={positions} />
@@ -424,6 +427,12 @@ export default function AutoTradingPanelV2() {
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
           📈 활성 전략별 현황
+          <Chip label="Source: 전략설정" color="success" size="small" variant="outlined" sx={{ ml: 1, verticalAlign: 'middle' }} />
+          {lastUpdated && (
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1, verticalAlign: 'middle' }}>
+              ({lastUpdated.toLocaleString('ko-KR')})
+            </Typography>
+          )}
         </Typography>
 
         {activeStrategies.length === 0 ? (
@@ -475,27 +484,29 @@ export default function AutoTradingPanelV2() {
       />
 
       {/* 자동매매 수정 다이얼로그 */}
-      {editingStrategy && (
-        <EditStrategyDialog
-          open={showEditDialog}
-          strategyId={editingStrategy.strategy_id}
-          strategyName={editingStrategy.strategy_name}
-          currentAllocatedCapital={editingStrategy.allocated_capital}
-          currentAllocatedPercent={editingStrategy.allocated_percent}
-          onClose={() => {
-            setShowEditDialog(false)
-            setEditingStrategy(null)
-          }}
-          onSuccess={() => {
-            loadData()
-          }}
-        />
-      )}
+      {
+        editingStrategy && (
+          <EditStrategyDialog
+            open={showEditDialog}
+            strategyId={editingStrategy.strategy_id}
+            strategyName={editingStrategy.strategy_name}
+            currentAllocatedCapital={editingStrategy.allocated_capital}
+            currentAllocatedPercent={editingStrategy.allocated_percent}
+            onClose={() => {
+              setShowEditDialog(false)
+              setEditingStrategy(null)
+            }}
+            onSuccess={() => {
+              loadData()
+            }}
+          />
+        )
+      }
 
       {/* 대기중인 주문 */}
       <Box sx={{ mb: 3 }}>
         <PendingOrdersPanel />
       </Box>
-    </Box>
+    </Box >
   )
 }

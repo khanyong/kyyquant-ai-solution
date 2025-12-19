@@ -220,7 +220,15 @@ const PortfolioPanel: React.FC = () => {
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="h6">계좌 잔고 및 보유 자산</Typography>
+        <Typography variant="h6">
+          계좌 잔고 및 보유 자산
+          <Chip label="Source: 키움증권" color="warning" size="small" variant="outlined" sx={{ ml: 1, verticalAlign: 'middle' }} />
+          {balance && balance.updated_at && (
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1, verticalAlign: 'middle' }}>
+              ({new Date(balance.updated_at).toLocaleString('ko-KR')})
+            </Typography>
+          )}
+        </Typography>
         <Stack direction="row" spacing={1}>
           <Button
             startIcon={loading ? <CircularProgress size={16} /> : <Refresh />}
@@ -228,6 +236,7 @@ const PortfolioPanel: React.FC = () => {
             disabled={loading}
             variant="outlined"
             size="small"
+            sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
           >
             새로고침
           </Button>
@@ -238,6 +247,7 @@ const PortfolioPanel: React.FC = () => {
             variant="contained"
             size="small"
             color="primary"
+            sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
           >
             키움 계좌 동기화
           </Button>
@@ -451,14 +461,14 @@ const PortfolioPanel: React.FC = () => {
                             <TableCell align="right">
                               <Stack direction="row" spacing={0.5} justifyContent="flex-end" alignItems="center">
                                 {holding.profit_loss >= 0 ? (
-                                  <TrendingUp fontSize="small" color="success" />
+                                  <TrendingUp fontSize="small" color="error" />
                                 ) : (
-                                  <TrendingDown fontSize="small" color="error" />
+                                  <TrendingDown fontSize="small" color="primary" />
                                 )}
                                 <Typography
                                   variant="body2"
                                   fontWeight="bold"
-                                  color={holding.profit_loss >= 0 ? 'success.main' : 'error.main'}
+                                  color={holding.profit_loss >= 0 ? 'error.main' : 'primary.main'}
                                 >
                                   {holding.profit_loss >= 0 ? '+' : ''}
                                   ₩{formatNumber(holding.profit_loss)}
@@ -468,7 +478,7 @@ const PortfolioPanel: React.FC = () => {
                             <TableCell align="right">
                               <Chip
                                 label={`${holding.profit_loss_rate >= 0 ? '+' : ''}${holding.profit_loss_rate.toFixed(2)}%`}
-                                color={holding.profit_loss_rate >= 0 ? 'success' : 'error'}
+                                color={holding.profit_loss_rate >= 0 ? 'error' : 'primary'}
                                 size="small"
                               />
                             </TableCell>

@@ -2290,13 +2290,50 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         }
       ]
+    },
+    {
+      id: 39,
+      title: '자동매매 UI 시각화 및 안정성 개선',
+      status: 'done',
+      priority: 'high',
+      icon: <Dashboard />,
+      period: '2025.12.19',
+      description: '자동매매 패널의 데이터 시각화 강화 및 UI 표시 문제 해결',
+      subtasks: [
+        {
+          title: '✅ 포트폴리오 차트 시각화 도입',
+          details: [
+            'Chart: Recharts 라이브러리 기반 차트 시스템 구축',
+            'Pie Chart: 자산 배분(현금/주식) 및 전략별 자금 할당 구조 시각화',
+            'Bar Chart: 보유 종목 Top 5 평가 금액 시각화',
+            'Label: 차트 내부(Inside)에 직관적인 퍼센트(%) 및 금액 라벨 표시'
+          ]
+        },
+        {
+          title: '✅ UI 표시 문제 및 가독성 개선',
+          details: [
+            'Fix: 버튼 텍스트 줄바꿈 방지 (white-space: nowrap)',
+            'Fix: 전략 수익률 음수(-) 부호 표시 로직 정상화',
+            'Colors: 상승(Red)/하락(Blue) 색상 테마 일관성 적용',
+            'Layout: 차트 라벨 오버플로우 방지 및 레이아웃 최적화'
+          ]
+        },
+        {
+          title: '✅ 시스템 안정성 확보',
+          details: [
+            'Code: 컴포넌트 구조 복구 및 구문 오류 문법 수정',
+            'Build: 프로덕션 빌드(tsc && vite build) 성공 검증',
+            'Error Handling: 데이터 로딩 시점의 방어적 코드 추가 (Null Check)'
+          ]
+        }
+      ]
     }
   ];
 
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 96 // 2025-12-17 기준 진행률 (전략 검증 시스템 및 배포 최적화 완료)
+  const progress = 97 // 2025-12-19 기준 진행률 (UI 시각화 및 안정성 개선 완료)
 
   const getStatusIcon = (status: string) => {
     switch (status) {
