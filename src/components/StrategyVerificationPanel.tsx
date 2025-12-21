@@ -33,7 +33,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Divider
+    Divider,
+    LinearProgress
 } from '@mui/material';
 import {
     PlayArrow as PlayArrowIcon,
@@ -78,31 +79,88 @@ export default function StrategyVerificationPanel() {
     const [selectedResult, setSelectedResult] = useState<VerificationResult | null>(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
 
+    const [progress, setProgress] = useState(0);
+    const [statusMessage, setStatusMessage] = useState('');
+
     const handleVerify = async () => {
         setLoading(true);
         setError(null);
+        setResults([]);
+        setProgress(0);
+        setStatusMessage('검증 대상 조회 중...');
+
         try {
             const apiUrl = import.meta.env.VITE_API_URL || '';
-            const response = await fetch(`${apiUrl}/api/strategy/verify-all`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
 
-            if (!response.ok) {
-                throw new Error(`Server responded with ${response.status}`);
+            // 1. 검증 대상 조회
+            const targetsResponse = await fetch(`${apiUrl}/api/strategy/verification-targets`);
+            if (!targetsResponse.ok) throw new Error('Failed to fetch verification targets');
+
+            const targets = await targetsResponse.json();
+
+            if (targets.length === 0) {
+                setStatusMessage('검증 대상이 없습니다.');
+                setLoading(false);
+                return;
             }
 
-            const data: VerificationResult[] = await response.json();
-            setResults(data);
+            // 2. 전체 작업량 계산
+            let totalStocks = 0;
+            targets.forEach((t: any) => totalStocks += t.stock_codes.length);
+
+            let processedCount = 0;
+            const BATCH_SIZE = 20; // 20개씩 끊어서 요청 (Timeout 방지)
+            const allResults: VerificationResult[] = [];
+
+            // 3. 전략별 배치 처리
+            for (const target of targets) {
+                const stockCodes = target.stock_codes;
+
+                for (let i = 0; i < stockCodes.length; i += BATCH_SIZE) {
+                    const batch = stockCodes.slice(i, i + BATCH_SIZE);
+                    setStatusMessage(`${target.strategy_name}: ${i + 1}/${stockCodes.length} 처리 중...`);
+
+                    try {
+                        const batchResponse = await fetch(`${apiUrl}/api/strategy/batch-check`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                strategy_id: target.strategy_id,
+                                stock_codes: batch
+                            })
+                        });
+
+                        if (batchResponse.ok) {
+                            const batchResults = await batchResponse.json();
+                            allResults.push(...batchResults);
+                            // 실시간 결과 업데이트 (선택 사항, 성능 위해 나중에 한 번에 할 수도 있음)
+                            setResults(prev => [...prev, ...batchResults]);
+                        } else {
+                            console.error(`Batch failed for ${target.strategy_name}`);
+                        }
+                    } catch (e) {
+                        console.error(`Batch error: ${e}`);
+                    }
+
+                    processedCount += batch.length;
+                    setProgress(Math.min((processedCount / totalStocks) * 100, 100));
+
+                    // UI 렌더링 양보 (비동기 지연)
+                    await new Promise(r => setTimeout(r, 10));
+                }
+            }
+
             setLastRunTime(new Date());
+            setStatusMessage(`완료! 총 ${allResults.length}건 검증됨`);
             setPage(0);
 
         } catch (err: any) {
             console.error("Verification failed:", err);
             setError(err.message || "Failed to verify strategies");
+            setStatusMessage('오류 발생');
         } finally {
             setLoading(false);
+            setProgress(0);
         }
     };
 
@@ -209,8 +267,18 @@ export default function StrategyVerificationPanel() {
                         disabled={loading}
                         sx={{ height: 40 }}
                     >
-                        {loading ? '검증 중...' : '전체 검증 실행'}
+                        {loading ? '검증 중단' : '전체 검증 실행'}
                     </Button>
+
+                    {loading && (
+                        <Stack direction="column" sx={{ minWidth: 200, ml: 2, mr: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography variant="caption" color="text.secondary">{statusMessage}</Typography>
+                                <Typography variant="caption" color="primary">{Math.round(progress)}%</Typography>
+                            </Box>
+                            <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 1 }} />
+                        </Stack>
+                    )}
 
                     <Button
                         variant="outlined"

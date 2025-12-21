@@ -105,6 +105,68 @@ class StrategyVerificationResult(BaseModel):
     score: float
     details: Dict[str, Any]
 
+class VerificationTarget(BaseModel):
+    strategy_id: str
+    strategy_name: str
+    stock_codes: List[str]
+
+@router.get("/verification-targets", response_model=List[VerificationTarget])
+async def get_verification_targets():
+    """
+    검증 대상 전략 및 종목 리스트 조회 (클라이언트 사이드 배치 처리용)
+    """
+    try:
+        supabase = get_supabase_client()
+        
+        # 1. 활성 전략 + 유니버스 조회 (RPC 사용)
+        rpc_response = supabase.rpc('get_active_strategies_with_universe', {}).execute()
+        strategies_data = rpc_response.data
+        
+        if not strategies_data:
+            return []
+            
+        targets = []
+        for item in strategies_data:
+            strategy_name = item.get('strategy_name', 'Unknown')
+            target_stocks = []
+            
+            # 1. Top-Level filtered_stocks
+            f_stocks_top = item.get('filtered_stocks')
+            if f_stocks_top:
+                for s in f_stocks_top:
+                    if isinstance(s, dict) and 'stock_code' in s:
+                        target_stocks.append(s['stock_code'])
+                    elif isinstance(s, str):
+                        target_stocks.append(s)
+            
+            # 2. 'universes' 키 확인
+            if item.get('universes'):
+                for u in item['universes']:
+                    f_stocks = u.get('filtered_stocks')
+                    if f_stocks:
+                        for s in f_stocks:
+                            if isinstance(s, dict) and 'stock_code' in s:
+                                target_stocks.append(s['stock_code'])
+                            elif isinstance(s, str):
+                                target_stocks.append(s)
+            
+            # 중복 제거 및 정렬
+            target_stocks = sorted(list(set(target_stocks)))
+            
+            if target_stocks:
+                targets.append(VerificationTarget(
+                    strategy_id=item['strategy_id'],
+                    strategy_name=strategy_name,
+                    stock_codes=target_stocks
+                ))
+                
+        return targets
+
+    except Exception as e:
+        print(f"[Targets] Failed to fetch targets: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch verification targets: {str(e)}")
+
+
 @router.post("/verify-all", response_model=List[StrategyVerificationResult])
 async def verify_all_strategies():
     """
@@ -526,32 +588,135 @@ async def check_strategy_signal(request: StrategySignalRequest):
         raise HTTPException(status_code=500, detail=f"Failed to check signal: {str(e)}")
 
 
-@router.post("/batch-check", response_model=List[StrategySignalResponse])
-async def batch_check_signals(request: BatchSignalRequest):
+@router.post("/batch-check", response_model=List[StrategyVerificationResult])
+async def batch_check_strategies(request: BatchSignalRequest):
     """
     배치 신호 확인 (여러 종목 동시 처리)
-
-    Args:
-        request: 전략 ID, 종목 코드 리스트
-
-    Returns:
-        List[StrategySignalResponse]: 종목별 신호 리스트
+    클라이언트 사이드 배치 처리를 지원하기 위한 엔드포인트
     """
-    results = []
+    try:
+        supabase = get_supabase_client()
+        import math
+        from backtest.engine import BacktestEngine
+        
+        # 1. 전략 정보 조회
+        strategy_response = supabase.table('strategies') \
+            .select('*') \
+            .eq('id', request.strategy_id) \
+            .single() \
+            .execute()
 
-    for stock_code in request.stock_codes:
-        try:
-            signal_request = StrategySignalRequest(
-                strategy_id=request.strategy_id,
-                stock_code=stock_code
-            )
-            signal = await check_strategy_signal(signal_request)
-            results.append(signal)
-        except Exception as e:
-            # 개별 종목 실패는 무시하고 계속
-            continue
+        if not strategy_response.data:
+            raise HTTPException(status_code=404, detail=f"Strategy {request.strategy_id} not found")
+        
+        strategy = strategy_response.data
+        strategy_id = strategy.get('id')
+        strategy_name = strategy.get('name', 'Unknown')
+        strategy_config = strategy.get('config') or strategy
+        
+        stock_codes = request.stock_codes
+        if not stock_codes:
+            return []
+            
+        # 2. 검증 엔진 초기화
+        engine = BacktestEngine()
+        sem = asyncio.Semaphore(20) # 동시성 제어
 
-    return results
+        # 3. 개별 종목 처리 함수 (Internal Helper)
+        async def process_single_stock(stock_code: str) -> Optional[StrategyVerificationResult]:
+            async with sem:
+                try:
+                    # 1. 과거 데이터 조회
+                    def fetch_data():
+                        p_resp = supabase.table('kw_price_daily').select('trade_date,open,high,low,close,volume').eq('stock_code', stock_code).order('trade_date', desc=False).limit(200).execute()
+                        c_resp = supabase.table('kw_price_current').select('*').eq('stock_code', stock_code).limit(1).execute()
+                        return p_resp, c_resp
+                        
+                    price_response, curr_resp = await asyncio.to_thread(fetch_data)
+
+                    if not price_response.data or len(price_response.data) < 20:
+                        return None
+
+                    # DataFrame 변환
+                    df = pd.DataFrame(price_response.data)
+                    df['trade_date'] = pd.to_datetime(df['trade_date'])
+                    df.set_index('trade_date', inplace=True)
+                    for col in ['open', 'high', 'low', 'close', 'volume']:
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+                    # 현재가 병합
+                    current_price = 0.0
+                    stock_name = stock_code
+                    
+                    if curr_resp.data and len(curr_resp.data) > 0:
+                        row = curr_resp.data[0]
+                        current_price = float(row.get('current_price') or 0)
+                        stock_name = row.get('stock_name', stock_code)
+                        
+                        if current_price > 0:
+                            try:
+                                now = datetime.now()
+                                last_date = df.index[-1]
+                                if last_date.date() < now.date():
+                                    new_row = pd.DataFrame([{
+                                        'open': current_price, 'high': current_price, 'low': current_price, 
+                                        'close': current_price, 'volume': 0
+                                    }], index=[pd.Timestamp(now)])
+                                    df = pd.concat([df, new_row])
+                                elif last_date.date() == now.date():
+                                    df.iloc[-1, df.columns.get_loc('close')] = current_price
+                            except Exception:
+                                pass
+                    
+                    # Fallback Price
+                    if current_price <= 0:
+                        if not df.empty:
+                            current_price = df.iloc[-1]['close']
+                        else:
+                            return None
+                            
+                    # 엔진 평가
+                    eval_result = await engine.evaluate_snapshot(stock_code, df, strategy_config)
+                    
+                    # 결과 포맷팅
+                    score = eval_result.get('score', 0)
+                    if not isinstance(score, (int, float)) or isinstance(score, float) and (math.isnan(score) or math.isinf(score)):
+                        score = 0.0
+                        
+                    signal = eval_result.get('signal', 'hold').upper()
+                    if signal == 'CONFLICT': signal = 'HOLD'
+                    
+                    safe_stock_name = stock_name or stock_code or "Unknown"
+                    if not isinstance(current_price, (int, float)) or isinstance(current_price, float) and (math.isnan(current_price) or math.isinf(current_price)):
+                        current_price = 0.0
+                    
+                    return StrategyVerificationResult(
+                        strategy_name=strategy_name,
+                        stock_code=stock_code,
+                        stock_name=safe_stock_name,
+                        current_price=float(current_price),
+                        signal_type=signal,
+                        score=float(score),
+                        details={
+                            'reasons': eval_result.get('reasons', []),
+                            'indicators': _sanitize_for_json(eval_result.get('indicators', {}))
+                        }
+                    )
+                except Exception as e:
+                    print(f"[Batch] Error processing {stock_code}: {e}")
+                    return None
+
+        # 4. 병렬 실행
+        tasks = [process_single_stock(code) for code in stock_codes]
+        results_raw = await asyncio.gather(*tasks)
+        results = [r for r in results_raw if r is not None]
+        
+        return results
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Batch verification failed: {str(e)}")
 
 
 @router.post("/check-signal", response_model=StrategySignalResponse)
