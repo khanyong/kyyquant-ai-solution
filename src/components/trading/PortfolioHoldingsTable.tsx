@@ -14,7 +14,8 @@ import {
 } from '@mui/material'
 import {
     TrendingUp,
-    Warning
+    Warning,
+    ListAlt
 } from '@mui/icons-material'
 
 interface Position {
@@ -49,8 +50,8 @@ export default function PortfolioHoldingsTable({ positions, loading }: Portfolio
 
     return (
         <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom fontFamily="serif">
-                📋 실시간 보유 종목 현황
+            <Typography variant="h6" fontWeight="bold" gutterBottom fontFamily="serif" sx={{ display: 'flex', alignItems: 'center' }}>
+                <ListAlt sx={{ mr: 1, color: 'text.primary' }} /> 실시간 보유 종목 현황
             </Typography>
 
             {positions.length === 0 ? (
@@ -103,10 +104,10 @@ export default function PortfolioHoldingsTable({ positions, loading }: Portfolio
                                     </TableCell>
                                     <TableCell align="center">
                                         {pos.profit_loss_rate >= 10 && (
-                                            <Chip icon={<TrendingUp />} label="익절구간" size="small" variant="outlined" sx={{ borderColor: '#2E7D32', color: '#2E7D32', fontWeight: 600 }} />
+                                            <Chip icon={<TrendingUp sx={{ color: 'text.secondary !important' }} />} label="익절구간" size="small" variant="outlined" sx={{ borderColor: 'text.secondary', color: 'text.secondary', fontWeight: 600 }} />
                                         )}
                                         {pos.profit_loss_rate <= -5 && (
-                                            <Chip icon={<Warning />} label="손절주의" size="small" variant="outlined" sx={{ borderColor: '#C62828', color: '#C62828', fontWeight: 600 }} />
+                                            <Chip icon={<Warning sx={{ color: 'text.secondary !important' }} />} label="손절주의" size="small" variant="outlined" sx={{ borderColor: 'text.secondary', color: 'text.secondary', fontWeight: 600 }} />
                                         )}
                                     </TableCell>
                                 </TableRow>

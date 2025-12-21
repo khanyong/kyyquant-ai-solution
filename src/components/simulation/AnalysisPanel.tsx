@@ -13,15 +13,15 @@ import { formatLargeNumber } from '../../utils/SimulationEngine';
 import { calculateCorrelationMatrix, interpretCorrelation } from '../../utils/CorrelationEngine';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    primary: '#00D1FF', // Cyan
-    secondary: '#7F5AF0', // Purple
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    border: '#2A2F3A',
-    success: '#2CB67D',
-    danger: '#EF4565',
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    border: 'var(--ipc-border)',
+    success: 'var(--ipc-success)',
+    danger: 'var(--ipc-danger)',
     colors: ['#00D1FF', '#7F5AF0', '#FFBB28', '#FF8042', '#2CB67D']
 };
 
@@ -46,7 +46,7 @@ const CorrelationHeatmapView = ({ results }: { results: NamedResult[] }) => {
 
     if (!allocations || allocations.length === 0) {
         return (
-            <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 2 }}>
+            <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'var(--ipc-bg-subtle)', borderRadius: 2 }}>
                 <Typography variant="h6" color={THEME.text} sx={{ mb: 1 }}>
                     Correlation Data Unavailable
                 </Typography>
@@ -114,7 +114,7 @@ const CorrelationHeatmapView = ({ results }: { results: NamedResult[] }) => {
 
                                     // Highlight self-correlation (diagonal)
                                     if (i === j) {
-                                        bgColor = 'rgba(255,255,255,0.05)';
+                                        bgColor = 'var(--ipc-bg-subtle)';
                                         color = THEME.textDim;
                                     }
 
@@ -137,7 +137,7 @@ const CorrelationHeatmapView = ({ results }: { results: NamedResult[] }) => {
                 </table>
             </Box>
 
-            <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, display: 'flex', gap: 4 }}>
+            <Box sx={{ p: 2, bgcolor: 'var(--ipc-bg-subtle)', borderRadius: 2, display: 'flex', gap: 4 }}>
                 <Box>
                     <Typography variant="subtitle2" color={THEME.text} fontWeight="bold" sx={{ mb: 0.5 }}>
                         (Red) High Correlation (&gt; 0.7)
@@ -282,7 +282,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ results }) => {
                                             </linearGradient>
                                         ))}
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={THEME.border} />
                                     <XAxis dataKey="year" stroke={THEME.textDim} />
                                     <YAxis stroke={THEME.textDim} tickFormatter={(val) => formatLargeNumber(val)} />
                                     <RechartsTooltip
@@ -316,7 +316,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ results }) => {
                         <Box sx={{ height: 400, width: '100%' }}>
                             <ResponsiveContainer>
                                 <BarChart data={chartData} layout="vertical">
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={THEME.border} />
                                     <XAxis type="number" stroke={THEME.textDim} />
                                     <YAxis dataKey="year" type="category" stroke={THEME.textDim} width={60} />
                                     <RechartsTooltip

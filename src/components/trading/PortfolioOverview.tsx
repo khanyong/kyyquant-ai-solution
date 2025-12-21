@@ -122,7 +122,7 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
         <AccountBalance fontSize="large" sx={{ color: '#121212' }} />
         <Typography variant="h5" fontWeight="bold" fontFamily="serif">
           내 포트폴리오 현황
-          <Chip label="Source: 내부DB" color="info" size="small" variant="outlined" sx={{ ml: 2, verticalAlign: 'middle', fontSize: '0.8rem' }} />
+          <Chip label="Source: 내부DB" size="small" variant="outlined" sx={{ ml: 2, verticalAlign: 'middle', fontSize: '0.8rem', borderColor: 'text.secondary', color: 'text.secondary' }} />
           {lastUpdated && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1, verticalAlign: 'middle', fontSize: '0.8rem' }}>
               ({lastUpdated.toLocaleString('ko-KR')})
@@ -194,12 +194,11 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                 {safeStats.totalProfit > 0 ? '+' : ''}{formatCurrency(safeStats.totalProfit)}원
               </Typography>
               <Chip
-                icon={safeStats.totalProfitRate > 0 ? <TrendingUp /> : undefined}
+                icon={safeStats.totalProfitRate > 0 ? <TrendingUp sx={{ color: 'text.secondary !important' }} /> : undefined}
                 label={formatPercent(safeStats.totalProfitRate)}
                 size="small"
                 variant="outlined"
-                color={safeStats.totalProfitRate > 0 ? 'error' : safeStats.totalProfitRate < 0 ? 'primary' : 'default'}
-                sx={{ fontWeight: 'bold', borderRadius: 0 }}
+                sx={{ fontWeight: 'bold', borderRadius: 0, borderColor: 'divider', color: 'text.primary' }}
               />
             </Stack>
           </Box>

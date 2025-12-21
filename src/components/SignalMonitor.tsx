@@ -50,6 +50,8 @@ import {
 import { supabase } from '../lib/supabase'
 import { isMarketOpen, getMarketStatusMessage } from '../utils/marketHours'
 import { n8nClient, WorkflowExecutionSummary, NodeExecutionStatus } from '../lib/n8n'
+import MarketOverview from './trading/MarketOverview'
+import SystemMonitor from './SystemMonitor'
 
 interface TradingSignal {
   id: string
@@ -111,6 +113,8 @@ interface PendingSellStock {
   strategy_id: string
   updated_at: string
 }
+
+
 
 export default function SignalMonitor() {
   const [signals, setSignals] = useState<TradingSignal[]>([])
@@ -601,6 +605,11 @@ export default function SignalMonitor() {
 
   return (
     <Box>
+      <SystemMonitor />
+      <Box sx={{ mb: 3 }}>
+        <MarketOverview />
+      </Box>
+
       {/* n8n 워크플로우 실행 내역 */}
       <Card sx={{ mb: 3 }}>
         <CardContent>

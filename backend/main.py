@@ -135,6 +135,16 @@ except ImportError as e:
     import_status["sync"] = "error"
     import_status["errors"]["sync"] = str(e)
 
+try:
+    from api.system import router as system_router
+    app.include_router(system_router, prefix="/api/system", tags=["system"])
+    print("[OK] System router registered")
+    import_status["system"] = "ok"
+except ImportError as e:
+    print(f"[ERROR] Failed to import system router: {e}")
+    import_status["system"] = "error"
+    import_status["errors"]["system"] = str(e)
+
 @app.get("/")
 async def root():
     """헬스체크 엔드포인트"""
@@ -149,6 +159,7 @@ async def root():
             "strategy": "/api/strategy",
             "account": "/api/account",
             "order": "/api/order",
+            "system": "/api/system",
             "docs": "/docs"
         }
     }

@@ -11,16 +11,18 @@ import {
 } from '@mui/material'
 import {
   Add,
-  Refresh
+  Refresh,
+  Work,
+  ShowChart
 } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 import PortfolioOverview from './PortfolioOverview'
 import PortfolioHoldingsTable from './PortfolioHoldingsTable'
 import StrategyCard from './StrategyCard'
-import PendingOrdersPanel from './PendingOrdersPanel'
+import EmergencyControlPanel from './EmergencyControlPanel'
+import StrategyVerificationPanel from '../StrategyVerificationPanel'
 import AddStrategyDialog from './AddStrategyDialog'
 import EditStrategyDialog from './EditStrategyDialog'
-import StrategyVerificationPanel from '../StrategyVerificationPanel'
 
 interface ActiveStrategy {
   strategy_id: string
@@ -394,17 +396,16 @@ export default function AutoTradingPanelV2() {
     <Box sx={{ p: 3 }}>
       {/* 헤더 */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Typography variant="h5" fontWeight="bold" fontFamily="serif">
-          💼 자동매매 포트폴리오
+        <Typography variant="h5" fontWeight="bold" fontFamily="serif" sx={{ display: 'flex', alignItems: 'center' }}>
+          <Work sx={{ mr: 1, color: 'text.primary' }} /> 자동매매 포트폴리오
         </Typography>
         <Stack direction="row" spacing={1}>
           <Button
             startIcon={<Refresh />}
             onClick={handleSyncAccount}
-            variant="contained"
-            color="secondary"
+            variant="outlined"
             size="small"
-            sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
+            sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content', color: 'text.primary', borderColor: 'rgba(0,0,0,0.23)' }}
           >
             계좌 동기화
           </Button>
@@ -413,7 +414,7 @@ export default function AutoTradingPanelV2() {
             onClick={loadData}
             variant="outlined"
             size="small"
-            sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
+            sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content', color: 'text.secondary', borderColor: 'rgba(0,0,0,0.23)' }}
           >
             새로고침
           </Button>
@@ -433,9 +434,9 @@ export default function AutoTradingPanelV2() {
 
       {/* 활성 전략 목록 */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" fontWeight="bold" gutterBottom fontFamily="serif">
-          📈 활성 전략별 현황
-          <Chip label="Source: 전략설정" size="small" variant="outlined" sx={{ ml: 1, verticalAlign: 'middle', borderColor: '#2E7D32', color: '#2E7D32' }} />
+        <Typography variant="h6" fontWeight="bold" gutterBottom fontFamily="serif" sx={{ display: 'flex', alignItems: 'center' }}>
+          <ShowChart sx={{ mr: 1, color: 'text.primary' }} /> 활성 전략별 현황
+          <Chip label="Source: 전략설정" size="small" variant="outlined" sx={{ ml: 1, verticalAlign: 'middle', borderColor: 'text.secondary', color: 'text.secondary' }} />
           {lastUpdated && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1, verticalAlign: 'middle' }}>
               ({lastUpdated.toLocaleString('ko-KR')})
@@ -469,6 +470,7 @@ export default function AutoTradingPanelV2() {
       {/* 전략 검증 패널 (전체 종목 스캔) */}
       <StrategyVerificationPanel />
 
+
       {/* 새 자동매매 시작 */}
       <Box sx={{ mb: 3 }}>
         <Button
@@ -477,9 +479,15 @@ export default function AutoTradingPanelV2() {
           onClick={() => setShowAddDialog(true)}
           fullWidth
           size="large"
+          sx={{ bgcolor: '#424242', '&:hover': { bgcolor: '#212121' } }}
         >
           ➕ 새 자동매매 시작
         </Button>
+      </Box>
+
+      {/* 긴급 대응 센터 (Emergency Control) */}
+      <Box sx={{ mb: 3 }}>
+        <EmergencyControlPanel onOpComplete={loadData} />
       </Box>
 
       {/* 자동매매 추가 다이얼로그 */}
@@ -510,11 +518,6 @@ export default function AutoTradingPanelV2() {
           />
         )
       }
-
-      {/* 대기중인 주문 */}
-      <Box sx={{ mb: 3 }}>
-        <PendingOrdersPanel />
-      </Box>
     </Box >
   )
 }

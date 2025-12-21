@@ -34,10 +34,7 @@ import BacktestRunner from './components/BacktestRunner'
 import SignalMonitor from './components/SignalMonitor'
 import StrategyMarket from './components/StrategyMarket'
 import AutoTradingPanel from './components/trading/AutoTradingPanelV2'
-import OrderPanel from './components/trading/OrderPanel'
-import PortfolioPanel from './components/trading/PortfolioPanel'
 import MarketOverview from './components/trading/MarketOverview'
-import KiwoomTradingPanel from './components/trading/KiwoomTradingPanel'
 import MarketMonitor from './components/MarketMonitor'
 import Community from './components/community/Community'
 import VisualRetirementPlanner from './components/simulation/VisualRetirementPlanner'
@@ -207,79 +204,111 @@ function MainApp() {
                 sx={{
                   '& .MuiTab-root': {
                     textTransform: 'none',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                    minHeight: 64,
-                    padding: '8px 12px',
-                    borderRight: '1px solid',
-                    borderColor: 'divider',
-                    flex: 1,
-                    minWidth: 0,
-                    '&:last-child': {
-                      borderRight: 'none'
+                    minHeight: 72,
+                    padding: '12px 16px',
+                    transition: 'all 0.3s ease',
+                    opacity: 0.7,
+                    '&:hover': {
+                      opacity: 1,
+                      bgcolor: 'rgba(0, 0, 0, 0.04)',
+                    },
+                    '&.Mui-selected': {
+                      opacity: 1,
+                      fontWeight: 700,
                     },
                     '& .MuiSvgIcon-root': {
-                      fontSize: '1.3rem',
-                      marginBottom: '2px'
+                      fontSize: '1.5rem',
+                      marginBottom: '4px'
                     }
                   },
-                  '& .MuiTabs-flexContainer': {
-                    justifyContent: 'space-between'
+                  '& .MuiTabs-indicator': {
+                    height: 3,
+                    borderRadius: '3px 3px 0 0'
                   }
                 }}
               >
                 <Tab
                   icon={<Announcement />}
-                  label={t('tabs.community')}
-                  sx={{
-                    // inheriting global theme 
-                  }}
+                  label={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Community</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>커뮤니티</Typography>
+                    </Box>
+                  }
                 />
                 <Tab
                   icon={<Code />}
-                  label={t('tabs.strategy_builder')}
-                  sx={{}}
+                  label={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Strategy Builder</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>전략 빌더</Typography>
+                    </Box>
+                  }
                 />
                 <Tab
                   icon={<SettingsIcon />}
                   label={
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <span>{t('tabs.investment_settings')}</span>
-                    </Stack>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Universe Builder</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>투자 유니버스</Typography>
+                    </Box>
                   }
-                  sx={{}}
                 />
                 <Tab
                   icon={<Assessment />}
-                  label={t('tabs.backtesting')}
-                  sx={{}}
+                  label={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Backtest</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>백테스트</Typography>
+                    </Box>
+                  }
                 />
                 <Tab
                   icon={<Monitor />}
-                  label={t('tabs.realtime_signals')}
-                  sx={{}}
+                  label={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Live Signals</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>실시간 시그널</Typography>
+                    </Box>
+                  }
                 />
                 <Tab
                   icon={<TrendingUp />}
-                  label={t('tabs.auto_trading')}
-                  sx={{}}
+                  label={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Auto Trading</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>자동매매</Typography>
+                    </Box>
+                  }
                 />
                 <Tab
                   icon={<ShowChart />}
-                  label={"Strategy Market"}
-                  sx={{}}
+                  label={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Market</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>전략 마켓</Typography>
+                    </Box>
+                  }
                 />
                 {isAdmin && (
                   <Tab
                     icon={<AdminPanelSettings />}
-                    label={t('tabs.admin')}
-                    sx={{}}
+                    label={
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Admin</Typography>
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>관리자</Typography>
+                      </Box>
+                    }
                   />
                 )}
                 <Tab
                   icon={<Speed />}
-                  label="IPC"
-                  sx={{}}
+                  label={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>IPC</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.7rem', mt: 0.5, opacity: 0.8 }}>자산운용</Typography>
+                    </Box>
+                  }
                 />
               </Tabs>
             </Paper>
@@ -309,10 +338,6 @@ function MainApp() {
               <Grid container spacing={3}>
                 <Grid item xs={12}>
                   <MarketOverview />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <KiwoomTradingPanel />
                 </Grid>
 
                 <Grid item xs={12}>
@@ -347,18 +372,6 @@ function MainApp() {
                       </Box>
                     </Paper>
                   )}
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 2 }}>
-                    <OrderPanel />
-                  </Paper>
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 2 }}>
-                    <PortfolioPanel />
-                  </Paper>
                 </Grid>
               </Grid>
             </TabPanel>

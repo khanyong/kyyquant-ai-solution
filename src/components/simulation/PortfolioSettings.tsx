@@ -6,11 +6,11 @@ import {
 } from '@mui/material';
 
 const THEME = {
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    border: '#2A2F3A',
-    primary: '#00D1FF'
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    border: 'var(--ipc-border)',
+    primary: 'var(--ipc-primary)'
 };
 
 interface PortfolioSettingsProps {

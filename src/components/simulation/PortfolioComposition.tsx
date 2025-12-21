@@ -9,12 +9,12 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, L
 import { AssetAllocation } from '../../utils/SimulationEngine';
 
 const THEME = {
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    border: '#2A2F3A',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    panel: '#151921',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    border: 'var(--ipc-border)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    panel: 'var(--ipc-bg-panel)',
     chartColors: ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
 };
 

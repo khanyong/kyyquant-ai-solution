@@ -23,7 +23,8 @@ import {
   Cancel,
   TrendingUp,
   TrendingDown,
-  AccessTime
+  AccessTime,
+  ListAlt
 } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 
@@ -144,14 +145,14 @@ export default function PendingOrdersPanel() {
   }
 
   const getStatusChip = (status: string) => {
-    const statusMap: Record<string, { label: string; color: 'warning' | 'success' | 'default' | 'error' }> = {
-      PENDING: { label: '대기중', color: 'warning' },
-      PARTIAL: { label: '부분체결', color: 'success' },
-      EXECUTED: { label: '체결완료', color: 'success' },
-      CANCELLED: { label: '취소됨', color: 'default' }
+    const statusMap: Record<string, { label: string }> = {
+      PENDING: { label: '대기중' },
+      PARTIAL: { label: '부분체결' },
+      EXECUTED: { label: '체결완료' },
+      CANCELLED: { label: '취소됨' }
     }
-    const { label, color } = statusMap[status] || { label: status, color: 'default' as const }
-    return <Chip label={label} color={color} size="small" />
+    const { label } = statusMap[status] || { label: status }
+    return <Chip label={label} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'text.secondary' }} />
   }
 
   if (loading) {
@@ -159,7 +160,7 @@ export default function PendingOrdersPanel() {
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            📋 미체결 주문
+            <ListAlt sx={{ fontSize: 28, color: 'text.secondary', mr: 1, verticalAlign: 'middle' }} /> 미체결 주문
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
             <Typography color="text.secondary">로딩 중...</Typography>
@@ -175,12 +176,13 @@ export default function PendingOrdersPanel() {
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="h6" fontWeight="bold">
-              📋 미체결 주문
+              <ListAlt sx={{ mr: 1 }} /> 미체결 주문
             </Typography>
             <Chip
               label={`${orders.length}개`}
-              color={orders.length > 0 ? 'warning' : 'default'}
+              variant="outlined"
               size="small"
+              sx={{ color: 'text.secondary', borderColor: 'text.secondary' }}
             />
           </Stack>
           <Button
@@ -235,9 +237,9 @@ export default function PendingOrdersPanel() {
                       <Chip
                         icon={getOrderTypeIcon(order.order_type)}
                         label={order.order_type === 'BUY' ? '매수' : '매도'}
-                        color={getOrderTypeColor(order.order_type)}
                         size="small"
-                        sx={{ minWidth: 70 }}
+                        variant="outlined"
+                        sx={{ minWidth: 70, color: 'text.secondary', borderColor: 'text.secondary', '& .MuiChip-icon': { color: 'text.secondary' } }}
                       />
                     </TableCell>
                     <TableCell align="right">

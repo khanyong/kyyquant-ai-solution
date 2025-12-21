@@ -45,7 +45,8 @@ import {
     Refresh as RefreshIcon,
     Search as SearchIcon,
     FilterList as FilterListIcon,
-    Visibility as VisibilityIcon
+    Visibility as VisibilityIcon,
+    FactCheck
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 
@@ -245,7 +246,7 @@ export default function StrategyVerificationPanel() {
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%' }}>
                     <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-                        🔍 전체 종목 전략 검증 & 엑셀 다운로드
+                        <FactCheck color="action" /> 전체 종목 전략 검증 & 엑셀 다운로드
                     </Typography>
                     {lastRunTime && (
                         <Chip
@@ -334,16 +335,16 @@ export default function StrategyVerificationPanel() {
                         <Grid item xs={3}>
                             <Card variant="outlined">
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                                    <Typography variant="body2" color="error.main">Buy Candidates</Typography>
-                                    <Typography variant="h5" fontWeight="bold" color="error.main">{summaryStats.buy}</Typography>
+                                    <Typography variant="body2" color="text.secondary">Buy Candidates</Typography>
+                                    <Typography variant="h5" fontWeight="bold" color="text.primary">{summaryStats.buy}</Typography>
                                 </CardContent>
                             </Card>
                         </Grid>
                         <Grid item xs={3}>
                             <Card variant="outlined">
                                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                                    <Typography variant="body2" color="info.main">Sell Candidates</Typography>
-                                    <Typography variant="h5" fontWeight="bold" color="info.main">{summaryStats.sell}</Typography>
+                                    <Typography variant="body2" color="text.secondary">Sell Candidates</Typography>
+                                    <Typography variant="h5" fontWeight="bold" color="text.primary">{summaryStats.sell}</Typography>
                                 </CardContent>
                             </Card>
                         </Grid>
@@ -392,10 +393,9 @@ export default function StrategyVerificationPanel() {
                                                 <TableCell align="center">
                                                     <Chip
                                                         label={row.signal_type}
-                                                        color={getSignalColor(row.signal_type) as any}
                                                         size="small"
-                                                        variant={row.signal_type === 'HOLD' ? 'outlined' : 'filled'}
-                                                        sx={{ minWidth: 60 }}
+                                                        variant="outlined"
+                                                        sx={{ minWidth: 60, color: 'text.primary', borderColor: 'rgba(0, 0, 0, 0.23)' }}
                                                     />
                                                 </TableCell>
                                                 <TableCell align="center">

@@ -25,9 +25,10 @@ router = APIRouter()
 def get_supabase_client():
     """Supabase 클라이언트 가져오기"""
     url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+    key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('SUPABASE_SERVICE_KEY')
 
     if not url or not key:
+        print(f"[Supabase] Missing credentials - URL: {bool(url)}, KEY: {bool(key)}")
         raise HTTPException(status_code=500, detail="Supabase credentials not configured")
 
     return create_client(url, key)
@@ -115,14 +116,20 @@ async def get_verification_targets():
     """
     검증 대상 전략 및 종목 리스트 조회 (클라이언트 사이드 배치 처리용)
     """
+    print("[Targets] Request received")
     try:
         supabase = get_supabase_client()
+        print("[Targets] Supabase client initialized")
         
         # 1. 활성 전략 + 유니버스 조회 (RPC 사용)
+        print("[Targets] Calling RPC: get_active_strategies_with_universe")
         rpc_response = supabase.rpc('get_active_strategies_with_universe', {}).execute()
+        print(f"[Targets] RPC Response received. Data type: {type(rpc_response.data)}")
+        
         strategies_data = rpc_response.data
         
         if not strategies_data:
+            print("[Targets] No active strategies found")
             return []
             
         targets = []
@@ -160,11 +167,14 @@ async def get_verification_targets():
                     stock_codes=target_stocks
                 ))
                 
+        print(f"[Targets] Found {len(targets)} strategies with targets")
         return targets
 
     except Exception as e:
-        print(f"[Targets] Failed to fetch targets: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch verification targets: {str(e)}")
+        import traceback
+        print(f"[Targets] Failed to fetch targets: {e!r}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to fetch targets: {e!r}")
 
 
 @router.post("/verify-all", response_model=List[StrategyVerificationResult])

@@ -28,7 +28,9 @@ import {
   ExpandLess,
   Warning,
   CheckCircle,
-  Delete
+  Delete,
+  BarChart as BarChartIcon,
+  Star
 } from '@mui/icons-material'
 import { supabase } from '../../lib/supabase'
 
@@ -183,8 +185,8 @@ export default function StrategyCard({
               <Chip
                 label={`${allocatedPercent}% 할당`}
                 size="small"
-                color="primary"
                 variant="outlined"
+                sx={{ borderColor: 'text.secondary', color: 'text.secondary' }}
               />
               {universes.map((u) => (
                 <Chip
@@ -192,6 +194,7 @@ export default function StrategyCard({
                   label={u.filter_name}
                   size="small"
                   variant="outlined"
+                  sx={{ borderColor: 'text.secondary', color: 'text.secondary' }}
                 />
               ))}
             </Stack>
@@ -203,6 +206,7 @@ export default function StrategyCard({
               startIcon={<Settings />}
               onClick={onEdit}
               variant="outlined"
+              sx={{ color: 'text.primary', borderColor: 'rgba(0,0,0,0.23)' }}
             >
               수정
             </Button>
@@ -211,7 +215,7 @@ export default function StrategyCard({
               startIcon={<Stop />}
               onClick={onStop}
               variant="outlined"
-              color="warning"
+              sx={{ color: 'text.primary', borderColor: 'rgba(0,0,0,0.23)' }}
             >
               중지
             </Button>
@@ -220,7 +224,7 @@ export default function StrategyCard({
               startIcon={<Delete />}
               onClick={onDelete}
               variant="outlined"
-              color="error"
+              sx={{ color: 'text.primary', borderColor: 'rgba(0,0,0,0.23)' }}
             >
               삭제
             </Button>
@@ -296,34 +300,31 @@ export default function StrategyCard({
 
         {/* 시그널 현황 */}
         <Box>
-          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-            📊 시그널 현황
+          <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+            <BarChartIcon sx={{ mr: 1, color: 'text.primary' }} /> 시그널 현황
           </Typography>
           <Stack spacing={1}>
             <Stack direction="row" spacing={2}>
               <Chip
-                icon={<TrendingUp />}
+                icon={<TrendingUp sx={{ color: 'text.secondary !important' }} />}
                 label={`매수 대기: ${buySignals.length}종목`}
-                color="error"
                 variant="outlined"
                 onClick={() => setShowBuySignals(!showBuySignals)}
-                sx={{ cursor: 'pointer' }}
+                sx={{ cursor: 'pointer', borderColor: 'text.secondary', color: 'text.secondary' }}
               />
               <Chip
-                icon={<CheckCircle />}
+                icon={<CheckCircle sx={{ color: 'text.secondary !important' }} />}
                 label={`보유 중: ${positions.length}종목`}
-                color="success"
                 variant="outlined"
                 onClick={() => setShowHoldings(!showHoldings)}
-                sx={{ cursor: 'pointer' }}
+                sx={{ cursor: 'pointer', borderColor: 'text.secondary', color: 'text.secondary' }}
               />
               <Chip
-                icon={<TrendingDown />}
+                icon={<TrendingDown sx={{ color: 'text.secondary !important' }} />}
                 label={`매도 예정: ${sellSignals.length}종목`}
-                color="primary"
                 variant="outlined"
                 onClick={() => setShowSellSignals(!showSellSignals)}
-                sx={{ cursor: 'pointer' }}
+                sx={{ cursor: 'pointer', borderColor: 'text.secondary', color: 'text.secondary' }}
               />
             </Stack>
 
@@ -357,8 +358,8 @@ export default function StrategyCard({
                           <Chip
                             label={`${signal.condition_match_score}점`}
                             size="small"
-                            color="error"
                             variant="outlined"
+                            sx={{ borderColor: 'text.secondary', color: 'text.secondary' }}
                           />
                         </Stack>
                       </Box>
@@ -473,8 +474,8 @@ export default function StrategyCard({
                             <Chip
                               label={`${signal.exit_condition_match_score || signal.condition_match_score}점`}
                               size="small"
-                              color="primary"
                               variant="outlined"
+                              sx={{ borderColor: 'text.secondary', color: 'text.secondary' }}
                             />
                           </Stack>
                         </Box>
@@ -501,8 +502,8 @@ export default function StrategyCard({
         {/* 주요 종목 */}
         {positions.length > 0 && (
           <Box>
-            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-              🎯 주요 보유 종목 (상위 3개)
+            <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <Star sx={{ mr: 1, color: 'text.primary' }} /> 주요 보유 종목 (상위 3개)
             </Typography>
             <Stack spacing={1}>
               {positions
@@ -533,18 +534,20 @@ export default function StrategyCard({
                       </Typography>
                       {pos.profit_rate >= 10 && (
                         <Chip
-                          icon={<TrendingUp />}
+                          icon={<TrendingUp sx={{ color: 'text.secondary !important' }} />}
                           label="매도 근접"
                           size="small"
-                          color="warning"
+                          variant="outlined"
+                          sx={{ borderColor: 'text.secondary', color: 'text.secondary' }}
                         />
                       )}
                       {pos.profit_rate <= -7 && (
                         <Chip
-                          icon={<Warning />}
+                          icon={<Warning sx={{ color: 'text.secondary !important' }} />}
                           label="손절 주의"
                           size="small"
-                          color="error"
+                          variant="outlined"
+                          sx={{ borderColor: 'text.secondary', color: 'text.secondary' }}
                         />
                       )}
                     </Stack>
