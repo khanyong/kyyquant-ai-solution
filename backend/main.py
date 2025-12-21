@@ -48,6 +48,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """Server Startup Tasks"""
+    print("[System] Executing startup tasks...")
+    try:
+        from api.market import start_market_scheduler
+        start_market_scheduler()
+    except Exception as e:
+        print(f"[Warning] Failed to start market scheduler: {e}")
+
 
 # Import Status Tracking
 import_status = {

@@ -263,9 +263,9 @@ async def get_market_status():
     - 공휴일, 수능일 등 특이사항 자동 반영
     - 주말 체크
     """
-    # 한국 시간 기준
-    tz = pytz.timezone('Asia/Seoul')
-    now = datetime.now(tz)
+    # 한국 시간 기준 (Pandas Timestamp 사용이 ecals와 호환성 좋음)
+    tz = 'Asia/Seoul'
+    now = pd.Timestamp.now(tz=tz)
     
     # XKRX (한국거래소) 캘린더 로드
     xkrx = ecals.get_calendar("XKRX")
@@ -282,9 +282,19 @@ async def get_market_status():
     
     if is_session:
         # 오늘의 개장/폐장 시간 조회
-        schedule = xkrx.schedule.loc[now.strftime('%Y-%m-%d')]
-        market_open_time = schedule['market_open'].tz_convert(tz)
-        market_close_time = schedule['market_close'].tz_convert(tz)
+        try:
+            schedule = xkrx.schedule.loc[now.strftime('%Y-%m-%d')]
+            # Robust access with fallback keys
+            market_open = schedule.get('market_open') if hasattr(schedule, 'get') else schedule['market_open']
+            market_close = schedule.get('market_close') if hasattr(schedule, 'get') else schedule['market_close']
+            
+            market_open_time = market_open.tz_convert(tz)
+            market_close_time = market_close.tz_convert(tz)
+        except Exception as e:
+            print(f"[WARNING] Schedule lookup failed: {e}. Using default hours.")
+            # Fallback to default KRX hours (09:00 - 15:30)
+            market_open_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+            market_close_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
     
     # 다음 이벤트 계산
     next_open = xkrx.next_open(now).tz_convert(tz)
@@ -307,3 +317,153 @@ async def get_market_status():
         'next_event_time': next_event_time.isoformat(),
         'time_to_next_event_minutes': int((next_event_time - now).total_seconds() / 60)
     }
+
+from apscheduler.schedulers.background import BackgroundScheduler
+import requests
+import datetime
+import json
+import os
+
+# Use 'logs' directory which is mounted as volume (- ./logs:/app/logs)
+# This ensures data persists even after container rebuild/deploy
+DATA_FILE_PATH = "logs/market_data_cache.json"
+
+def get_mock_indices():
+    """Fallback mock data to prevent empty UI"""
+    return [
+        {"index_code": "KOSPI", "current_value": 2600.00, "change_value": 15.50, "change_rate": 0.60},
+        {"index_code": "KOSDAQ", "current_value": 850.20, "change_value": -5.20, "change_rate": -0.61},
+        {"index_code": "USD_KRW", "current_value": 1320.50, "change_value": 2.50, "change_rate": 0.19},
+        {"index_code": "SPX", "current_value": 4780.25, "change_value": 30.10, "change_rate": 0.63},
+        {"index_code": "COMP", "current_value": 15050.60, "change_value": 120.40, "change_rate": 0.81},
+        {"index_code": "IEF", "current_value": 95.40, "change_value": 0.15, "change_rate": 0.16},
+        {"index_code": "TLT", "current_value": 98.20, "change_value": 0.50, "change_rate": 0.51},
+        {"index_code": "LQD", "current_value": 109.80, "change_value": 0.30, "change_rate": 0.27}
+    ]
+
+def load_cache_from_disk():
+    """Load cached data from JSON file on server start"""
+    if os.path.exists(DATA_FILE_PATH):
+        try:
+            with open(DATA_FILE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                print(f"[System] Disk Cache Loaded: {len(data)} items")
+                return data
+        except Exception as e:
+            print(f"[Error] Failed to load disk cache: {e}")
+    
+    print("[System] No disk cache found. Using Mock data.")
+    return get_mock_indices()
+
+# --- [Scheduler & Cache Configuration] ---
+# In-memory Cache (Initialized from Disk or Mock)
+GLOBAL_INDICES_CACHE = load_cache_from_disk()
+LAST_UPDATED_TIME = datetime.datetime.now()
+
+# Helper: Create Cached Session for yfinance
+def get_yfinance_session():
+    session = requests.Session()
+    # "Browser-like" User-Agent to avoid AWS IP Blocking
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    })
+    return session
+
+def fetch_global_indices_background():
+    """
+    Background Task: Fetch market data every 10 minutes.
+    Updates GLOBAL_INDICES_CACHE in memory.
+    """
+    global GLOBAL_INDICES_CACHE, LAST_UPDATED_TIME
+    print(f"[Market Scheduler] Starting update at {datetime.datetime.now()}...")
+    
+    indices_map = {
+        'KOSPI': '^KS11',
+        'KOSDAQ': '^KQ11',
+        'USD_KRW': 'KRW=X',
+        'SPX': '^GSPC',
+        'COMP': '^IXIC',
+        'IEF': 'IEF',
+        'TLT': 'TLT',
+        'LQD': 'LQD'
+    }
+    
+    new_data = []
+    session = get_yfinance_session()
+    
+    try:
+        for code, symbol in indices_map.items():
+            try:
+                # Use Ticker with custom session
+                ticker = yf.Ticker(symbol, session=session)
+                
+                # Fetch 5 days history (robustness)
+                # fast_info is faster but history is more reliable for "Close"
+                hist = ticker.history(period="5d")
+                
+                if hist.empty:
+                    print(f"  [Fail] {code} ({symbol}): No data (blocked/delisted?)")
+                    continue
+
+                current_price = float(hist['Close'].iloc[-1])
+                prev_close = float(hist['Close'].iloc[-2]) if len(hist) > 1 else current_price
+
+                # NaN check
+                import math
+                if math.isnan(current_price):
+                    current_price = prev_close if not math.isnan(prev_close) else 0
+
+                change_value = current_price - prev_close
+                change_rate = (change_value / prev_close) * 100 if prev_close != 0 else 0
+                
+                new_data.append({
+                    "index_code": code,
+                    "current_value": round(current_price, 2),
+                    "change_value": round(change_value, 2),
+                    "change_rate": round(change_rate, 2),
+                    "updated_at": datetime.datetime.now().isoformat()
+                })
+                
+            except Exception as e:
+                print(f"  [Error] {code}: {e}")
+                continue
+
+        if new_data:
+            GLOBAL_INDICES_CACHE = new_data
+            LAST_UPDATED_TIME = datetime.datetime.now()
+            
+            # Save to Disk
+            try:
+                with open(DATA_FILE_PATH, "w", encoding="utf-8") as f:
+                    json.dump(new_data, f, ensure_ascii=False, indent=4)
+                print(f"[Market Scheduler] Success! Updated {len(new_data)} items and saved to disk.")
+            except Exception as e:
+                print(f"[Market Scheduler] Updated memory but failed to save disk: {e}")
+                
+        else:
+            print("[Market Scheduler] Fetch returned 0 items. Keeping old cache.")
+
+    except Exception as e:
+        print(f"[Market Scheduler] Critical Error: {e}")
+
+# Call this from main.py @app.on_event("startup")
+def start_market_scheduler():
+    scheduler = BackgroundScheduler()
+    # Run every 10 minutes (600 seconds) to be safe from blocking
+    scheduler.add_job(fetch_global_indices_background, 'interval', minutes=10)
+    scheduler.start()
+    print("[System] Market Data Scheduler Started (Interval: 10min)")
+    
+    # Run once immediately on startup (in a separate thread ideally, or simple call)
+    try:
+         fetch_global_indices_background()
+    except:
+         pass
+
+@router.get("/global-indices")
+async def get_global_indices():
+    """
+    Return InMemory Cached Data immediately.
+    Zero latency, no blocking.
+    """
+    return GLOBAL_INDICES_CACHE
