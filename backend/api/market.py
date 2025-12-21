@@ -483,19 +483,64 @@ def fetch_global_indices_background():
     except Exception as e:
         print(f"[Market Scheduler] Critical Error: {e}")
 
+class MarketDataPayload(BaseModel):
+    data: List[Dict[str, Any]]
+
+# ... existing code ...
+
+@router.post("/update-data")
+async def receive_market_data(payload: MarketDataPayload):
+    """
+    Receives market data from NAS Fetcher (Home IP) and updates cache.
+    Authentication via simple key check header could be added here.
+    """
+    global GLOBAL_INDICES_CACHE, LAST_UPDATED_TIME
+    
+    try:
+        new_data = payload.data
+        if not new_data:
+            return {"status": "ignored", "message": "Empty data received"}
+
+        # Update Memory Cache
+        current_map = {item['index_code']: item for item in GLOBAL_INDICES_CACHE}
+        for item in new_data:
+            # Ensure proper format
+             if 'updated_at' not in item:
+                 item['updated_at'] = datetime.now().isoformat()
+             current_map[item['index_code']] = item
+        
+        GLOBAL_INDICES_CACHE = list(current_map.values())
+        LAST_UPDATED_TIME = datetime.now()
+
+        # Save to Disk
+        try:
+            with open(DATA_FILE_PATH, 'w', encoding='utf-8') as f:
+                json.dump(GLOBAL_INDICES_CACHE, f, ensure_ascii=False, indent=2)
+            print(f"[Market Receiver] Successfully updated {len(new_data)} items from NAS.")
+        except Exception as e:
+            print(f"[Market Receiver] Failed to save to disk: {e}")
+            
+        return {"status": "success", "count": len(new_data)}
+        
+    except Exception as e:
+        print(f"[Market Receiver] Error processing data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Call this from main.py @app.on_event("startup")
 def start_market_scheduler():
     scheduler = BackgroundScheduler()
-    # Run every 10 minutes (600 seconds) to be safe from blocking
-    scheduler.add_job(fetch_global_indices_background, 'interval', minutes=10)
-    scheduler.start()
-    print("[System] Market Data Scheduler Started (Interval: 10min)")
+    # AWS IP Blocking Issue:
+    # Disable internal fetching from AWS. Only listen to NAS push.
+    # scheduler.add_job(fetch_global_indices_background, 'interval', minutes=10)
     
-    # Run once immediately on startup (in a separate thread ideally, or simple call)
-    try:
-         fetch_global_indices_background()
-    except:
-         pass
+    scheduler.start()
+    print("[System] Market Data Scheduler Started (Internal Fetch Disabled - Waiting for NAS Push)")
+    
+    # Run once immediately? No, wait for NAS.
+    # try:
+    #      fetch_global_indices_background()
+    # except:
+    #      pass
 
 @router.get("/global-indices")
 async def get_global_indices():

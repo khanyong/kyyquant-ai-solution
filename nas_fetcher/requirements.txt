@@ -1,0 +1,6 @@
+requests
+pandas
+finance-datareader
+yfinance
+lxml
+beautifulsoup4
