@@ -3,15 +3,15 @@ import { Box, Typography, Paper, Grid, TextField, Slider, Button, Alert } from '
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    success: '#2CB67D',
-    warning: '#FFBB28',
-    danger: '#EF4565',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    success: 'var(--ipc-success)',
+    warning: 'var(--ipc-warning)',
+    danger: 'var(--ipc-danger)',
+    border: 'var(--ipc-border)'
 };
 
 const ISAPage: React.FC = () => {
@@ -82,7 +82,7 @@ const ISAPage: React.FC = () => {
                                 type="number"
                                 value={principal}
                                 onChange={(e) => setPrincipal(Number(e.target.value))}
-                                sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                sx={{ bgcolor: '#f5f5f5' }}
                             />
                             <Typography variant="caption" color={THEME.textDim}>연간 최대 2,000만원</Typography>
                         </Box>
@@ -121,7 +121,7 @@ const ISAPage: React.FC = () => {
                         <Box sx={{ height: 400, width: '100%' }}>
                             <ResponsiveContainer>
                                 <BarChart data={data} layout="vertical" margin={{ top: 20, right: 30, left: 40, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" horizontal={false} />
                                     <XAxis type="number" stroke={THEME.textDim} tickFormatter={(val) => `₩${(val / 10000).toLocaleString()}만`} />
                                     <YAxis dataKey="name" type="category" stroke={THEME.textDim} width={120} />
                                     <Tooltip

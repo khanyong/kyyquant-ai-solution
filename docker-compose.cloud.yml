@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # 1. Backend Service
+  backend:
+    build: ./backend
+    container_name: auto-stock-backend
+    ports:
+      - "8001:8001"
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - KIWOOM_APP_KEY=${KIWOOM_APP_KEY}
+      - KIWOOM_APP_SECRET=${KIWOOM_APP_SECRET}
+      - KIWOOM_ACCOUNT_NO=${KIWOOM_ACCOUNT_NO}
+      - KIWOOM_IS_DEMO=${KIWOOM_IS_DEMO}
+      - FRONTEND_URL=https://kyyquant-ai-solution.vercel.app
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Seoul
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+    extra_hosts:
+      - "openapi.kiwoom.com:211.115.74.81"
+    networks:
+      - trading-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 2. workflow automation (n8n)
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_PORT=5678
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - TZ=Asia/Seoul
+      - N8N_HOST=stock.bll-pro.com
+      - WEBHOOK_URL=https://stock.bll-pro.com/
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - trading-network
+
+  # 3. Reverse Proxy (Nginx Proxy Manager)
+  npm:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - trading-network
+
+networks:
+  trading-network:
+    driver: bridge
+
+volumes:
+  n8n_data:
+  npm_data:
+  npm_letsencrypt:

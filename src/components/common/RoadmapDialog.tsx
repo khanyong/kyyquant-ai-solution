@@ -2327,13 +2327,68 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         }
       ]
+    },
+    {
+      id: 40,
+      title: '테마 리파인먼트 및 UI/UX 개선',
+      status: 'done',
+      priority: 'high',
+      icon: <Dashboard />,
+      period: '2025.12.21',
+      description: '엄격한 모노크로매틱 테마 적용 및 사용자 경험 중심의 UI 개선',
+      subtasks: [
+        {
+          title: '✅ 에디토리얼 스타일 적용',
+          details: [
+            'Design: Strategy Market, Portfolio 패널에 New York Times 스타일 적용',
+            'Font: Playfair Display(제목) 및 Lora(본문) 서체 도입',
+            'Color: 엄격한 그레이스케일(Grayscale) 및 Journalistic Gold 포인트 적용',
+            'UI: 불필요한 그라디언트 및 섀도우 제거, 샤프한 보더 적용'
+          ]
+        },
+        {
+          title: '✅ 가시성 및 사용성 개선',
+          details: [
+            'Filter: Quick Filter Template 버튼에 명확한 경계선 추가',
+            'Sidebar: IPC 터미널 사이드바 헤더 정리 (불필요한 뒤로가기 제거)',
+            'Holdings: 보유 종목 테이블 가독성 개선 (Serif 헤더 도입)'
+          ]
+        }
+      ]
+    },
+    {
+      id: 41,
+      title: '통합 네비게이션 구조화',
+      status: 'done',
+      priority: 'high',
+      icon: <Assignment />,
+      period: '2025.12.21',
+      description: 'SPA 경험 강화를 위한 Admin 및 IPC 페이지 탭 통합',
+      subtasks: [
+        {
+          title: '✅ 탭 기반 통합 네비게이션',
+          details: [
+            'Architecture: AdminDashboard 및 IPC(VisualRetirementPlanner)를 메인 탭으로 통합',
+            'Routes: 별도 페이지 리로드 없는 부드러운 탭 전환(TabPanel) 구현',
+            'Cleanup: 레거시 라우팅 경로(/admin, /consulting) 정리 및 최적화'
+          ]
+        },
+        {
+          title: '✅ 컴포넌트 구조 최적화',
+          details: [
+            'Refactor: 독립 페이지 컴포넌트를 임베디드 가능한 형태로 변경',
+            'State: 탭 전환 시에도 컨텍스트 유지 구조 마련',
+            'Layout: 전체 화면 레이아웃과 탭 컨텐츠 레이아웃 일원화'
+          ]
+        }
+      ]
     }
   ];
 
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 97 // 2025-12-19 기준 진행률 (UI 시각화 및 안정성 개선 완료)
+  const progress = 98 // 2025-12-21 기준 진행률 (테마 및 네비게이션 통합 완료)
 
   const getStatusIcon = (status: string) => {
     switch (status) {

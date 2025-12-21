@@ -23,7 +23,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
         maxWidth: '100vw',
         overflowX: 'hidden',
         position: 'relative',
-        bgcolor: '#050912', // Global dark background fix
+        bgcolor: 'background.default', // Use global theme
         minHeight: '100vh',
       }}
     >

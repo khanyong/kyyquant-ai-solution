@@ -124,7 +124,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
     totalStocks: number
     freshStocks: number
   } | null>(null)
-  
+
   // 필터 설정 상태
   const [valuationFilters, setValuationFilters] = useState({
     marketCap: [100, 50000],  // 억원
@@ -140,7 +140,13 @@ const TradingSettingsWithUniverse: React.FC = () => {
     volume: [100, 10000],           // 거래량 (천주)
     foreignRatio: [0, 50]          // 외국인 보유비율 (%)
   })
-  
+
+  // Custom Colors for Editorial Look
+  const darkGrey = '#121212';
+  const mediumGrey = '#757575';
+  const lightGrey = '#E0E0E0';
+  const journalisticGold = '#C5A065'; // NYT-style data accent
+
   const [financialFilters, setFinancialFilters] = useState({
     roe: [-20, 50],  // %
     roa: [0, 20],  // %
@@ -155,11 +161,11 @@ const TradingSettingsWithUniverse: React.FC = () => {
     dividendYield: [0, 10],  // 배당수익률 %
     dividendPayout: [0, 50]  // 배당성향 %
   })
-  
+
   const [sectorFilters, setSectorFilters] = useState({
     sectors: [] as string[]
   })
-  
+
   const [investorFilters, setInvestorFilters] = useState({
     foreignHoldingRatio: [0, 100],
     institutionHoldingRatio: [0, 100],
@@ -171,14 +177,14 @@ const TradingSettingsWithUniverse: React.FC = () => {
     investorType: ['foreign', 'institution'] as ('foreign' | 'institution' | 'pension')[],
     minConsecutiveBuyDays: 3
   })
-  
+
   const allSectors = [
     'IT', '바이오', '2차전지', '반도체', '화학', '철강',
     '건설', '조선', '자동차', '금융', '유통', '음식료',
     '엔터테인먼트', '게임', '의료', '제약', '전기전자',
     '기계', '섬유', '종이목재', '운수', '통신', '유틸리티', '기타'
   ]
-  
+
   // 프리셋 템플릿
   const filterPresets = [
     {
@@ -218,7 +224,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
       }
     }
   ]
-  
+
   const [activeTab, setActiveTab] = useState(0)
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const [selectedMatrix, setSelectedMatrix] = useState<string | null>(null)
@@ -236,55 +242,55 @@ const TradingSettingsWithUniverse: React.FC = () => {
       const { count: totalCount } = await supabase
         .from('kw_financial_snapshot')
         .select('*', { count: 'exact', head: true })
-      
+
       const finalTotalCount = totalCount || 0
       console.log('전체 종목 수:', finalTotalCount)
-      
+
       // 2. 페이지네이션으로 모든 데이터 로드
       let allData: any[] = []
       let offset = 0
       const pageSize = 1000
-      
+
       while (offset < finalTotalCount) {
         const { data: pageData, error: pageError } = await supabase
           .from('kw_financial_snapshot')
           .select('*')
           .order('snapshot_date', { ascending: false })
           .range(offset, offset + pageSize - 1)
-        
+
         if (pageError) throw pageError
-        
+
         if (!pageData || pageData.length === 0) break
-        
+
         allData = [...allData, ...pageData]
         offset += pageSize
-        
+
         // 최대 10페이지까지만 (10000개)
         if (offset >= 10000) break
       }
-      
+
       console.log(`로드된 데이터: ${allData.length}개`)
-      
+
       if (allData.length === 0) {
         setDataStatus('no-data')
         setFilterStats(prev => ({ ...prev, total: 0 }))
         return
       }
-      
+
       // 3. 가장 최신 스냅샷만 필터링
       const latestByStock: any = {}
       allData.forEach(item => {
-        if (!latestByStock[item.stock_code] || 
-            item.snapshot_date > latestByStock[item.stock_code].snapshot_date) {
+        if (!latestByStock[item.stock_code] ||
+          item.snapshot_date > latestByStock[item.stock_code].snapshot_date) {
           latestByStock[item.stock_code] = item
         }
       })
-      
+
       const uniqueStocks = Object.values(latestByStock)
       console.log(`유니크한 종목: ${uniqueStocks.length}개`)
-      
+
       setAllStocks(uniqueStocks)
-      
+
       // 4. 데이터 신선도 정보 설정
       setDataFreshness({
         lastUpdate: new Date().toISOString(),
@@ -292,27 +298,27 @@ const TradingSettingsWithUniverse: React.FC = () => {
         totalStocks: finalTotalCount,
         freshStocks: uniqueStocks.length
       })
-      
+
       // 5. filterStats 초기화 - total은 전체 종목 수를 유지
-      setFilterStats(prev => ({ 
-        ...prev, 
+      setFilterStats(prev => ({
+        ...prev,
         total: finalTotalCount  // 전체 종목 수로 설정
       }))
-      
+
       // 3. 수집 로그 조회
       const { data: logData } = await supabase
         .from('kw_collection_log')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
-      
+
       if (logData && logData.length > 0) {
         const lastCollection = logData[0]
         console.log('최근 수집 정보:', lastCollection)
       }
-      
+
       setDataStatus('ready')
-      
+
     } catch (error) {
       console.error('데이터 로드 실패:', error)
       setDataStatus('error')
@@ -342,7 +348,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
       const { filterType, filters } = event.detail
       handleFilterApplication(filterType, filters)
     }
-    
+
     window.addEventListener('applyFilter', handleApplyFilter as EventListener)
     return () => {
       window.removeEventListener('applyFilter', handleApplyFilter as EventListener)
@@ -352,16 +358,16 @@ const TradingSettingsWithUniverse: React.FC = () => {
   // 필터링 통계 계산 (실제 데이터 필터링)
   const calculateFilteringStats = async (universe: any) => {
     setIsCalculating(true)
-    
+
     // 실제 데이터 필터링
     setTimeout(async () => {
       const total = dataFreshness?.totalStocks || filterStats.total || 0  // 실제 전체 종목 수 사용 (변경하지 않음)
       let remaining = total
-      
+
       // 실제로 필터링된 데이터 수 계산
       if (allStocks.length > 0) {
         let filteredStocks = [...allStocks]
-        
+
         // 시가총액 필터
         if (universe.marketCap) {
           const [min, max] = universe.marketCap
@@ -372,9 +378,9 @@ const TradingSettingsWithUniverse: React.FC = () => {
           })
           console.log(`시가총액 필터: ${beforeCount} → ${filteredStocks.length}`)
         }
-        
+
         const afterMarketCap = filteredStocks.length
-        
+
         // PER 필터
         if (universe.per) {
           const [min, max] = universe.per
@@ -385,7 +391,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
           })
           console.log(`PER 필터: ${beforeCount} → ${filteredStocks.length}`)
         }
-        
+
         // PBR 필터
         if (universe.pbr) {
           const [min, max] = universe.pbr
@@ -396,7 +402,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
           })
           console.log(`PBR 필터: ${beforeCount} → ${filteredStocks.length}`)
         }
-        
+
         // ROE 필터
         if (universe.roe) {
           const [min, max] = universe.roe
@@ -407,10 +413,10 @@ const TradingSettingsWithUniverse: React.FC = () => {
           })
           console.log(`ROE 필터: ${beforeCount} → ${filteredStocks.length}`)
         }
-        
+
         const afterFinancial = filteredStocks.length
         const afterSector = filteredStocks.length  // 섹터 필터는 나중에 구현
-        
+
         setFilterStats({
           total,
           afterMarketCap,
@@ -419,13 +425,13 @@ const TradingSettingsWithUniverse: React.FC = () => {
           afterInvestor: filteredStocks.length,
           final: filteredStocks.length
         })
-        
+
         setFilteredStocks(filteredStocks)
         updateSampleStocks(universe, filteredStocks.length)
         setIsCalculating(false)
         return
       }
-      
+
       // 시가총액 필터
       if (universe.marketCap) {
         const [min, max] = universe.marketCap
@@ -434,7 +440,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
         remaining = Math.floor(remaining * ratio)
       }
       const afterMarketCap = remaining
-      
+
       // 재무지표 필터 (PER, PBR, ROE, ROA 등)
       let financialFilterRatio = 1
       if (universe.per) {
@@ -461,10 +467,10 @@ const TradingSettingsWithUniverse: React.FC = () => {
         const [min, max] = universe.currentRatio
         financialFilterRatio *= Math.min((max - min) / 300, 1)
       }
-      
+
       remaining = Math.floor(afterMarketCap * financialFilterRatio * 0.5)
       const afterFinancial = remaining
-      
+
       // 섹터 필터
       if (universe.sectors && universe.sectors.length > 0) {
         // 전체 24개 섹터 중 선택된 섹터 비율
@@ -472,7 +478,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
         remaining = Math.floor(afterFinancial * sectorRatio)
       }
       const afterSector = remaining
-      
+
       setFilterStats({
         total,
         afterMarketCap,
@@ -481,7 +487,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
         afterInvestor: afterSector,
         final: afterSector
       })
-      
+
       // 샘플 종목 업데이트
       updateSampleStocks(universe, afterSector)
       setIsCalculating(false)
@@ -492,7 +498,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
   const handleFilterApplication = async (filterType: string, filters: any) => {
     setIsCalculating(true)
     setFilterProgress((prev: any) => ({ ...prev, [filterType]: 0 }))
-    
+
     // 프로그레스 애니메이션
     const progressInterval = setInterval(() => {
       setFilterProgress((prev: any) => {
@@ -505,30 +511,30 @@ const TradingSettingsWithUniverse: React.FC = () => {
         return newProgress
       })
     }, 50)
-    
+
     setTimeout(async () => {
       // 전체 종목 수는 dataFreshness에서 가져온 값을 유지
       const total = dataFreshness?.totalStocks || filterStats.total || 0
-      
+
       // 기존 통계를 유지하면서 새로운 필터만 업데이트
       let newStats = { ...filterStats, total }  // 기존 통계 유지
-      
+
       // 필터링 시작점 결정 - 이미 필터링된 데이터가 있으면 그것을 사용
-      let stocksToFilter = cumulativeFilteredStocks.length > 0 && appliedFilters.valuation ? 
-                           [...cumulativeFilteredStocks] : [...allStocks]
+      let stocksToFilter = cumulativeFilteredStocks.length > 0 && appliedFilters.valuation ?
+        [...cumulativeFilteredStocks] : [...allStocks]
       let filteredData = [...stocksToFilter]
       let currentCount = stocksToFilter.length
-      
+
       // 1. 가치평가 필터 (새로 적용하는 경우에만)
       if (filterType === 'valuation') {
         const valuationFilters = filters
-        
+
         // 필터 값 저장
         setCurrentFilterValues((prev: any) => ({ ...prev, valuation: valuationFilters }))
-        
+
         // 전체 데이터에서 시작
         filteredData = [...allStocks]
-        
+
         if (allStocks.length > 0 && valuationFilters) {
           // 실제 데이터 필터링
           filteredData = filteredData.filter(stock => {
@@ -561,26 +567,26 @@ const TradingSettingsWithUniverse: React.FC = () => {
           }
           newStats.afterMarketCap = currentCount
         }
-        
+
         setAppliedFilters(prev => ({ ...prev, valuation: true }))
       } else if (appliedFilters.valuation && filterType !== 'valuation') {
         // 가치평가 필터가 이미 적용된 상태면 그 결과를 유지
         // newStats.afterMarketCap는 이미 유지되고 있음
       }
-      
+
       // 2. 재무지표 필터 (가치평가 필터 결과에 적용)
       if (filterType === 'financial') {
         const financialFilters = filters
-        
+
         // 필터 값 저장
         setCurrentFilterValues((prev: any) => ({ ...prev, financial: financialFilters }))
-        
+
         // 가치평가 필터가 적용되어 있으면 먼저 가치평가 필터를 다시 적용
         if (appliedFilters.valuation && currentFilterValues.valuation) {
           // 저장된 가치평가 필터 값으로 재적용
           const valuationFilters = currentFilterValues.valuation
           filteredData = [...allStocks]
-          
+
           if (allStocks.length > 0 && valuationFilters) {
             filteredData = filteredData.filter(stock => {
               if (valuationFilters?.marketCap) {
@@ -605,7 +611,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
           // 가치평가 필터가 없으면 전체에서 시작
           filteredData = [...allStocks]
         }
-        
+
         // 재무지표 필터 적용
         if (filteredData.length > 0 && financialFilters) {
           filteredData = filteredData.filter(stock => {
@@ -637,24 +643,24 @@ const TradingSettingsWithUniverse: React.FC = () => {
           currentCount = Math.floor(baseCount * financialRatio * 0.6)
           newStats.afterFinancial = currentCount
         }
-        
+
         setAppliedFilters(prev => ({ ...prev, financial: true }))
       } else if (appliedFilters.financial && filterType !== 'financial') {
         // 재무지표 필터가 이미 적용된 상태면 그 결과를 유지
         // newStats.afterFinancial는 이미 유지되고 있음
       }
-      
+
       // 3. 섹터 필터 (재무지표 필터 결과에 적용)
       if (filterType === 'sector') {
         const sectorFilters = filters
-        
+
         // 이전 필터가 적용되어 있으면 그 결과에서 시작
         if ((appliedFilters.financial || appliedFilters.valuation) && cumulativeFilteredStocks.length > 0) {
           filteredData = [...cumulativeFilteredStocks]
         } else {
           filteredData = [...allStocks]
         }
-        
+
         if (filteredData.length > 0 && sectorFilters?.sectors) {
           // 실제 데이터 필터링
           filteredData = filteredData.filter(stock => {
@@ -669,25 +675,25 @@ const TradingSettingsWithUniverse: React.FC = () => {
           // 시뮬레이션
           const sectorRatio = sectorFilters.sectors.length / 24
           // 이전 필터 결과에서 계속
-          const prevCount = appliedFilters.financial ? newStats.afterFinancial : 
-                           appliedFilters.valuation ? newStats.afterMarketCap : total
+          const prevCount = appliedFilters.financial ? newStats.afterFinancial :
+            appliedFilters.valuation ? newStats.afterMarketCap : total
           currentCount = Math.floor(prevCount * sectorRatio)
           newStats.afterSector = currentCount
         }
-        
+
         setAppliedFilters(prev => ({ ...prev, sector: true }))
       } else if (appliedFilters.sector && filterType !== 'sector') {
         // 섹터 필터가 이미 적용된 상태면 그 결과를 유지
         // newStats.afterSector는 이미 유지되고 있음
       }
-      
+
       // 4. 투자자 필터 (새로 추가)
       if (filterType === 'investor') {
         const investorFilters = filters
-        
+
         // 필터 값 저장
         setCurrentFilterValues((prev: any) => ({ ...prev, investor: investorFilters }))
-        
+
         // 이전 필터가 적용된 데이터에서 시작
         if (appliedFilters.sector && currentFilterValues.sector) {
           // 섹터 필터까지 적용된 데이터 사용
@@ -696,24 +702,24 @@ const TradingSettingsWithUniverse: React.FC = () => {
         } else if (appliedFilters.valuation && currentFilterValues.valuation) {
           // 가치 필터까지 적용된 데이터 사용
         }
-        
+
         // 실제 투자자 데이터로 필터링
         const stockCodes = filteredData.map(stock => stock.stock_code)
-        
+
         try {
           const filteredCodes = await investorDataService.filterStocksByInvestor(
             stockCodes,
             investorFilters
           )
-          
+
           // 필터링된 종목 코드로 데이터 필터링
-          filteredData = filteredData.filter(stock => 
+          filteredData = filteredData.filter(stock =>
             filteredCodes.includes(stock.stock_code)
           )
-          
+
           currentCount = filteredData.length
           newStats.afterInvestor = currentCount
-          
+
           console.log(`투자자 필터 적용: ${stockCodes.length} → ${currentCount}`)
         } catch (error) {
           console.error('투자자 필터링 중 오류:', error)
@@ -722,10 +728,10 @@ const TradingSettingsWithUniverse: React.FC = () => {
           currentCount = Math.floor(prevCount * 0.7)
           newStats.afterInvestor = currentCount
         }
-        
+
         setAppliedFilters(prev => ({ ...prev, investor: true }))
       }
-      
+
       // 최종 결과 설정
       // 현재 적용된 모든 필터를 고려한 최종 카운트
       if (appliedFilters.investor || filterType === 'investor') {
@@ -739,11 +745,11 @@ const TradingSettingsWithUniverse: React.FC = () => {
       } else {
         newStats.final = currentCount
       }
-      
+
       setFilterStats(newStats)
       setFilteredStocks(filteredData.slice(0, 10))  // UI에 표시할 샘플 종목
       setCumulativeFilteredStocks(filteredData)  // 전체 필터링된 종목 저장
-      
+
       // localStorage에 필터 설정과 필터링 결과 저장
       const filterConfig = {
         filters: {
@@ -781,7 +787,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
       }
       localStorage.setItem('investmentConfig', JSON.stringify(updatedConfig))
       console.log('필터 설정 저장 완료:', filterConfig)
-      
+
       // 샘플 종목 업데이트
       updateSampleStocks(investmentConfig?.universe || {}, currentCount)
       setIsCalculating(false)
@@ -789,7 +795,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
       setFilterProgress(prev => ({ ...prev, [filterType]: 100 }))
     }, 1000)
   }
-  
+
   // 샘플 종목 업데이트
   const updateSampleStocks = (universe: any, count: number) => {
     // 필터 조건에 맞는 샘플 종목 생성
@@ -810,7 +816,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
       }
       return true
     })
-    
+
     setFilteredStocks(samples)
   }
 
@@ -864,7 +870,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
           </Box>
           <Box sx={{ p: 2 }}>
             {/* 창의적인 필터 UI */}
-            
+
             {/* 1. 프리셋 템플릿 (Quick Filters) */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" gutterBottom sx={{ mb: 2, fontWeight: 'bold' }}>
@@ -873,25 +879,26 @@ const TradingSettingsWithUniverse: React.FC = () => {
               <Grid container spacing={1}>
                 {filterPresets.map((preset) => (
                   <Grid item xs={6} key={preset.name}>
-                    <Card 
-                      sx={{ 
+                    <Card
+                      sx={{
                         cursor: 'pointer',
-                        border: selectedPreset === preset.name ? 2 : 0,
-                        borderColor: `${preset.color}.main`,
+                        border: selectedPreset === preset.name ? '2px solid' : '1px solid',
+                        borderColor: selectedPreset === preset.name ? darkGrey : lightGrey,
                         transition: 'all 0.3s',
-                        '&:hover': { 
+                        '&:hover': {
                           transform: 'translateY(-2px)',
-                          boxShadow: 3
+                          borderColor: darkGrey,
+                          boxShadow: 1
                         }
                       }}
                       onClick={() => {
                         setSelectedPreset(preset.name)
                         // 프리셋 필터 적용
                         if (preset.filters.valuation) {
-                          setValuationFilters({...valuationFilters, ...preset.filters.valuation})
+                          setValuationFilters({ ...valuationFilters, ...preset.filters.valuation })
                         }
                         if (preset.filters.financial) {
-                          setFinancialFilters({...financialFilters, ...preset.filters.financial})
+                          setFinancialFilters({ ...financialFilters, ...preset.filters.financial })
                         }
                       }}
                     >
@@ -910,32 +917,48 @@ const TradingSettingsWithUniverse: React.FC = () => {
                 ))}
               </Grid>
             </Box>
-            
+
             <Divider sx={{ my: 2 }} />
-            
-            {/* 2. 탭 기반 필터 카테고리 */}
-            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs 
-                value={activeTab} 
+
+            {/* 2. 탭 기반 필터 카테고리 - News Navigation Style */}
+            <Box sx={{
+              borderBottom: `1px solid #000`,
+              borderTop: `1px solid ${lightGrey}`,
+              mb: 3
+            }}>
+              <Tabs
+                value={activeTab}
                 onChange={(e, v) => setActiveTab(v)}
                 variant="fullWidth"
+                TabIndicatorProps={{
+                  style: {
+                    backgroundColor: '#000',
+                    height: 3
+                  }
+                }}
                 sx={{
+                  minHeight: 56,
                   '& .MuiTab-root': {
-                    minHeight: 48,
+                    fontFamily: '"Playfair Display", serif',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    color: mediumGrey,
                     textTransform: 'none',
-                    fontSize: '0.875rem'
+                    '&.Mui-selected': {
+                      color: '#000',
+                    }
                   }
                 }}
               >
-                <Tab icon={<Assessment />} label="가치" />
-                <Tab icon={<AccountBalance />} label="재무" />
-                <Tab icon={<Category />} label="섹터" />
-                <Tab icon={<Groups />} label="투자자" />
-                <Tab icon={<ViewModule />} label="매트릭스" />
-                <Tab icon={<Timeline />} label="대시보드" />
+                <Tab label="Valuation" />
+                <Tab label="Financials" />
+                <Tab label="Sectors" />
+                <Tab label="Investors" />
+                <Tab label="Matrix" />
+                <Tab label="Dashboard" />
               </Tabs>
             </Box>
-            
+
             {/* 탭 내용 */}
             <Box sx={{ mt: 2 }}>
               {/* 가치 탭 */}
@@ -945,7 +968,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                     <Typography variant="caption" color="textSecondary">시가총액 (억원)</Typography>
                     <Slider
                       value={valuationFilters.marketCap}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, marketCap: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, marketCap: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={100000}
@@ -954,157 +977,174 @@ const TradingSettingsWithUniverse: React.FC = () => {
                         { value: 0, label: '0' },
                         { value: 50000, label: '5조' }
                       ]}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   {/* 가치 지표 섹션 */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" sx={{ mt: 1, fontWeight: 'bold' }}>
-                      📊 가치 지표
-                    </Typography>
+                    <Box sx={{
+                      borderTop: `2px solid #000`,
+                      borderBottom: `1px solid ${lightGrey}`,
+                      py: 1,
+                      mt: 2,
+                      mb: 2
+                    }}>
+                      <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>
+                        Valuation Metrics
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
+
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">PER (주가수익비율)</Typography>
                     <Slider
                       value={valuationFilters.per}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, per: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, per: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={100}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">PBR (주가순자산비율)</Typography>
                     <Slider
                       value={valuationFilters.pbr}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, pbr: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, pbr: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={10}
                       step={0.1}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">PCR (주가현금흐름비율)</Typography>
                     <Slider
                       value={valuationFilters.pcr || [0, 50]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, pcr: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, pcr: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={50}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">PSR (주가매출비율)</Typography>
                     <Slider
                       value={valuationFilters.psr || [0, 10]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, psr: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, psr: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={10}
                       step={0.1}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">PEG (이익성장비율)</Typography>
                     <Slider
                       value={valuationFilters.peg || [0, 3]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, peg: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, peg: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={5}
                       step={0.1}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">EPS (주당순이익)</Typography>
                     <Slider
                       value={valuationFilters.eps || [0, 10000]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, eps: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, eps: v as number[] })}
                       valueLabelDisplay="auto"
                       min={-5000}
                       max={50000}
                       step={100}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">BPS (주당순자산)</Typography>
                     <Slider
                       value={valuationFilters.bps || [0, 50000]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, bps: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, bps: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={200000}
                       step={1000}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
-                  
+
                   {/* 가격 관련 지표 섹션 */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 'bold' }}>
-                      💰 가격 지표
-                    </Typography>
+                    <Box sx={{
+                      borderTop: `2px solid #000`,
+                      borderBottom: `1px solid ${lightGrey}`,
+                      py: 1,
+                      mt: 4,
+                      mb: 2
+                    }}>
+                      <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>
+                        Price & Volume
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
+
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">현재가 (원)</Typography>
                     <Slider
                       value={valuationFilters.currentPrice || [1000, 100000]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, currentPrice: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, currentPrice: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={1000000}
                       step={1000}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">52주 최고가 대비 (%)</Typography>
                     <Slider
                       value={valuationFilters.priceToHigh52w || [50, 100]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, priceToHigh52w: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, priceToHigh52w: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={100}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">거래량 (천주)</Typography>
                     <Slider
                       value={valuationFilters.volume || [100, 10000]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, volume: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, volume: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={100000}
                       step={100}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">외국인 보유비율 (%)</Typography>
                     <Slider
                       value={valuationFilters.foreignRatio || [0, 50]}
-                      onChange={(e, v) => setValuationFilters({...valuationFilters, foreignRatio: v as number[]})}
+                      onChange={(e, v) => setValuationFilters({ ...valuationFilters, foreignRatio: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={100}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={12}>
-                    <Button 
-                      variant="contained" 
+                    <Button
+                      variant="contained"
                       fullWidth
                       startIcon={<Speed />}
+                      sx={{ bgcolor: darkGrey, '&:hover': { bgcolor: '#212121' } }}
                       onClick={() => {
                         const event = new CustomEvent('applyFilter', {
                           detail: { filterType: 'valuation', filters: valuationFilters }
@@ -1117,180 +1157,211 @@ const TradingSettingsWithUniverse: React.FC = () => {
                   </Grid>
                 </Grid>
               )}
-              
+
               {/* 재무 탭 */}
               {activeTab === 1 && (
                 <Grid container spacing={2}>
                   {/* 수익성 지표 섹션 */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                      📈 수익성 지표
-                    </Typography>
+                    <Box sx={{
+                      borderTop: `2px solid #000`,
+                      borderBottom: `1px solid ${lightGrey}`,
+                      py: 1,
+                      mt: 2,
+                      mb: 2
+                    }}>
+                      <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>
+                        Profitability Metrics
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
+
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">ROE (자기자본이익률) %</Typography>
                     <Slider
                       value={financialFilters.roe}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, roe: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, roe: v as number[] })}
                       valueLabelDisplay="auto"
                       min={-20}
                       max={50}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">ROA (총자산이익률) %</Typography>
                     <Slider
                       value={financialFilters.roa || [0, 20]}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, roa: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, roa: v as number[] })}
                       valueLabelDisplay="auto"
                       min={-10}
                       max={30}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">영업이익률 (%)</Typography>
                     <Slider
                       value={financialFilters.operatingMargin}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, operatingMargin: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, operatingMargin: v as number[] })}
                       valueLabelDisplay="auto"
                       min={-20}
                       max={50}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">순이익률 (%)</Typography>
                     <Slider
                       value={financialFilters.netMargin || [0, 30]}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, netMargin: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, netMargin: v as number[] })}
                       valueLabelDisplay="auto"
                       min={-20}
                       max={50}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
-                  
+
                   {/* 안정성 지표 섹션 */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 'bold' }}>
-                      🛡️ 안정성 지표
-                    </Typography>
+                    <Box sx={{
+                      borderTop: `2px solid #000`,
+                      borderBottom: `1px solid ${lightGrey}`,
+                      py: 1,
+                      mt: 4,
+                      mb: 2
+                    }}>
+                      <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>
+                        Stability Metrics
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
+
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">부채비율 (%)</Typography>
                     <Slider
                       value={financialFilters.debtRatio}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, debtRatio: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, debtRatio: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={200}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">유동비율 (%)</Typography>
                     <Slider
                       value={financialFilters.currentRatio || [100, 300]}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, currentRatio: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, currentRatio: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={500}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">당좌비율 (%)</Typography>
                     <Slider
                       value={financialFilters.quickRatio || [50, 200]}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, quickRatio: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, quickRatio: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={300}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
-                  
+
                   {/* 성장성 지표 섹션 */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 'bold' }}>
-                      🚀 성장성 지표
-                    </Typography>
+                    <Box sx={{
+                      borderTop: `2px solid #000`,
+                      borderBottom: `1px solid ${lightGrey}`,
+                      py: 1,
+                      mt: 4,
+                      mb: 2
+                    }}>
+                      <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>
+                        Growth Metrics
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
+
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">매출성장률 (%)</Typography>
                     <Slider
                       value={financialFilters.revenueGrowth || [-10, 50]}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, revenueGrowth: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, revenueGrowth: v as number[] })}
                       valueLabelDisplay="auto"
                       min={-50}
                       max={100}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">이익성장률 (%)</Typography>
                     <Slider
                       value={financialFilters.profitGrowth || [-10, 50]}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, profitGrowth: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, profitGrowth: v as number[] })}
                       valueLabelDisplay="auto"
                       min={-50}
                       max={100}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">자본성장률 (%)</Typography>
                     <Slider
                       value={financialFilters.equityGrowth || [0, 30]}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, equityGrowth: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, equityGrowth: v as number[] })}
                       valueLabelDisplay="auto"
                       min={-20}
                       max={50}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
-                  
+
                   {/* 배당 지표 섹션 */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 'bold' }}>
-                      💵 배당 지표
-                    </Typography>
+                    <Box sx={{
+                      borderTop: `2px solid #000`,
+                      borderBottom: `1px solid ${lightGrey}`,
+                      py: 1,
+                      mt: 4,
+                      mb: 2
+                    }}>
+                      <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>
+                        Dividend Metrics
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
+
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">배당수익률 (%)</Typography>
                     <Slider
                       value={financialFilters.dividendYield}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, dividendYield: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, dividendYield: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={10}
                       step={0.5}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="textSecondary">배당성향 (%)</Typography>
                     <Slider
                       value={financialFilters.dividendPayout || [0, 50]}
-                      onChange={(e, v) => setFinancialFilters({...financialFilters, dividendPayout: v as number[]})}
+                      onChange={(e, v) => setFinancialFilters({ ...financialFilters, dividendPayout: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={100}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, color: journalisticGold }}
                     />
                   </Grid>
                   <Grid item xs={12}>
-                    <Button 
-                      variant="contained" 
+                    <Button
+                      variant="contained"
                       fullWidth
-                      color="secondary"
-                      startIcon={<Timeline />}
+                      sx={{ bgcolor: darkGrey, '&:hover': { bgcolor: '#212121' } }}
                       onClick={() => {
                         const event = new CustomEvent('applyFilter', {
                           detail: { filterType: 'financial', filters: financialFilters }
@@ -1303,7 +1374,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                   </Grid>
                 </Grid>
               )}
-              
+
               {/* 섹터 탭 */}
               {activeTab === 2 && (
                 <Box>
@@ -1325,7 +1396,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                               })
                             }
                           }}
-                          sx={{ 
+                          sx={{
                             width: '100%',
                             cursor: 'pointer',
                             '&:hover': { transform: 'scale(1.05)' }
@@ -1334,12 +1405,10 @@ const TradingSettingsWithUniverse: React.FC = () => {
                       </Grid>
                     ))}
                   </Grid>
-                  <Button 
-                    variant="contained" 
+                  <Button
+                    variant="contained"
                     fullWidth
-                    color="info"
-                    startIcon={<Category />}
-                    sx={{ mt: 2 }}
+                    sx={{ mt: 2, bgcolor: darkGrey, '&:hover': { bgcolor: '#212121' } }}
                     onClick={() => {
                       const event = new CustomEvent('applyFilter', {
                         detail: { filterType: 'sector', filters: sectorFilters }
@@ -1351,7 +1420,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                   </Button>
                 </Box>
               )}
-              
+
               {/* 투자자 탭 */}
               {activeTab === 3 && (
                 <Box>
@@ -1388,7 +1457,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                   />
                 </Box>
               )}
-              
+
               {/* 상세 탭 - Matrix View */}
               {activeTab === 4 && (
                 <Box>
@@ -1396,7 +1465,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                     <ViewModule />
                     매트릭스 필터 뷰
                   </Typography>
-                  
+
                   {/* Visual Matrix Grid */}
                   <Grid container spacing={1} sx={{ mb: 3 }}>
                     {[
@@ -1453,41 +1522,42 @@ const TradingSettingsWithUniverse: React.FC = () => {
                           size="small"
                           value={
                             selectedMatrix === 'PER' ? valuationFilters.per[0] :
-                            selectedMatrix === 'PBR' ? valuationFilters.pbr[0] :
-                            selectedMatrix === 'ROE' ? financialFilters.roe[0] :
-                            financialFilters.debtRatio[0]
+                              selectedMatrix === 'PBR' ? valuationFilters.pbr[0] :
+                                selectedMatrix === 'ROE' ? financialFilters.roe[0] :
+                                  financialFilters.debtRatio[0]
                           }
                           onChange={(e) => {
                             const val = Number(e.target.value);
                             if (selectedMatrix === 'PER') {
-                              setValuationFilters({...valuationFilters, per: [val, valuationFilters.per[1]]});
+                              setValuationFilters({ ...valuationFilters, per: [val, valuationFilters.per[1]] });
                             } else if (selectedMatrix === 'PBR') {
-                              setValuationFilters({...valuationFilters, pbr: [val, valuationFilters.pbr[1]]});
+                              setValuationFilters({ ...valuationFilters, pbr: [val, valuationFilters.pbr[1]] });
                             } else if (selectedMatrix === 'ROE') {
-                              setFinancialFilters({...financialFilters, roe: [val, financialFilters.roe[1]]});
+                              setFinancialFilters({ ...financialFilters, roe: [val, financialFilters.roe[1]] });
                             } else {
-                              setFinancialFilters({...financialFilters, debtRatio: [val, financialFilters.debtRatio[1]]});
+                              setFinancialFilters({ ...financialFilters, debtRatio: [val, financialFilters.debtRatio[1]] });
                             }
                           }}
                           sx={{ width: 100 }}
                         />
                         <Box sx={{ flex: 1 }}>
                           <Slider
+                            sx={{ color: darkGrey }}
                             value={
                               selectedMatrix === 'PER' ? valuationFilters.per :
-                              selectedMatrix === 'PBR' ? valuationFilters.pbr :
-                              selectedMatrix === 'ROE' ? financialFilters.roe :
-                              financialFilters.debtRatio
+                                selectedMatrix === 'PBR' ? valuationFilters.pbr :
+                                  selectedMatrix === 'ROE' ? financialFilters.roe :
+                                    financialFilters.debtRatio
                             }
                             onChange={(e, v) => {
                               if (selectedMatrix === 'PER') {
-                                setValuationFilters({...valuationFilters, per: v as number[]});
+                                setValuationFilters({ ...valuationFilters, per: v as number[] });
                               } else if (selectedMatrix === 'PBR') {
-                                setValuationFilters({...valuationFilters, pbr: v as number[]});
+                                setValuationFilters({ ...valuationFilters, pbr: v as number[] });
                               } else if (selectedMatrix === 'ROE') {
-                                setFinancialFilters({...financialFilters, roe: v as number[]});
+                                setFinancialFilters({ ...financialFilters, roe: v as number[] });
                               } else {
-                                setFinancialFilters({...financialFilters, debtRatio: v as number[]});
+                                setFinancialFilters({ ...financialFilters, debtRatio: v as number[] });
                               }
                             }}
                             valueLabelDisplay="auto"
@@ -1502,20 +1572,20 @@ const TradingSettingsWithUniverse: React.FC = () => {
                           size="small"
                           value={
                             selectedMatrix === 'PER' ? valuationFilters.per[1] :
-                            selectedMatrix === 'PBR' ? valuationFilters.pbr[1] :
-                            selectedMatrix === 'ROE' ? financialFilters.roe[1] :
-                            financialFilters.debtRatio[1]
+                              selectedMatrix === 'PBR' ? valuationFilters.pbr[1] :
+                                selectedMatrix === 'ROE' ? financialFilters.roe[1] :
+                                  financialFilters.debtRatio[1]
                           }
                           onChange={(e) => {
                             const val = Number(e.target.value);
                             if (selectedMatrix === 'PER') {
-                              setValuationFilters({...valuationFilters, per: [valuationFilters.per[0], val]});
+                              setValuationFilters({ ...valuationFilters, per: [valuationFilters.per[0], val] });
                             } else if (selectedMatrix === 'PBR') {
-                              setValuationFilters({...valuationFilters, pbr: [valuationFilters.pbr[0], val]});
+                              setValuationFilters({ ...valuationFilters, pbr: [valuationFilters.pbr[0], val] });
                             } else if (selectedMatrix === 'ROE') {
-                              setFinancialFilters({...financialFilters, roe: [financialFilters.roe[0], val]});
+                              setFinancialFilters({ ...financialFilters, roe: [financialFilters.roe[0], val] });
                             } else {
-                              setFinancialFilters({...financialFilters, debtRatio: [financialFilters.debtRatio[0], val]});
+                              setFinancialFilters({ ...financialFilters, debtRatio: [financialFilters.debtRatio[0], val] });
                             }
                           }}
                           sx={{ width: 100 }}
@@ -1554,7 +1624,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                           }}
                           onClick={() => {
                             setMarketCapRange(bubble.marketCap);
-                            setValuationFilters({...valuationFilters, marketCap: bubble.marketCap});
+                            setValuationFilters({ ...valuationFilters, marketCap: bubble.marketCap });
                           }}
                         >
                           <Typography variant="caption" sx={{ color: 'white', textAlign: 'center' }}>
@@ -1647,7 +1717,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                     <Timeline />
                     대시보드 필터
                   </Typography>
-                  
+
                   {/* Gauge Charts */}
                   <Grid container spacing={2} sx={{ mb: 3 }}>
                     <Grid item xs={4}>
@@ -1760,11 +1830,11 @@ const TradingSettingsWithUniverse: React.FC = () => {
                             onClick={() => {
                               // Apply predefined filter range
                               if (metric.name === 'PER') {
-                                setValuationFilters({...valuationFilters, per: [metric.min, metric.max]})
+                                setValuationFilters({ ...valuationFilters, per: [metric.min, metric.max] })
                               } else if (metric.name === 'PBR') {
-                                setValuationFilters({...valuationFilters, pbr: [metric.min, metric.max]})
+                                setValuationFilters({ ...valuationFilters, pbr: [metric.min, metric.max] })
                               } else if (metric.name === 'ROE') {
-                                setFinancialFilters({...financialFilters, roe: [metric.min, metric.max]})
+                                setFinancialFilters({ ...financialFilters, roe: [metric.min, metric.max] })
                               }
                               // ... handle other metrics
                             }}
@@ -1839,7 +1909,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                     필터 초기화
                   </Button>
                 )}
-                <IconButton 
+                <IconButton
                   size="small"
                   onClick={() => {
                     loadStockData()
@@ -1850,7 +1920,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
                 </IconButton>
               </Stack>
             </Box>
-            
+
             {/* 데이터 상태 표시 */}
             {dataStatus === 'loading' && (
               <Box sx={{ mt: 2 }}>
@@ -1897,24 +1967,24 @@ const TradingSettingsWithUniverse: React.FC = () => {
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption">최신 데이터:</Typography>
                         <Typography variant="caption" color={
-                          dataFreshness.freshStocks > dataFreshness.totalStocks * 0.8 
-                            ? 'success.main' 
+                          dataFreshness.freshStocks > dataFreshness.totalStocks * 0.8
+                            ? 'success.main'
                             : dataFreshness.freshStocks > dataFreshness.totalStocks * 0.5
-                            ? 'warning.main'
-                            : 'error.main'
+                              ? 'warning.main'
+                              : 'error.main'
                         }>
                           {dataFreshness.freshStocks}개 ({Math.round((dataFreshness.freshStocks / dataFreshness.totalStocks) * 100)}%)
                         </Typography>
                       </Box>
-                      <LinearProgress 
-                        variant="determinate" 
+                      <LinearProgress
+                        variant="determinate"
                         value={(dataFreshness.freshStocks / dataFreshness.totalStocks) * 100}
                         color={
-                          dataFreshness.freshStocks > dataFreshness.totalStocks * 0.8 
-                            ? 'success' 
+                          dataFreshness.freshStocks > dataFreshness.totalStocks * 0.8
+                            ? 'success'
                             : dataFreshness.freshStocks > dataFreshness.totalStocks * 0.5
-                            ? 'warning'
-                            : 'error'
+                              ? 'warning'
+                              : 'error'
                         }
                         sx={{ mt: 1, height: 6, borderRadius: 1 }}
                       />
@@ -1930,177 +2000,185 @@ const TradingSettingsWithUniverse: React.FC = () => {
                 )}
               </Box>
             )}
-            
+
             {/* 시각적 필터링 흐름 */}
             <Box sx={{ mt: 3 }}>
               <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <FilterList fontSize="small" />
                 필터링 흐름
               </Typography>
-              
+
               {/* 전체 종목 */}
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  mb: 2, 
-                  bgcolor: 'primary.dark',
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  mb: 2,
+                  bgcolor: '#FFFFFF',
+                  border: `1px solid ${mediumGrey}`,
+                  borderRadius: 0,
                   position: 'relative',
                   overflow: 'hidden'
                 }}
               >
-                <Typography variant="h4" color="primary.contrastText">
+                <Typography variant="h4" color="text.primary" fontFamily="serif" fontWeight="bold">
                   {filterStats.total.toLocaleString()}
                 </Typography>
-                <Typography variant="body2" color="primary.contrastText">
+                <Typography variant="body2" color="text.primary">
                   전체 종목
                 </Typography>
               </Paper>
-              
+
               {/* 가치평가 필터 */}
               <Box sx={{ position: 'relative', mb: 2 }}>
                 <ArrowDownward sx={{ position: 'absolute', left: '50%', top: -20, transform: 'translateX(-50%)', color: 'text.secondary' }} />
-                <Paper 
+                <Paper
                   elevation={appliedFilters.valuation ? 2 : 0}
-                  sx={{ 
+                  sx={{
                     p: 2,
-                    bgcolor: appliedFilters.valuation ? 'primary.main' : 'grey.800',
+                    bgcolor: '#FFFFFF',
+                    border: appliedFilters.valuation ? `2px solid ${mediumGrey}` : `1px solid ${lightGrey}`,
+                    borderRadius: 0,
                     transition: 'all 0.3s',
                     position: 'relative',
                     overflow: 'hidden'
                   }}
                 >
                   {filterProgress.valuation > 0 && filterProgress.valuation < 100 && (
-                    <LinearProgress 
-                      variant="determinate" 
+                    <LinearProgress
+                      variant="determinate"
                       value={filterProgress.valuation}
                       sx={{ position: 'absolute', top: 0, left: 0, right: 0 }}
                     />
                   )}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                      <Typography variant="body2" color={appliedFilters.valuation ? "primary.contrastText" : "text.secondary"}>
+                      <Typography variant="body2" color="text.secondary" fontWeight="bold">
                         가치평가 필터
                       </Typography>
-                      <Typography variant="h5" color={appliedFilters.valuation ? "primary.contrastText" : "text.primary"}>
+                      <Typography variant="h5" color="text.primary" fontFamily="serif">
                         {filterStats.afterMarketCap > 0 ? filterStats.afterMarketCap.toLocaleString() : '-'}
                       </Typography>
                     </Box>
                     {appliedFilters.valuation && (
-                      <CheckCircle color="success" />
+                      <CheckCircle htmlColor={mediumGrey} />
                     )}
                   </Box>
                   {filterStats.afterMarketCap > 0 && (
-                    <Typography variant="caption" color={appliedFilters.valuation ? "primary.contrastText" : "text.secondary"}>
+                    <Typography variant="caption" color="text.secondary">
                       {Math.round((filterStats.afterMarketCap / filterStats.total) * 100)}% 통과
                     </Typography>
                   )}
                 </Paper>
               </Box>
-              
+
               {/* 재무 필터 */}
               <Box sx={{ position: 'relative', mb: 2 }}>
                 <ArrowDownward sx={{ position: 'absolute', left: '50%', top: -20, transform: 'translateX(-50%)', color: 'text.secondary' }} />
-                <Paper 
+                <Paper
                   elevation={appliedFilters.financial ? 2 : 0}
-                  sx={{ 
+                  sx={{
                     p: 2,
-                    bgcolor: appliedFilters.financial ? 'secondary.main' : 'grey.800',
+                    bgcolor: '#FFFFFF',
+                    border: appliedFilters.financial ? `2px solid ${mediumGrey}` : `1px solid ${lightGrey}`,
+                    borderRadius: 0,
                     transition: 'all 0.3s',
                     position: 'relative',
                     overflow: 'hidden'
                   }}
                 >
                   {filterProgress.financial > 0 && filterProgress.financial < 100 && (
-                    <LinearProgress 
-                      variant="determinate" 
+                    <LinearProgress
+                      variant="determinate"
                       value={filterProgress.financial}
                       sx={{ position: 'absolute', top: 0, left: 0, right: 0 }}
                     />
                   )}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                      <Typography variant="body2" color={appliedFilters.financial ? "secondary.contrastText" : "text.secondary"}>
+                      <Typography variant="body2" color="text.secondary" fontWeight="bold">
                         재무지표 필터
                       </Typography>
-                      <Typography variant="h5" color={appliedFilters.financial ? "secondary.contrastText" : "text.primary"}>
+                      <Typography variant="h5" color="text.primary" fontFamily="serif">
                         {filterStats.afterFinancial > 0 ? filterStats.afterFinancial.toLocaleString() : '-'}
                       </Typography>
                     </Box>
                     {appliedFilters.financial && (
-                      <CheckCircle color="success" />
+                      <CheckCircle htmlColor={mediumGrey} />
                     )}
                   </Box>
                   {filterStats.afterFinancial > 0 && filterStats.afterMarketCap > 0 && (
-                    <Typography variant="caption" color={appliedFilters.financial ? "secondary.contrastText" : "text.secondary"}>
+                    <Typography variant="caption" color="text.secondary">
                       {Math.round((filterStats.afterFinancial / filterStats.afterMarketCap) * 100)}% 통과
                     </Typography>
                   )}
                 </Paper>
               </Box>
-              
+
               {/* 섹터 필터 */}
               <Box sx={{ position: 'relative', mb: 2 }}>
                 <ArrowDownward sx={{ position: 'absolute', left: '50%', top: -20, transform: 'translateX(-50%)', color: 'text.secondary' }} />
-                <Paper 
+                <Paper
                   elevation={appliedFilters.sector ? 2 : 0}
-                  sx={{ 
+                  sx={{
                     p: 2,
-                    bgcolor: appliedFilters.sector ? 'info.main' : 'grey.800',
+                    bgcolor: '#FFFFFF',
+                    border: appliedFilters.sector ? `2px solid ${mediumGrey}` : `1px solid ${lightGrey}`,
+                    borderRadius: 0,
                     transition: 'all 0.3s',
                     position: 'relative',
                     overflow: 'hidden'
                   }}
                 >
                   {filterProgress.sector > 0 && filterProgress.sector < 100 && (
-                    <LinearProgress 
-                      variant="determinate" 
+                    <LinearProgress
+                      variant="determinate"
                       value={filterProgress.sector}
                       sx={{ position: 'absolute', top: 0, left: 0, right: 0 }}
                     />
                   )}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                      <Typography variant="body2" color={appliedFilters.sector ? "info.contrastText" : "text.secondary"}>
+                      <Typography variant="body2" color="text.secondary" fontWeight="bold">
                         섹터 필터
                       </Typography>
-                      <Typography variant="h5" color={appliedFilters.sector ? "info.contrastText" : "text.primary"}>
+                      <Typography variant="h5" color="text.primary" fontFamily="serif">
                         {filterStats.afterSector > 0 ? filterStats.afterSector.toLocaleString() : '-'}
                       </Typography>
                     </Box>
                     {appliedFilters.sector && (
-                      <CheckCircle color="success" />
+                      <CheckCircle htmlColor={mediumGrey} />
                     )}
                   </Box>
                   {filterStats.afterSector > 0 && filterStats.afterFinancial > 0 && (
-                    <Typography variant="caption" color={appliedFilters.sector ? "info.contrastText" : "text.secondary"}>
+                    <Typography variant="caption" color="text.secondary">
                       {Math.round((filterStats.afterSector / filterStats.afterFinancial) * 100)}% 통과
                     </Typography>
                   )}
                 </Paper>
               </Box>
-              
+
               {/* 최종 결과 */}
-              <Paper 
+              <Paper
                 elevation={3}
-                sx={{ 
+                sx={{
                   p: 2,
-                  bgcolor: filterStats.final > 0 ? 'success.main' : 'grey.900',
-                  border: '2px solid',
-                  borderColor: filterStats.final > 0 ? 'success.light' : 'grey.700'
+                  bgcolor: '#FFFFFF',
+                  border: `2px solid ${mediumGrey}`,
+                  borderRadius: 0
                 }}
               >
-                <Typography variant="h3" color={filterStats.final > 0 ? "success.contrastText" : "text.primary"}>
+                <Typography variant="h3" color="text.primary" fontFamily="serif" fontWeight="bold">
                   {filterStats.final.toLocaleString()}
                 </Typography>
-                <Typography variant="body2" color={filterStats.final > 0 ? "success.contrastText" : "text.secondary"}>
+                <Typography variant="body2" color="text.secondary" fontWeight="bold">
                   최종 투자 유니버스
                 </Typography>
                 {filterStats.final > 0 && (
                   <Button
                     variant="contained"
                     size="small"
-                    sx={{ mt: 2, bgcolor: 'white', color: 'success.main' }}
+                    sx={{ mt: 2, bgcolor: darkGrey, color: '#fff', '&:hover': { bgcolor: '#212121' } }}
                     onClick={() => setShowStockList(!showStockList)}
                     startIcon={showStockList ? <VisibilityOff /> : <Visibility />}
                   >
@@ -2117,56 +2195,56 @@ const TradingSettingsWithUniverse: React.FC = () => {
                 <Stack spacing={1} sx={{ mt: 1 }}>
                   <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
                     {investmentConfig.universe?.marketCap && (
-                      <Chip 
-                        label={`시총: ${investmentConfig.universe.marketCap[0]}~${investmentConfig.universe.marketCap[1]}억`} 
-                        size="small" 
-                        variant="outlined" 
+                      <Chip
+                        label={`시총: ${investmentConfig.universe.marketCap[0]}~${investmentConfig.universe.marketCap[1]}억`}
+                        size="small"
+                        variant="outlined"
                       />
                     )}
                     {investmentConfig.universe?.per && (
-                      <Chip 
-                        label={`PER: ${investmentConfig.universe.per[0]}~${investmentConfig.universe.per[1]}`} 
-                        size="small" 
-                        variant="outlined" 
+                      <Chip
+                        label={`PER: ${investmentConfig.universe.per[0]}~${investmentConfig.universe.per[1]}`}
+                        size="small"
+                        variant="outlined"
                       />
                     )}
                     {investmentConfig.universe?.pbr && (
-                      <Chip 
-                        label={`PBR: ${investmentConfig.universe.pbr[0]}~${investmentConfig.universe.pbr[1]}`} 
-                        size="small" 
-                        variant="outlined" 
+                      <Chip
+                        label={`PBR: ${investmentConfig.universe.pbr[0]}~${investmentConfig.universe.pbr[1]}`}
+                        size="small"
+                        variant="outlined"
                       />
                     )}
                     {investmentConfig.universe?.roe && (
-                      <Chip 
-                        label={`ROE: ${investmentConfig.universe.roe[0]}~${investmentConfig.universe.roe[1]}%`} 
-                        size="small" 
-                        variant="outlined" 
+                      <Chip
+                        label={`ROE: ${investmentConfig.universe.roe[0]}~${investmentConfig.universe.roe[1]}%`}
+                        size="small"
+                        variant="outlined"
                       />
                     )}
                   </Stack>
                   <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
                     {investmentConfig.universe?.debtRatio && (
-                      <Chip 
-                        label={`부채비율: ${investmentConfig.universe.debtRatio[0]}~${investmentConfig.universe.debtRatio[1]}%`} 
-                        size="small" 
+                      <Chip
+                        label={`부채비율: ${investmentConfig.universe.debtRatio[0]}~${investmentConfig.universe.debtRatio[1]}%`}
+                        size="small"
                         variant="outlined"
                         color="secondary"
                       />
                     )}
                     {investmentConfig.universe?.currentRatio && (
-                      <Chip 
-                        label={`유동비율: ${investmentConfig.universe.currentRatio[0]}~${investmentConfig.universe.currentRatio[1]}%`} 
-                        size="small" 
+                      <Chip
+                        label={`유동비율: ${investmentConfig.universe.currentRatio[0]}~${investmentConfig.universe.currentRatio[1]}%`}
+                        size="small"
                         variant="outlined"
                         color="secondary"
                       />
                     )}
                     {investmentConfig.universe?.sectors?.length > 0 && (
-                      <Chip 
-                        label={`섹터: ${investmentConfig.universe.sectors.length}개`} 
-                        size="small" 
-                        variant="outlined" 
+                      <Chip
+                        label={`섹터: ${investmentConfig.universe.sectors.length}개`}
+                        size="small"
+                        variant="outlined"
                         color="primary"
                       />
                     )}
@@ -2203,119 +2281,119 @@ const TradingSettingsWithUniverse: React.FC = () => {
 
               <Box sx={{ p: 1 }}>
                 {filteredStocks.length === 0 && !isCalculating ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Warning color="action" sx={{ fontSize: 48, mb: 2 }} />
-                  <Typography variant="body1" color="text.secondary">
-                    현재 필터 조건에 맞는 종목이 없습니다
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    필터 조건을 완화해보세요
-                  </Typography>
-                </Box>
-              ) : (
-                <>
-                  <List dense>
-                    {(filteredStocks.length > 0 ? filteredStocks : sampleStocks).map((stock) => (
-                  <ListItem key={stock.code} divider>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography variant="subtitle2">{stock.name}</Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              {stock.code}
-                            </Typography>
-                          </Stack>
-                          <Chip 
-                            label={stock.sector} 
-                            size="small" 
-                            variant="outlined"
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Warning color="action" sx={{ fontSize: 48, mb: 2 }} />
+                    <Typography variant="body1" color="text.secondary">
+                      현재 필터 조건에 맞는 종목이 없습니다
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      필터 조건을 완화해보세요
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    <List dense>
+                      {(filteredStocks.length > 0 ? filteredStocks : sampleStocks).map((stock) => (
+                        <ListItem key={stock.code} divider>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Typography variant="subtitle2">{stock.name}</Typography>
+                                  <Typography variant="caption" color="textSecondary">
+                                    {stock.code}
+                                  </Typography>
+                                </Stack>
+                                <Chip
+                                  label={stock.sector}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Grid container spacing={1} sx={{ mt: 0.5 }}>
+                                <Grid item xs={6}>
+                                  <Typography variant="caption" color="textSecondary">
+                                    시총: {(stock.marketCap / 10000).toFixed(0)}조
+                                  </Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                  <Typography
+                                    variant="caption"
+                                    color={stock.change > 0 ? 'error.main' : stock.change < 0 ? 'primary.main' : 'textSecondary'}
+                                  >
+                                    {stock.change > 0 ? '+' : ''}{stock.change}%
+                                  </Typography>
+                                </Grid>
+                                <Grid item xs={4}>
+                                  <Typography variant="caption" color="textSecondary">
+                                    PER: {stock.per}
+                                  </Typography>
+                                </Grid>
+                                <Grid item xs={4}>
+                                  <Typography variant="caption" color="textSecondary">
+                                    PBR: {stock.pbr}
+                                  </Typography>
+                                </Grid>
+                                <Grid item xs={4}>
+                                  <Typography variant="caption" color="textSecondary">
+                                    ROE: {stock.roe}%
+                                  </Typography>
+                                </Grid>
+                              </Grid>
+                            }
                           />
-                        </Box>
-                      }
-                      secondary={
-                        <Grid container spacing={1} sx={{ mt: 0.5 }}>
-                          <Grid item xs={6}>
-                            <Typography variant="caption" color="textSecondary">
-                              시총: {(stock.marketCap / 10000).toFixed(0)}조
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={6}>
-                            <Typography 
-                              variant="caption" 
-                              color={stock.change > 0 ? 'error.main' : stock.change < 0 ? 'primary.main' : 'textSecondary'}
-                            >
-                              {stock.change > 0 ? '+' : ''}{stock.change}%
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={4}>
-                            <Typography variant="caption" color="textSecondary">
-                              PER: {stock.per}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={4}>
-                            <Typography variant="caption" color="textSecondary">
-                              PBR: {stock.pbr}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={4}>
-                            <Typography variant="caption" color="textSecondary">
-                              ROE: {stock.roe}%
-                            </Typography>
-                          </Grid>
-                        </Grid>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
+                        </ListItem>
+                      ))}
+                    </List>
 
-                  {/* 더 많은 종목 표시 */}
-                  {filterStats.final > filteredStocks.length && (
-                    <Box sx={{ textAlign: 'center', py: 2 }}>
-                      <Typography variant="caption" color="textSecondary">
-                        + {filterStats.final - filteredStocks.length}개 종목 더 보기
-                      </Typography>
-                    </Box>
-                  )}
-                </>
-              )}
+                    {/* 더 많은 종목 표시 */}
+                    {filterStats.final > filteredStocks.length && (
+                      <Box sx={{ textAlign: 'center', py: 2 }}>
+                        <Typography variant="caption" color="textSecondary">
+                          + {filterStats.final - filteredStocks.length}개 종목 더 보기
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                )}
               </Box>
 
               {/* 액션 버튼 */}
               <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Typography variant="caption">
-                  필터링된 {filterStats.final}개 종목이 전략 빌더에서 사용됩니다.
-                  전략 빌더에서 매수/매도 조건을 설정하세요.
-                </Typography>
-              </Alert>
-              <Stack direction="row" spacing={1}>
-                <Button variant="outlined" size="small" fullWidth>
-                  Excel 다운로드
-                </Button>
-                <Button 
-                  variant="contained" 
-                  size="small" 
-                  fullWidth 
-                  startIcon={<TrendingUp />}
-                  onClick={() => {
-                    // Navigate to Strategy Builder tab
-                    const event = new CustomEvent('navigateToStrategyBuilder', { 
-                      detail: { universe: filteredStocks } 
-                    })
-                    window.dispatchEvent(event)
-                  }}
-                >
-                  전략 빌더로 이동
-                </Button>
-              </Stack>
-            </Box>
-          </Paper>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="caption">
+                    필터링된 {filterStats.final}개 종목이 전략 빌더에서 사용됩니다.
+                    전략 빌더에서 매수/매도 조건을 설정하세요.
+                  </Typography>
+                </Alert>
+                <Stack direction="row" spacing={1}>
+                  <Button variant="outlined" size="small" fullWidth>
+                    Excel 다운로드
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    fullWidth
+                    startIcon={<TrendingUp />}
+                    onClick={() => {
+                      // Navigate to Strategy Builder tab
+                      const event = new CustomEvent('navigateToStrategyBuilder', {
+                        detail: { universe: filteredStocks }
+                      })
+                      window.dispatchEvent(event)
+                    }}
+                  >
+                    전략 빌더로 이동
+                  </Button>
+                </Stack>
+              </Box>
+            </Paper>
           </Collapse>
         </Box>
       )}
-      
+
       {/* 필터 저장 다이얼로그 */}
       <SaveFilterDialog
         open={saveDialogOpen}
@@ -2332,7 +2410,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
           console.log(`필터 "${savedName}"이(가) ${saveType === 'local' ? '로컬' : '클라우드'}에 저장되었습니다.`)
         }}
       />
-      
+
       {/* 필터 불러오기 다이얼로그 */}
       <LoadFilterDialog
         open={loadDialogOpen}
@@ -2352,7 +2430,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
             setCumulativeFilteredStocks(filter.filteredStocks)
             setFilteredStocks(filter.filteredStocks.slice(0, 10))
           }
-          
+
           // 필터 UI 업데이트
           if (filter.filters?.valuation) {
             setValuationFilters(filter.filters.valuation)
@@ -2363,7 +2441,7 @@ const TradingSettingsWithUniverse: React.FC = () => {
           if (filter.filters?.sector) {
             setSectorFilters(filter.filters.sector)
           }
-          
+
           setLoadDialogOpen(false)
           console.log(`필터 "${filter.name}"을(를) 불러왔습니다.`)
         }}

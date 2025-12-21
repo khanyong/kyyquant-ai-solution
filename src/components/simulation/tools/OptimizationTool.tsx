@@ -15,16 +15,17 @@ interface OptimizationToolProps {
 }
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    success: '#2CB67D',
-    warning: '#FFBB28',
-    danger: '#EF4565',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    border: '#2A2F3A'
+    bg: '#FFFFFF',
+    panel: '#FFFFFF',
+    primary: '#121212', // Editorial Black
+    secondary: '#757575',
+    success: '#C5A065', // Journalistic Gold
+    warning: '#D32F2F', // Editorial Red for warnings
+    danger: '#D32F2F',
+    text: '#121212',
+    textDim: '#757575',
+    border: '#121212',
+    hairline: '#E0E0E0'
 };
 
 const OptimizationTool: React.FC<OptimizationToolProps> = ({ activePortfolio }) => {
@@ -95,40 +96,42 @@ const OptimizationTool: React.FC<OptimizationToolProps> = ({ activePortfolio }) 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3, overflowY: 'auto' }}>
             {/* Header */}
-            <Box sx={{ mb: 4 }}>
-                <Typography variant="h4" fontWeight="bold" sx={{ color: THEME.text, mb: 1 }}>
+            <Box sx={{ mb: 4, borderBottom: `1px solid ${THEME.primary}`, pb: 2 }}>
+                <Typography variant="h4" sx={{ color: THEME.text, mb: 1, fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>
                     Asset Allocation
                 </Typography>
-                <Typography variant="body1" sx={{ color: THEME.textDim }}>
-                    Efficient Frontier Analysis for <span style={{ color: THEME.primary, fontWeight: 'bold' }}>{activePortfolio.name}</span>.
+                <Typography variant="body1" sx={{ color: THEME.textDim, fontFamily: '"Playfair Display", serif', fontStyle: 'italic' }}>
+                    Efficient Frontier Analysis for <span style={{ color: THEME.primary, fontWeight: 'bold', borderBottom: `1px solid ${THEME.success}` }}>{activePortfolio.name}</span>.
                 </Typography>
             </Box>
 
             <Grid container spacing={3} sx={{ height: '100%' }}>
                 {/* Left: Chart */}
                 <Grid item xs={12} md={8}>
-                    <Paper sx={{ p: 4, bgcolor: THEME.panel, border: '1px solid ' + THEME.border, borderRadius: 2, height: 500 }}>
-                        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Risk vs Return Profile</Typography>
-                        <ResponsiveContainer width="100%" height="90%">
+                    <Paper sx={{ p: 4, bgcolor: THEME.panel, border: `1px solid ${THEME.border}`, borderRadius: 0, height: 500, boxShadow: 'none' }}>
+                        <Box sx={{ borderBottom: `1px solid ${THEME.hairline}`, mb: 3, pb: 1 }}>
+                            <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>Risk vs Return Profile</Typography>
+                        </Box>
+                        <ResponsiveContainer width="100%" height="85%">
                             <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                <CartesianGrid strokeDasharray="3 3" stroke={THEME.hairline} />
                                 <XAxis
                                     type="number" dataKey="x" name="Risk (Vol)" unit="%"
-                                    stroke={THEME.textDim} domain={['auto', 'auto']}
+                                    stroke={THEME.text} domain={['auto', 'auto']}
                                     label={{ value: 'Risk (Standard Deviation)', position: 'insideBottom', offset: -10, fill: THEME.textDim }}
                                 />
                                 <YAxis
                                     type="number" dataKey="y" name="Return" unit="%"
-                                    stroke={THEME.textDim} domain={['auto', 'auto']}
+                                    stroke={THEME.text} domain={['auto', 'auto']}
                                     label={{ value: 'Expected Return', angle: -90, position: 'insideLeft', fill: THEME.textDim }}
                                 />
-                                <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: THEME.bg, border: '1px solid ' + THEME.border }} />
+                                <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: THEME.bg, border: `1px solid ${THEME.border}` }} />
 
-                                {/* Simulated Portfolios */}
-                                <Scatter name="Potential Portfolios" data={frontierData} fill="#8884d8" fillOpacity={0.5} shape="circle" />
+                                {/* Simulated Portfolios - Muted Grey/Gold */}
+                                <Scatter name="Potential Portfolios" data={frontierData} fill="#BDBDBD" fillOpacity={0.6} shape="circle" />
 
-                                {/* Current Portfolio */}
-                                <Scatter name="Current" data={[currentMetrics]} fill={THEME.primary} shape="star" z={200}>
+                                {/* Current Portfolio - Strong Gold Star */}
+                                <Scatter name="Current" data={[currentMetrics]} fill={THEME.success} shape="star" z={300} stroke="#000" strokeWidth={1}>
                                     <LabelList dataKey="x" content={() => null} />
                                 </Scatter>
                             </ScatterChart>
@@ -139,22 +142,24 @@ const OptimizationTool: React.FC<OptimizationToolProps> = ({ activePortfolio }) 
                 {/* Right: Recommendation */}
                 <Grid item xs={12} md={4}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <Paper sx={{ p: 3, bgcolor: THEME.panel, border: '1px solid ' + THEME.border, background: 'linear-gradient(180deg, rgba(44, 182, 125, 0.1) 0%, rgba(21, 25, 33, 0) 100%)' }}>
+                        <Paper sx={{ p: 3, bgcolor: THEME.panel, borderTop: `4px solid ${THEME.success}`, borderRight: `1px solid ${THEME.hairline}`, borderLeft: `1px solid ${THEME.hairline}`, borderBottom: `1px solid ${THEME.hairline}`, borderRadius: 0, boxShadow: 'none' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                                 <Lightbulb sx={{ color: THEME.success }} />
-                                <Typography variant="h6" fontWeight="bold">AI Insight</Typography>
+                                <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold' }}>AI Insight</Typography>
                             </Box>
-                            <Typography variant="body1" sx={{ color: THEME.text, mb: 2 }}>
+                            <Typography variant="body1" sx={{ color: THEME.text, mb: 3, lineHeight: 1.6 }}>
                                 Your portfolio lies {isOptimal ? 'ON' : 'BELOW'} the efficient frontier.
                             </Typography>
 
                             {!isOptimal && (
                                 <>
-                                    <Typography variant="body2" sx={{ color: THEME.textDim, mb: 2 }}>
-                                        You are taking <b>{(currentMetrics.x).toFixed(1)}%</b> risk for a <b>{(currentMetrics.y).toFixed(1)}%</b> return.
-                                        Analysis suggests you could increase return to <b>{(currentMetrics.y * 1.2).toFixed(1)}%</b> with the same risk level by optimizing weights.
-                                    </Typography>
-                                    <Chip icon={<AutoGraph />} label="Auto-Optimize Available" color="primary" variant="outlined" clickable />
+                                    <Box sx={{ borderLeft: `3px solid ${THEME.textDim}`, pl: 2, mb: 3 }}>
+                                        <Typography variant="body2" sx={{ color: THEME.secondary, fontStyle: 'italic' }}>
+                                            "You are taking <b>{(currentMetrics.x).toFixed(1)}%</b> risk for a <b>{(currentMetrics.y).toFixed(1)}%</b> return.
+                                            Optimization could boost returns to <b>{(currentMetrics.y * 1.2).toFixed(1)}%</b>."
+                                        </Typography>
+                                    </Box>
+                                    <Chip icon={<AutoGraph />} label="Auto-Optimize Available" sx={{ bgcolor: THEME.text, color: '#fff', borderRadius: 0 }} clickable />
                                 </>
                             )}
 
@@ -166,15 +171,17 @@ const OptimizationTool: React.FC<OptimizationToolProps> = ({ activePortfolio }) 
                             )}
                         </Paper>
 
-                        <Paper sx={{ p: 3, bgcolor: THEME.panel, border: '1px solid ' + THEME.border }}>
-                            <Typography variant="subtitle2" color={THEME.textDim} sx={{ mb: 1 }}>Current Metrics</Typography>
+                        <Paper sx={{ p: 3, bgcolor: THEME.panel, border: `1px solid ${THEME.border}`, borderRadius: 0, boxShadow: 'none' }}>
+                            <Box sx={{ borderBottom: `1px solid ${THEME.hairline}`, mb: 2, pb: 1 }}>
+                                <Typography variant="subtitle2" color={THEME.textDim} sx={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>Current Metrics</Typography>
+                            </Box>
                             <Grid container spacing={2}>
                                 <Grid item xs={6}>
                                     <Typography variant="h4" fontWeight="bold" color={THEME.primary}>{currentMetrics.y.toFixed(1)}%</Typography>
                                     <Typography variant="caption" color={THEME.textDim}>Return</Typography>
                                 </Grid>
                                 <Grid item xs={6}>
-                                    <Typography variant="h4" fontWeight="bold" color={THEME.warning}>{currentMetrics.x.toFixed(1)}%</Typography>
+                                    <Typography variant="h4" fontWeight="bold" color={THEME.primary}>{currentMetrics.x.toFixed(1)}%</Typography>
                                     <Typography variant="caption" color={THEME.textDim}>Risk (Vol)</Typography>
                                 </Grid>
                             </Grid>

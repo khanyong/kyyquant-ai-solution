@@ -662,8 +662,9 @@ export default function SignalMonitor() {
                 sx={{
                   p: 2,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.05) 100%)',
-                  border: '2px solid rgba(76, 175, 80, 0.3)'
+                  bgcolor: 'var(--ipc-success-bg)',
+                  border: '1px solid var(--ipc-success-bg)',
+                  borderRadius: 'var(--ipc-radius-sm)'
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
@@ -688,8 +689,9 @@ export default function SignalMonitor() {
                 sx={{
                   p: 2,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.2) 0%, rgba(244, 67, 54, 0.05) 100%)',
-                  border: '2px solid rgba(244, 67, 54, 0.3)'
+                  bgcolor: 'var(--ipc-danger-bg)',
+                  border: '1px solid var(--ipc-danger-bg)',
+                  borderRadius: 'var(--ipc-radius-sm)'
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
@@ -714,8 +716,9 @@ export default function SignalMonitor() {
                 sx={{
                   p: 2,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(33, 150, 243, 0.05) 100%)',
-                  border: '2px solid rgba(33, 150, 243, 0.3)'
+                  bgcolor: 'var(--ipc-info-bg)',
+                  border: '1px solid var(--ipc-info-bg)',
+                  borderRadius: 'var(--ipc-radius-sm)'
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
@@ -737,8 +740,9 @@ export default function SignalMonitor() {
                 sx={{
                   p: 2,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.2) 0%, rgba(156, 39, 176, 0.05) 100%)',
-                  border: '2px solid rgba(156, 39, 176, 0.3)'
+                  bgcolor: 'var(--ipc-primary-light)',
+                  border: '1px solid var(--ipc-primary-light)',
+                  borderRadius: 'var(--ipc-radius-sm)'
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
@@ -919,17 +923,17 @@ export default function SignalMonitor() {
       </Card>
 
       {/* 시장 모니터링 섹션 */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
+      <Card sx={{ mb: 3, border: '1px solid black' }}>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
             <Box>
               <Stack direction="row" spacing={1} alignItems="center">
-                <ShowChart sx={{ color: 'white' }} />
-                <Typography variant="h5" color="white" gutterBottom>
+                <ShowChart color="action" />
+                <Typography variant="h5" color="text.primary" gutterBottom>
                   실시간 시장 모니터링
                 </Typography>
               </Stack>
-              <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
+              <Typography variant="body2" color="text.secondary">
                 n8n 워크플로우가 1분마다 수집하는 주요 종목 시세
               </Typography>
             </Box>
@@ -939,10 +943,10 @@ export default function SignalMonitor() {
                   icon={<Update />}
                   label={lastMarketUpdate.toLocaleTimeString()}
                   size="small"
-                  sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                  sx={{ bgcolor: 'action.selected', color: 'text.primary' }}
                 />
               )}
-              <IconButton onClick={fetchMarketData} sx={{ color: 'white' }}>
+              <IconButton onClick={fetchMarketData} color="primary">
                 <Refresh />
               </IconButton>
             </Stack>
@@ -957,8 +961,8 @@ export default function SignalMonitor() {
                 sx={{
                   p: 2,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.2) 0%, rgba(244, 67, 54, 0.05) 100%)',
-                  border: '2px solid rgba(244, 67, 54, 0.3)'
+                  bgcolor: 'var(--ipc-bg-subtle)',
+                  border: '1px solid var(--ipc-border)'
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
@@ -978,8 +982,8 @@ export default function SignalMonitor() {
                 sx={{
                   p: 2,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(33, 150, 243, 0.05) 100%)',
-                  border: '2px solid rgba(33, 150, 243, 0.3)'
+                  bgcolor: 'var(--ipc-bg-subtle)',
+                  border: '1px solid var(--ipc-border)'
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
@@ -999,8 +1003,8 @@ export default function SignalMonitor() {
                 sx={{
                   p: 2,
                   textAlign: 'center',
-                  background: 'linear-gradient(135deg, rgba(158, 158, 158, 0.2) 0%, rgba(158, 158, 158, 0.05) 100%)',
-                  border: '2px solid rgba(158, 158, 158, 0.3)'
+                  bgcolor: 'var(--ipc-bg-subtle)',
+                  border: '1px solid var(--ipc-border)'
                 }}
               >
                 <Typography variant="caption" color="text.secondary" gutterBottom>
@@ -1025,7 +1029,7 @@ export default function SignalMonitor() {
               {/* 시장 데이터 테이블 */}
               <Box>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Typography variant="subtitle1" fontWeight="medium" color="white">
+                  <Typography variant="subtitle1" fontWeight="medium" color="text.primary">
                     최근 업데이트 종목 ({displayedStocks.length}개)
                   </Typography>
                   {marketData.length > 10 && (
@@ -1033,7 +1037,7 @@ export default function SignalMonitor() {
                       size="small"
                       variant="outlined"
                       onClick={() => setShowAllStocks(!showAllStocks)}
-                      sx={{ color: 'white', borderColor: 'rgba(255, 255, 255, 0.3)' }}
+                      color="primary"
                     >
                       {showAllStocks ? '접기 ▲' : `전체 보기 (${marketData.length}개) ▼`}
                     </Button>
@@ -1054,52 +1058,52 @@ export default function SignalMonitor() {
                     </TableHead>
                     <TableBody>
                       {displayedStocks.map((item) => (
-                      <TableRow key={item.stock_code} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
-                            {item.stock_name || item.stock_code}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {item.stock_code}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            fontWeight="bold"
-                            color={getPriceColor(item.change_rate)}
-                          >
-                            {item.current_price?.toLocaleString() || '-'}원
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                            {item.change_rate > 0 ? <TrendingUp fontSize="small" color="error" /> :
-                             item.change_rate < 0 ? <TrendingDown fontSize="small" color="primary" /> : null}
+                        <TableRow key={item.stock_code} hover>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium">
+                              {item.stock_name || item.stock_code}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {item.stock_code}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
                             <Typography
                               variant="body2"
-                              fontWeight="medium"
+                              fontWeight="bold"
                               color={getPriceColor(item.change_rate)}
                             >
-                              {item.change_rate > 0 ? '+' : ''}
-                              {item.change_rate?.toFixed(2) || '0.00'}%
+                              {item.current_price?.toLocaleString() || '-'}원
                             </Typography>
-                          </Stack>
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatVolume(item.volume)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ color: 'error.main' }}>
-                          {item.high_52w ? item.high_52w.toLocaleString() : '-'}
-                        </TableCell>
-                        <TableCell align="right" sx={{ color: 'primary.main' }}>
-                          {item.low_52w ? item.low_52w.toLocaleString() : '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                              {item.change_rate > 0 ? <TrendingUp fontSize="small" color="error" /> :
+                                item.change_rate < 0 ? <TrendingDown fontSize="small" color="primary" /> : null}
+                              <Typography
+                                variant="body2"
+                                fontWeight="medium"
+                                color={getPriceColor(item.change_rate)}
+                              >
+                                {item.change_rate > 0 ? '+' : ''}
+                                {item.change_rate?.toFixed(2) || '0.00'}%
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="right">
+                            {formatVolume(item.volume)}
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: 'error.main' }}>
+                            {item.high_52w ? item.high_52w.toLocaleString() : '-'}
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: 'primary.main' }}>
+                            {item.low_52w ? item.low_52w.toLocaleString() : '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Box>
             </>
           )}
@@ -1110,25 +1114,25 @@ export default function SignalMonitor() {
 
       {/* 매수 대기 종목 섹션 */}
       {pendingStocks.length > 0 && (
-        <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+        <Card sx={{ mb: 3, border: '1px solid black' }}>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
               <Box>
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Timer sx={{ color: 'white' }} />
-                  <Typography variant="h5" color="white" gutterBottom>
+                  <Timer color="action" />
+                  <Typography variant="h5" color="text.primary" gutterBottom>
                     매수 대기 종목
                   </Typography>
                 </Stack>
-                <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
+                <Typography variant="body2" color="text.secondary">
                   조건 근접도 80% 이상 (곧 매수 신호 발생 가능)
                 </Typography>
               </Box>
               <Chip
                 label={`${pendingStocks.length}개 종목`}
                 sx={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  color: 'white',
+                  bgcolor: 'warning.light',
+                  color: 'warning.contrastText',
                   fontWeight: 'bold'
                 }}
               />
@@ -1174,7 +1178,7 @@ export default function SignalMonitor() {
                                 backgroundColor: 'rgba(0, 0, 0, 0.1)',
                                 '& .MuiLinearProgress-bar': {
                                   backgroundColor: stock.condition_match_score >= 95 ? '#f44336' :
-                                                   stock.condition_match_score >= 90 ? '#ff9800' : '#4caf50'
+                                    stock.condition_match_score >= 90 ? '#ff9800' : '#4caf50'
                                 }
                               }}
                             />
@@ -1200,25 +1204,25 @@ export default function SignalMonitor() {
 
       {/* 매도 대기 종목 섹션 */}
       {pendingSellStocks.length > 0 && (
-        <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+        <Card sx={{ mb: 3, border: '1px solid black' }}>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
               <Box>
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Timer sx={{ color: 'white' }} />
-                  <Typography variant="h5" color="white" gutterBottom>
+                  <Timer color="action" />
+                  <Typography variant="h5" color="text.primary" gutterBottom>
                     매도 대기 종목
                   </Typography>
                 </Stack>
-                <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
+                <Typography variant="body2" color="text.secondary">
                   보유 종목의 매도 조건 근접도 80% 이상 (곧 매도 신호 발생 가능)
                 </Typography>
               </Box>
               <Chip
                 label={`${pendingSellStocks.length}개 보유종목`}
                 sx={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  color: 'white',
+                  bgcolor: 'info.light',
+                  color: 'info.contrastText',
                   fontWeight: 'bold'
                 }}
               />
@@ -1264,7 +1268,7 @@ export default function SignalMonitor() {
                                 backgroundColor: 'rgba(0, 0, 0, 0.1)',
                                 '& .MuiLinearProgress-bar': {
                                   backgroundColor: stock.exit_condition_match_score >= 95 ? '#f44336' :
-                                                   stock.exit_condition_match_score >= 90 ? '#ff9800' : '#2196f3'
+                                    stock.exit_condition_match_score >= 90 ? '#ff9800' : '#2196f3'
                                 }
                               }}
                             />
@@ -1289,28 +1293,28 @@ export default function SignalMonitor() {
       )}
 
       {/* 매매 신호 섹션 */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <Card sx={{ mb: 3, border: '1px solid black' }}>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
             <Box>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Bolt sx={{ color: 'white' }} />
-                <Typography variant="h5" color="white" gutterBottom>
+                <Bolt color="action" />
+                <Typography variant="h5" color="text.primary" gutterBottom>
                   실시간 매매 신호
                 </Typography>
               </Stack>
-              <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
+              <Typography variant="body2" color="text.secondary">
                 전략별 매수/매도 신호를 실시간으로 모니터링합니다
               </Typography>
             </Box>
             <Stack direction="row" spacing={1}>
               <IconButton
                 onClick={() => setNotifications(!notifications)}
-                sx={{ color: 'white' }}
+                color="primary"
               >
                 {notifications ? <NotificationsActive /> : <NotificationsOff />}
               </IconButton>
-              <IconButton onClick={fetchSignals} sx={{ color: 'white' }}>
+              <IconButton onClick={fetchSignals} color="primary">
                 <Refresh />
               </IconButton>
             </Stack>
@@ -1318,16 +1322,11 @@ export default function SignalMonitor() {
 
           <Stack direction="row" spacing={2}>
             <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>전략 선택</InputLabel>
+              <InputLabel>전략 선택</InputLabel>
               <Select
                 value={filterStrategy}
                 onChange={(e) => setFilterStrategy(e.target.value)}
                 label="전략 선택"
-                sx={{
-                  color: 'white',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.3)' },
-                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.5)' }
-                }}
               >
                 <MenuItem value="all">모든 전략</MenuItem>
                 {strategies.map(strategy => (
@@ -1339,16 +1338,11 @@ export default function SignalMonitor() {
             </FormControl>
 
             <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>신호 타입</InputLabel>
+              <InputLabel>신호 타입</InputLabel>
               <Select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
                 label="신호 타입"
-                sx={{
-                  color: 'white',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.3)' },
-                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.5)' }
-                }}
               >
                 <MenuItem value="all">전체</MenuItem>
                 <MenuItem value="BUY">매수</MenuItem>

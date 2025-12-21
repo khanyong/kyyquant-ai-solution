@@ -50,7 +50,7 @@ interface PortfolioOverviewProps {
   lastUpdated: Date | null
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
+const COLORS = ['#C5A065', '#212121', '#424242', '#616161', '#9E9E9E', '#E0E0E0'] // Editorial Gold + Grey Palette
 
 export default function PortfolioOverview({ stats, activeStrategies, positions, lastUpdated }: PortfolioOverviewProps) {
   const theme = useTheme()
@@ -119,9 +119,9 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
     <Paper sx={{ p: 3, mb: 3 }}>
       {/* Header */}
       <Stack direction="row" alignItems="center" spacing={2} mb={3}>
-        <AccountBalance fontSize="large" color="primary" />
-        <Typography variant="h5" fontWeight="bold">
-          📊 내 포트폴리오 현황
+        <AccountBalance fontSize="large" sx={{ color: '#121212' }} />
+        <Typography variant="h5" fontWeight="bold" fontFamily="serif">
+          내 포트폴리오 현황
           <Chip label="Source: 내부DB" color="info" size="small" variant="outlined" sx={{ ml: 2, verticalAlign: 'middle', fontSize: '0.8rem' }} />
           {lastUpdated && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1, verticalAlign: 'middle', fontSize: '0.8rem' }}>
@@ -135,11 +135,11 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
         {/* ... (Summary Cards Section - No Changes) ... */}
         {/* 총 투자금 */}
         <Grid item xs={12} md={3}>
-          <Box p={2} bgcolor={theme.palette.background.default} borderRadius={2}>
+          <Box p={2} border="1px solid #000000" bgcolor="background.paper" borderRadius={0}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
               총 할당 자금
             </Typography>
-            <Typography variant="h5" fontWeight="bold">
+            <Typography variant="h5" fontWeight="bold" fontFamily="serif">
               {formatCurrency(safeStats.totalAllocated)}원
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -150,11 +150,11 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
 
         {/* 투자 중 */}
         <Grid item xs={12} md={3}>
-          <Box p={2} bgcolor={theme.palette.background.default} borderRadius={2}>
+          <Box p={2} border="1px solid #000000" bgcolor="background.paper" borderRadius={0}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
               투자 중
             </Typography>
-            <Typography variant="h5" fontWeight="bold">
+            <Typography variant="h5" fontWeight="bold" fontFamily="serif">
               {formatCurrency(safeStats.totalInvested)}원
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -165,11 +165,11 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
 
         {/* 현재 평가액 */}
         <Grid item xs={12} md={3}>
-          <Box p={2} bgcolor={theme.palette.background.default} borderRadius={2}>
+          <Box p={2} border="1px solid #000000" bgcolor="background.paper" borderRadius={0}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
               현재 평가액
             </Typography>
-            <Typography variant="h5" fontWeight="bold">
+            <Typography variant="h5" fontWeight="bold" fontFamily="serif">
               {formatCurrency(safeStats.totalValue)}원
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -180,7 +180,7 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
 
         {/* 수익률 */}
         <Grid item xs={12} md={3}>
-          <Box p={2} bgcolor={theme.palette.background.default} borderRadius={2}>
+          <Box p={2} border="1px solid #000000" bgcolor="background.paper" borderRadius={0}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
               총 수익
             </Typography>
@@ -188,6 +188,7 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
               <Typography
                 variant="h5"
                 fontWeight="bold"
+                fontFamily="serif"
                 color={getProfitColor(safeStats.totalProfit)}
               >
                 {safeStats.totalProfit > 0 ? '+' : ''}{formatCurrency(safeStats.totalProfit)}원
@@ -196,8 +197,9 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                 icon={safeStats.totalProfitRate > 0 ? <TrendingUp /> : undefined}
                 label={formatPercent(safeStats.totalProfitRate)}
                 size="small"
-                color={safeStats.totalProfitRate > 0 ? 'error' : safeStats.totalProfitRate < 0 ? 'primary' : 'default'} // Red/Blue scheme
-                sx={{ fontWeight: 'bold' }}
+                variant="outlined"
+                color={safeStats.totalProfitRate > 0 ? 'error' : safeStats.totalProfitRate < 0 ? 'primary' : 'default'}
+                sx={{ fontWeight: 'bold', borderRadius: 0 }}
               />
             </Stack>
           </Box>
@@ -209,8 +211,8 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
         <Grid item xs={12} md={4}>
           <Card elevation={0} variant="outlined">
             <CardContent>
-              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center">
-                <PieChartIcon sx={{ mr: 1, color: 'primary.main' }} /> 자산 배분
+              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center" fontFamily="serif">
+                <PieChartIcon sx={{ mr: 1, color: 'text.primary' }} /> 자산 배분
               </Typography>
               <Box height={250}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -221,7 +223,7 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                       cy="50%"
                       innerRadius={60}
                       outerRadius={80}
-                      fill="#8884d8"
+                      fill="#212121"
                       paddingAngle={5}
                       dataKey="value"
                       label={renderCustomizedLabel}
@@ -244,8 +246,8 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
         <Grid item xs={12} md={4}>
           <Card elevation={0} variant="outlined">
             <CardContent>
-              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center">
-                <PieChartIcon sx={{ mr: 1, color: 'secondary.main' }} /> 전략별 자금 할당
+              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center" fontFamily="serif">
+                <PieChartIcon sx={{ mr: 1, color: 'text.primary' }} /> 전략별 자금 할당
               </Typography>
               {strategyAllocationData.length > 0 ? (
                 <Box height={250}>
@@ -257,7 +259,7 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                         cy="50%"
                         innerRadius={60}
                         outerRadius={80}
-                        fill="#82ca9d"
+                        fill="#212121"
                         paddingAngle={5}
                         dataKey="value"
                         label={renderCustomizedLabel}
@@ -285,8 +287,8 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
         <Grid item xs={12} md={4}>
           <Card elevation={0} variant="outlined">
             <CardContent>
-              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center">
-                <BarChartIcon sx={{ mr: 1, color: 'success.main' }} /> 보유 비중 Top 5
+              <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center" fontFamily="serif">
+                <BarChartIcon sx={{ mr: 1, color: 'text.primary' }} /> 보유 비중 Top 5
               </Typography>
               {topHoldingsData.length > 0 ? (
                 <Box height={250}>
@@ -299,8 +301,8 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" hide />
                       <YAxis type="category" dataKey="name" width={60} fontSize={12} />
-                      <Tooltip formatter={(value: number) => `₩${formatCurrency(value)}`} />
-                      <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]}>
+                      <Tooltip formatter={(value: number) => `₩${formatCurrency(value)}`} contentStyle={{ backgroundColor: '#fff', border: '1px solid #000' }} />
+                      <Bar dataKey="value" fill="#212121" radius={[0, 0, 0, 0]}>
                         <LabelList dataKey="label" position="insideLeft" fill="white" fontSize={11} fontWeight="bold" />
                         {topHoldingsData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

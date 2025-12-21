@@ -4,16 +4,16 @@ import { Delete, Add, TrendingUp, AccountBalanceWallet } from '@mui/icons-materi
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    success: '#2CB67D',
-    warning: '#FFBB28',
-    danger: '#EF4565',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    success: 'var(--ipc-success)',
+    warning: 'var(--ipc-warning)',
+    danger: 'var(--ipc-danger)',
+    border: 'var(--ipc-border)'
 };
 
 interface Asset {
@@ -94,7 +94,7 @@ const CashAssets: React.FC = () => {
                                 <TextField
                                     fullWidth size="small"
                                     value={newAsset.name} onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                    sx={{ bgcolor: '#f5f5f5' }}
                                 />
                             </Box>
                             <Grid container spacing={2}>
@@ -103,7 +103,7 @@ const CashAssets: React.FC = () => {
                                     <Select
                                         fullWidth size="small"
                                         value={newAsset.type} onChange={(e) => setNewAsset({ ...newAsset, type: e.target.value as any })}
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                        sx={{ bgcolor: '#f5f5f5' }}
                                     >
                                         <MenuItem value="deposit">정기예금 (거치식)</MenuItem>
                                         <MenuItem value="savings">정기적금 (적립식)</MenuItem>
@@ -114,7 +114,7 @@ const CashAssets: React.FC = () => {
                                     <TextField
                                         type="number" fullWidth size="small"
                                         value={newAsset.duration} onChange={(e) => setNewAsset({ ...newAsset, duration: Number(e.target.value) })}
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                        sx={{ bgcolor: '#f5f5f5' }}
                                     />
                                 </Grid>
                             </Grid>
@@ -125,7 +125,7 @@ const CashAssets: React.FC = () => {
                                 <TextField
                                     type="number" fullWidth size="small"
                                     value={newAsset.amount} onChange={(e) => setNewAsset({ ...newAsset, amount: Number(e.target.value) })}
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                    sx={{ bgcolor: '#f5f5f5' }}
                                 />
                             </Box>
                             <Box>
@@ -133,7 +133,7 @@ const CashAssets: React.FC = () => {
                                 <TextField
                                     type="number" fullWidth size="small"
                                     value={newAsset.rate} onChange={(e) => setNewAsset({ ...newAsset, rate: Number(e.target.value) })}
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                    sx={{ bgcolor: '#f5f5f5' }}
                                 />
                             </Box>
                             <Button
@@ -211,7 +211,7 @@ const CashAssets: React.FC = () => {
                                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>자산 구성 및 이자 수익</Typography>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#333" />
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e0e0e0" />
                                         <XAxis type="number" stroke={THEME.textDim} />
                                         <YAxis dataKey="name" type="category" stroke={THEME.textDim} width={100} />
                                         <Tooltip

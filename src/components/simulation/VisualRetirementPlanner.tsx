@@ -24,11 +24,12 @@ import { Portfolio, SimulationParams } from './types';
 
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    border: '#2A2F3A',
-    primary: '#00D1FF'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    border: 'var(--ipc-border)'
 };
 
 const VisualRetirementPlanner: React.FC = () => {

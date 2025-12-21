@@ -3,12 +3,12 @@ import { Box, Typography, Paper, Grid } from '@mui/material';
 import { HealthAndSafety, Shield } from '@mui/icons-material';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    border: 'var(--ipc-border)'
 };
 
 const InsuranceAnalysis: React.FC = () => {

@@ -22,6 +22,7 @@ import {
 import {
   Refresh,
   AccountBalanceWallet,
+  AccountBalance,
   TrendingUp,
   TrendingDown,
   ShowChart
@@ -224,9 +225,9 @@ const PortfolioPanel: React.FC = () => {
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="h6">
+        <Typography variant="h6" fontFamily="serif" fontWeight="bold">
           계좌 잔고 및 보유 자산
-          <Chip label="Source: 키움증권" color="warning" size="small" variant="outlined" sx={{ ml: 1, verticalAlign: 'middle' }} />
+          <Chip label="Source: 키움증권" size="small" variant="outlined" sx={{ ml: 1, verticalAlign: 'middle', borderColor: '#EF6C00', color: '#EF6C00' }} />
           {balance && balance.updated_at && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1, verticalAlign: 'middle' }}>
               ({new Date(balance.updated_at).toLocaleString('ko-KR')})
@@ -284,25 +285,26 @@ const PortfolioPanel: React.FC = () => {
         <>
           {/* 계좌 잔고 Summary */}
           {balance && (
-            <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            <Card sx={{ mb: 3, border: '1px solid black', borderRadius: 0 }}>
               <CardContent>
                 <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                  <AccountBalanceWallet sx={{ color: 'white' }} />
-                  <Typography variant="h6" color="white">
+                  <AccountBalance color="action" />
+                  <Typography variant="h6" color="text.primary" fontFamily="serif" fontWeight="bold">
                     계좌 잔고
                   </Typography>
                 </Stack>
 
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid #e0e0e0', borderRadius: 0 }} elevation={0}>
                       <Typography variant="caption" color="text.secondary" gutterBottom>
                         총 자산
                       </Typography>
                       <Typography
                         variant="h6"
                         fontWeight="bold"
-                        color="primary"
+                        color="text.primary"
+                        fontFamily="serif"
                         sx={{
                           fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
                           whiteSpace: 'nowrap',
@@ -316,13 +318,14 @@ const PortfolioPanel: React.FC = () => {
                   </Grid>
 
                   <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid #e0e0e0', borderRadius: 0 }} elevation={0}>
                       <Typography variant="caption" color="text.secondary" gutterBottom>
                         가능 현금
                       </Typography>
                       <Typography
                         variant="h6"
                         fontWeight="bold"
+                        fontFamily="serif"
                         sx={{
                           fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
                           whiteSpace: 'nowrap',
@@ -336,14 +339,15 @@ const PortfolioPanel: React.FC = () => {
                   </Grid>
 
                   <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid #e0e0e0', borderRadius: 0 }} elevation={0}>
                       <Typography variant="caption" color="text.secondary" gutterBottom>
                         주식 평가액
                       </Typography>
                       <Typography
                         variant="h6"
                         fontWeight="bold"
-                        color="info.main"
+                        color="text.primary"
+                        fontFamily="serif"
                         sx={{
                           fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
                           whiteSpace: 'nowrap',
@@ -357,20 +361,21 @@ const PortfolioPanel: React.FC = () => {
                   </Grid>
 
                   <Grid item xs={12} sm={6} md={3}>
-                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Paper sx={{ p: 2, textAlign: 'center', minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid #e0e0e0', borderRadius: 0 }} elevation={0}>
                       <Typography variant="caption" color="text.secondary" gutterBottom>
                         평가손익
                       </Typography>
                       <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
                         {balance.total_profit_loss >= 0 ? (
-                          <TrendingUp color="error" fontSize="small" />
+                          <TrendingUp htmlColor="#C62828" fontSize="small" />
                         ) : (
-                          <TrendingDown color="primary" fontSize="small" />
+                          <TrendingDown htmlColor="#1565C0" fontSize="small" />
                         )}
                         <Typography
                           variant="h6"
                           fontWeight="bold"
-                          color={balance.total_profit_loss >= 0 ? 'error.main' : 'primary.main'}
+                          fontFamily="serif"
+                          color={balance.total_profit_loss >= 0 ? '#C62828' : '#1565C0'}
                           sx={{
                             fontSize: { xs: '0.85rem', sm: '0.95rem', md: '1rem' },
                             whiteSpace: 'nowrap',
@@ -384,15 +389,15 @@ const PortfolioPanel: React.FC = () => {
                       </Stack>
                       <Chip
                         label={`${balance.total_profit_loss >= 0 ? '+' : ''}${balance.total_profit_loss_rate.toFixed(2)}%`}
-                        color={balance.total_profit_loss >= 0 ? 'error' : 'primary'}
+                        variant="outlined"
                         size="small"
-                        sx={{ mt: 1 }}
+                        sx={{ mt: 1, borderColor: balance.total_profit_loss >= 0 ? '#C62828' : '#1565C0', color: balance.total_profit_loss >= 0 ? '#C62828' : '#1565C0', fontWeight: 'bold' }}
                       />
                     </Paper>
                   </Grid>
                 </Grid>
 
-                <Typography variant="caption" color="rgba(255,255,255,0.7)" sx={{ mt: 2, display: 'block' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
                   마지막 업데이트: {new Date(balance.updated_at).toLocaleString('ko-KR')}
                 </Typography>
               </CardContent>
@@ -400,11 +405,11 @@ const PortfolioPanel: React.FC = () => {
           )}
 
           {/* 보유 종목 테이블 */}
-          <Card>
+          <Card sx={{ border: '1px solid black', borderRadius: 0 }}>
             <CardContent>
               <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-                <ShowChart color="primary" />
-                <Typography variant="h6">보유 종목 ({holdings.length})</Typography>
+                <ShowChart color="action" />
+                <Typography variant="h6" fontFamily="serif" fontWeight="bold">보유 종목 ({holdings.length})</Typography>
               </Stack>
 
               {holdings.length === 0 ? (
@@ -482,8 +487,9 @@ const PortfolioPanel: React.FC = () => {
                             <TableCell align="right">
                               <Chip
                                 label={`${holding.profit_loss_rate >= 0 ? '+' : ''}${holding.profit_loss_rate.toFixed(2)}%`}
-                                color={holding.profit_loss_rate >= 0 ? 'error' : 'primary'}
+                                variant="outlined"
                                 size="small"
+                                sx={{ borderColor: holding.profit_loss_rate >= 0 ? '#C62828' : '#1565C0', color: holding.profit_loss_rate >= 0 ? '#C62828' : '#1565C0', fontWeight: 'bold' }}
                               />
                             </TableCell>
                           </TableRow>

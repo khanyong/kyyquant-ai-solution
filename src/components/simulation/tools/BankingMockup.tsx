@@ -3,14 +3,14 @@ import { Box, Typography, Paper, Grid, Card, CardContent, Tabs, Tab, Button, Tex
 import { AccountBalance, CreditCard, Send, AccountBalanceWallet, Receipt, ArrowForward, Savings, AttachMoney } from '@mui/icons-material';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    border: '#2A2F3A',
-    success: '#2CB67D'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    border: 'var(--ipc-border)',
+    success: 'var(--ipc-success)'
 };
 
 interface BankingMockupProps {
@@ -87,7 +87,7 @@ const BankingMockup: React.FC<BankingMockupProps> = ({ initialTab = 0 }) => {
                                                 {tx.type === 'in' ? '+' : ''}{tx.amount.toLocaleString()}
                                             </Typography>
                                         </ListItem>
-                                        <Divider variant="inset" component="li" sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+                                        <Divider variant="inset" component="li" sx={{ borderColor: '#e0e0e0' }} />
                                     </React.Fragment>
                                 ))}
                             </List>
@@ -103,7 +103,7 @@ const BankingMockup: React.FC<BankingMockupProps> = ({ initialTab = 0 }) => {
 
                     <Box sx={{ mb: 3 }}>
                         <Typography gutterBottom color={THEME.textDim}>출금 계좌</Typography>
-                        <TextField select SelectProps={{ native: true }} fullWidth sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}>
+                        <TextField select SelectProps={{ native: true }} fullWidth sx={{ bgcolor: 'var(--ipc-bg-subtle)' }}>
                             {accounts.map(acc => (
                                 <option key={acc.id} value={acc.id}>{acc.name} (₩{acc.balance.toLocaleString()})</option>
                             ))}
@@ -112,66 +112,71 @@ const BankingMockup: React.FC<BankingMockupProps> = ({ initialTab = 0 }) => {
 
                     <Box sx={{ mb: 3 }}>
                         <Typography gutterBottom color={THEME.textDim}>입금 계좌번호</Typography>
-                        <TextField fullWidth placeholder="- 없이 입력해주세요" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <TextField fullWidth placeholder="- 없이 입력해주세요" sx={{ bgcolor: 'var(--ipc-bg-subtle)' }} />
                     </Box>
 
                     <Box sx={{ mb: 4 }}>
                         <Typography gutterBottom color={THEME.textDim}>이체 금액 (원)</Typography>
-                        <TextField fullWidth type="number" placeholder="0" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <TextField fullWidth type="number" placeholder="0" sx={{ bgcolor: 'var(--ipc-bg-subtle)' }} />
                     </Box>
 
                     <Button variant="contained" fullWidth size="large" sx={{ bgcolor: THEME.primary, color: '#000', fontWeight: 'bold' }} startIcon={<Send />}>
                         이체하기
                     </Button>
                 </Paper>
-            )}
+            )
+            }
 
             {/* Tab 2: Loan */}
-            {tab === 2 && (
-                <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                        <Card sx={{ bgcolor: THEME.panel, border: '1px solid ' + THEME.border, p: 2 }}>
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                    <Typography variant="h6" fontWeight="bold">신용대출</Typography>
-                                    <Typography variant="h6" color={THEME.primary}>4.52%</Typography>
-                                </Box>
-                                <Typography variant="body2" color={THEME.textDim} sx={{ mb: 3 }}>
-                                    신용점수 기반 사전 승인 한도입니다.
-                                </Typography>
-                                <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>₩50,000,000</Typography>
-                                <Button variant="outlined" fullWidth sx={{ color: THEME.primary, borderColor: THEME.primary }}>한도 조회</Button>
-                            </CardContent>
-                        </Card>
+            {
+                tab === 2 && (
+                    <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                            <Card sx={{ bgcolor: THEME.panel, border: '1px solid ' + THEME.border, p: 2 }}>
+                                <CardContent>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                        <Typography variant="h6" fontWeight="bold">신용대출</Typography>
+                                        <Typography variant="h6" color={THEME.primary}>4.52%</Typography>
+                                    </Box>
+                                    <Typography variant="body2" color={THEME.textDim} sx={{ mb: 3 }}>
+                                        신용점수 기반 사전 승인 한도입니다.
+                                    </Typography>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>₩50,000,000</Typography>
+                                    <Button variant="outlined" fullWidth sx={{ color: THEME.primary, borderColor: THEME.primary }}>한도 조회</Button>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <Card sx={{ bgcolor: THEME.panel, border: '1px solid ' + THEME.border, p: 2 }}>
+                                <CardContent>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                        <Typography variant="h6" fontWeight="bold">주택담보대출</Typography>
+                                        <Typography variant="h6" color={THEME.secondary}>3.85%</Typography>
+                                    </Box>
+                                    <Typography variant="body2" color={THEME.textDim} sx={{ mb: 3 }}>
+                                        LTV 70% 적용 주택 담보 대출.
+                                    </Typography>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>₩500,000,000</Typography>
+                                    <Button variant="outlined" fullWidth sx={{ color: THEME.secondary, borderColor: THEME.secondary }}>신청하기</Button>
+                                </CardContent>
+                            </Card>
+                        </Grid>
                     </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Card sx={{ bgcolor: THEME.panel, border: '1px solid ' + THEME.border, p: 2 }}>
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                    <Typography variant="h6" fontWeight="bold">주택담보대출</Typography>
-                                    <Typography variant="h6" color={THEME.secondary}>3.85%</Typography>
-                                </Box>
-                                <Typography variant="body2" color={THEME.textDim} sx={{ mb: 3 }}>
-                                    LTV 70% 적용 주택 담보 대출.
-                                </Typography>
-                                <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>₩500,000,000</Typography>
-                                <Button variant="outlined" fullWidth sx={{ color: THEME.secondary, borderColor: THEME.secondary }}>신청하기</Button>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                </Grid>
-            )}
+                )
+            }
 
             {/* Tab 3: Forex */}
-            {tab === 3 && (
-                <Box sx={{ textAlign: 'center', py: 8, color: THEME.textDim }}>
-                    <AttachMoney sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
-                    <Typography variant="h6">외환 거래 서비스 준비 중</Typography>
-                    <Typography variant="body2">실시간 환율 및 다통화 지갑 기능 오픈 예정.</Typography>
-                </Box>
-            )}
+            {
+                tab === 3 && (
+                    <Box sx={{ textAlign: 'center', py: 8, color: THEME.textDim }}>
+                        <AttachMoney sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
+                        <Typography variant="h6">외환 거래 서비스 준비 중</Typography>
+                        <Typography variant="body2">실시간 환율 및 다통화 지갑 기능 오픈 예정.</Typography>
+                    </Box>
+                )
+            }
 
-        </Box>
+        </Box >
     );
 };
 

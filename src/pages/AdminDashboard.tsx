@@ -115,7 +115,7 @@ const AdminDashboard: React.FC = () => {
           (acc, profile) => {
             acc.totalUsers++
             if (profile.is_admin) acc.adminCount++
-            
+
             switch (profile.approval_status) {
               case 'pending':
                 acc.pendingApprovals++
@@ -174,33 +174,15 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl">
+    <Box sx={{ p: 1 }}>
       <Box sx={{ my: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <AdminPanelSettings sx={{ fontSize: 35 }} />
             Admin Dashboard
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="outlined"
-              startIcon={<Home />}
-              onClick={() => navigate('/')}
-              size="large"
-            >
-              메인으로
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<ArrowBack />}
-              onClick={() => navigate(-1)}
-              size="large"
-            >
-              뒤로가기
-            </Button>
-          </Box>
         </Box>
-        
+
         {/* Statistics Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={2.4}>
@@ -269,31 +251,31 @@ const AdminDashboard: React.FC = () => {
         <Paper sx={{ width: '100%' }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={currentTab} onChange={handleTabChange} aria-label="admin tabs">
-              <Tab 
-                icon={<People />} 
-                iconPosition="start" 
-                label="사용자 관리" 
+              <Tab
+                icon={<People />}
+                iconPosition="start"
+                label="사용자 관리"
                 id="admin-tab-0"
                 aria-controls="admin-tabpanel-0"
               />
-              <Tab 
-                icon={<AdminPanelSettings />} 
-                iconPosition="start" 
-                label="승인 대기" 
+              <Tab
+                icon={<AdminPanelSettings />}
+                iconPosition="start"
+                label="승인 대기"
                 id="admin-tab-1"
                 aria-controls="admin-tabpanel-1"
               />
-              <Tab 
-                icon={<Assessment />} 
-                iconPosition="start" 
-                label="System Reports" 
+              <Tab
+                icon={<Assessment />}
+                iconPosition="start"
+                label="System Reports"
                 id="admin-tab-2"
                 aria-controls="admin-tabpanel-2"
               />
-              <Tab 
-                icon={<Settings />} 
-                iconPosition="start" 
-                label="System Settings" 
+              <Tab
+                icon={<Settings />}
+                iconPosition="start"
+                label="System Settings"
                 id="admin-tab-3"
                 aria-controls="admin-tabpanel-3"
               />
@@ -331,7 +313,7 @@ const AdminDashboard: React.FC = () => {
           </TabPanel>
         </Paper>
       </Box>
-    </Container>
+    </Box>
   )
 }
 

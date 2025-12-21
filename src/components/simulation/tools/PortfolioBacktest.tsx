@@ -19,14 +19,14 @@ import PortfolioComposition from '../PortfolioComposition';
 import { Portfolio, SimulationParams } from '../types';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    success: '#2CB67D',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    success: 'var(--ipc-success)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    border: 'var(--ipc-border)'
 };
 
 interface PortfolioBacktestProps {
@@ -144,7 +144,7 @@ const PortfolioBacktest: React.FC<PortfolioBacktestProps> = ({
                                 size="small"
                                 InputProps={{
                                     startAdornment: <InputAdornment position="start"><Search sx={{ color: THEME.textDim }} /></InputAdornment>,
-                                    sx: { color: THEME.text, bgcolor: THEME.bg }
+                                    sx: { color: THEME.text, bgcolor: '#f5f5f5' }
                                 }}
                             />
                         </Box>
@@ -152,7 +152,7 @@ const PortfolioBacktest: React.FC<PortfolioBacktestProps> = ({
                             <AssetSelector
                                 onDragStart={(e, asset) => e.dataTransfer.setData('application/json', JSON.stringify(asset))}
                                 onAssetClick={(asset) => { setSelectedAssetForDetail(asset); setDetailOpen(true); }}
-                                darkTheme={true}
+                                darkTheme={false}
                             />
                         </Box>
                     </Paper>

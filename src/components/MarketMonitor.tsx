@@ -238,12 +238,12 @@ export default function MarketMonitor() {
                 <Typography variant="caption" color="text.secondary">
                   {isMarketOpen()
                     ? `마지막 업데이트: ${lastUpdate.toLocaleTimeString('ko-KR', {
-                        timeZone: 'Asia/Seoul',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: true
-                      })}`
+                      timeZone: 'Asia/Seoul',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true
+                    })}`
                     : '주식시장 휴장 중 - 실시간 업데이트 일시정지'
                   }
                 </Typography>
@@ -272,7 +272,7 @@ export default function MarketMonitor() {
               {/* 요약 카드 */}
               <Grid container spacing={2} mb={3}>
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(244, 67, 54, 0.1)', border: '1px solid rgba(244, 67, 54, 0.3)' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'var(--ipc-danger-bg)', border: '1px solid var(--ipc-danger-bg)', borderRadius: 'var(--ipc-radius-sm)' }}>
                     <Typography variant="caption" color="text.secondary">
                       상승 종목
                     </Typography>
@@ -282,7 +282,7 @@ export default function MarketMonitor() {
                   </Paper>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(33, 150, 243, 0.1)', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'var(--ipc-info-bg)', border: '1px solid var(--ipc-info-bg)', borderRadius: 'var(--ipc-radius-sm)' }}>
                     <Typography variant="caption" color="text.secondary">
                       하락 종목
                     </Typography>
@@ -292,7 +292,7 @@ export default function MarketMonitor() {
                   </Paper>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(158, 158, 158, 0.1)', border: '1px solid rgba(158, 158, 158, 0.3)' }}>
+                  <Paper sx={{ p: 2, bgcolor: 'var(--ipc-bg-subtle)', border: '1px solid var(--ipc-border)', borderRadius: 'var(--ipc-radius-sm)' }}>
                     <Typography variant="caption" color="text.secondary">
                       보합 종목
                     </Typography>

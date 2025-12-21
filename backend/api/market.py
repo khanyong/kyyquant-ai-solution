@@ -250,43 +250,59 @@ async def get_candles(
         raise HTTPException(status_code=500, detail=f"Failed to fetch candles: {str(e)}")
 
 
+# ... (existing imports)
+import exchange_calendars as ecals
+import pytz
+
+# ... (rest of the file)
+
 @router.get("/market-status")
 async def get_market_status():
     """
-    시장 상태 확인
-
-    Returns:
-        시장 개장 여부, 현재 시간, 다음 개장/폐장 시간
+    시장 상태 확인 (exchange_calendars 사용)
+    - 공휴일, 수능일 등 특이사항 자동 반영
+    - 주말 체크
     """
-    now = datetime.now()
-
-    # 한국 시장 시간 (09:00-15:30)
-    market_open = now.replace(hour=9, minute=0, second=0, microsecond=0)
-    market_close = now.replace(hour=15, minute=30, second=0, microsecond=0)
-
-    is_open = market_open <= now <= market_close
-
-    # 주말 체크
-    is_weekend = now.weekday() >= 5  # 5=토요일, 6=일요일
-
-    # 다음 이벤트 시간
-    if is_open and not is_weekend:
+    # 한국 시간 기준
+    tz = pytz.timezone('Asia/Seoul')
+    now = datetime.now(tz)
+    
+    # XKRX (한국거래소) 캘린더 로드
+    xkrx = ecals.get_calendar("XKRX")
+    
+    # 오늘이 개장일인지 확인 (주말/공휴일 자동 체크)
+    is_session = xkrx.is_session(now.strftime('%Y-%m-%d'))
+    
+    # 현재 장 중인지 확인 (09:00 ~ 15:30, 수능일 등 반영됨)
+    # is_open_on_minute는 분 단위로 체크
+    is_open = xkrx.is_open_on_minute(now)
+    
+    market_open_time = None
+    market_close_time = None
+    
+    if is_session:
+        # 오늘의 개장/폐장 시간 조회
+        schedule = xkrx.schedule.loc[now.strftime('%Y-%m-%d')]
+        market_open_time = schedule['market_open'].tz_convert(tz)
+        market_close_time = schedule['market_close'].tz_convert(tz)
+    
+    # 다음 이벤트 계산
+    next_open = xkrx.next_open(now).tz_convert(tz)
+    next_close = xkrx.next_close(now).tz_convert(tz)
+    
+    if is_open:
         next_event = "close"
-        next_event_time = market_close
+        next_event_time = next_close
     else:
         next_event = "open"
-        # 다음 평일 09:00
-        next_day = now + timedelta(days=1)
-        while next_day.weekday() >= 5:
-            next_day += timedelta(days=1)
-        next_event_time = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
+        next_event_time = next_open
 
     return {
-        'is_open': is_open and not is_weekend,
-        'is_weekend': is_weekend,
+        'is_open': is_open,
+        'is_session': is_session, # 오늘이 개장일인지 (휴장일이면 False)
         'current_time': now.isoformat(),
-        'market_open_time': market_open.isoformat(),
-        'market_close_time': market_close.isoformat(),
+        'market_open_time': market_open_time.isoformat() if market_open_time else None,
+        'market_close_time': market_close_time.isoformat() if market_close_time else None,
         'next_event': next_event,
         'next_event_time': next_event_time.isoformat(),
         'time_to_next_event_minutes': int((next_event_time - now).total_seconds() / 60)

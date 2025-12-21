@@ -4,13 +4,14 @@ import { Box, Paper, Typography, Grid, Card, CardActionArea, Divider } from '@mu
 import { ShowChart, BarChart, TrendingUp, PieChart, ArrowForward, AccessTime } from '@mui/icons-material';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    success: 'var(--ipc-success)',
+    border: 'var(--ipc-border)'
 };
 
 interface IPCHomeProps {
@@ -29,7 +30,7 @@ const TOOLS = [
         id: 'montecarlo',
         title: 'Monte Carlo Simulation',
         desc: 'Run Monte Carlo simulations to test long term expected portfolio growth and survival.',
-        icon: <TrendingUp sx={{ fontSize: 40, color: '#2CB67D' }} />,
+        icon: <TrendingUp sx={{ fontSize: 40, color: 'var(--ipc-success)' }} />,
         tag: 'Planning'
     },
     {
@@ -43,7 +44,7 @@ const TOOLS = [
         id: 'factor',
         title: 'Factor Analysis',
         desc: 'Analyze the sources of risk and return of manager returns.',
-        icon: <BarChart sx={{ fontSize: 40, color: '#FFBB28' }} />,
+        icon: <BarChart sx={{ fontSize: 40, color: 'var(--ipc-warning)' }} />,
         tag: 'Research'
     }
 ];
@@ -53,12 +54,13 @@ const IPCHome: React.FC<IPCHomeProps> = ({ setActiveTool }) => {
         <Box sx={{ p: 4, maxWidth: 1200, margin: '0 auto', height: '100%', overflowY: 'auto' }}>
             {/* Header Section */}
             <Box sx={{ mb: 6, textAlign: 'center' }}>
-                <Typography variant="h3" fontWeight="900" sx={{ mb: 2, letterSpacing: -1, color: THEME.text }}>
-                    IPC <span style={{ color: THEME.primary }}>Analysis Tools</span>
+                <Typography variant="h3" className="ipc-header-text" sx={{ mb: 2, color: THEME.text }}>
+                    IPC <span style={{ fontStyle: 'italic', fontFamily: 'Lora, serif' }}>Insight</span>
                 </Typography>
-                <Typography variant="h6" sx={{ color: THEME.textDim, maxWidth: 700, mx: 'auto' }}>
+                <Typography variant="h6" className="ipc-sub-text" sx={{ maxWidth: 700, mx: 'auto' }}>
                     Quantitative investment analysis tools for portfolio construction, backtesting, and risk management. No login required for standard features.
                 </Typography>
+                <Box className="ipc-section-divider" sx={{ mt: 4, width: '60px', mx: 'auto', borderBottomColor: THEME.primary }} />
             </Box>
 
             {/* Tools Grid */}
@@ -72,16 +74,16 @@ const IPCHome: React.FC<IPCHomeProps> = ({ setActiveTool }) => {
                             >
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', mb: 2 }}>
                                     {tool.icon}
-                                    <Paper sx={{ px: 1, py: 0.5, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
+                                    <Paper sx={{ px: 1, py: 0.5, bgcolor: 'var(--ipc-bg-subtle)', borderRadius: 1 }}>
                                         <Typography variant="caption" sx={{ color: THEME.textDim, fontWeight: 'bold' }}>
                                             {tool.tag}
                                         </Typography>
                                     </Paper>
                                 </Box>
-                                <Typography variant="h5" fontWeight="bold" sx={{ mb: 1.5, color: THEME.text }}>
+                                <Typography variant="h5" className="ipc-header-text" sx={{ mb: 1.5, color: THEME.text }}>
                                     {tool.title}
                                 </Typography>
-                                <Typography variant="body1" sx={{ color: THEME.textDim, mb: 3, flex: 1 }}>
+                                <Typography variant="body1" className="ipc-sub-text" sx={{ mb: 3, flex: 1 }}>
                                     {tool.desc}
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', color: THEME.primary, gap: 1 }}>

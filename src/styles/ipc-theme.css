@@ -1,0 +1,177 @@
+:root {
+  /* Fonts - Improving the "Professional" Typography */
+  --ipc-font-serif-display: 'Playfair Display', serif;
+  --ipc-font-serif-text: 'Lora', serif;
+  --ipc-font-sans: 'Pretendard Variable', system-ui, sans-serif;
+  --ipc-font-mono: 'JetBrains Mono', monospace;
+
+  /* Backgrounds - Stark & Clean */
+  --ipc-bg-primary: #FFFFFF;
+  /* Pure White */
+  --ipc-bg-panel: #FFFFFF;
+  /* Pure White */
+  --ipc-bg-subtle: #F5F5F5;
+  /* Light Grey (Gray 100) */
+  --ipc-bg-hover: #EEEEEE;
+  /* Gray 200 */
+
+  /* Text - Ultimate Grey Scale */
+  --ipc-text-primary: #000000;
+  /* Absolute Black */
+  --ipc-text-secondary: #616161;
+  /* Gray 700 */
+  --ipc-text-dim: #9E9E9E;
+  /* Gray 500 */
+  --ipc-text-inverse: #ffffff;
+
+  /* Brand / Accents - MONOCHROMATIC */
+  --ipc-primary: #212121;
+  /* Gray 900 (Nearly Black) */
+  --ipc-primary-light: #E0E0E0;
+  /* Gray 300 */
+  --ipc-primary-hover: #424242;
+  /* Gray 800 */
+
+  --ipc-secondary: #757575;
+  /* Gray 600 */
+  --ipc-accent: #000000;
+  /* Black Accent */
+
+  /* Data Visualizations - STRICT MONOCHROME BACKGROUNDS */
+  /* User requested "No popping colors" -> All backgrounds are Neutral Grey/White */
+  --ipc-success: #2E7D32;
+  /* Professional Dark Green (Text/Icon only) */
+  --ipc-success-bg: #F5F5F5;
+  /* Neutral Grey Background */
+
+  --ipc-warning: #EF6C00;
+  /* Professional Dark Orange */
+  --ipc-warning-bg: #F5F5F5;
+  /* Neutral Grey Background */
+
+  --ipc-danger: #C62828;
+  /* Professional Dark Red */
+  --ipc-danger-bg: #F5F5F5;
+  /* Neutral Grey Background */
+
+  --ipc-info: #1565C0;
+  /* Professional Dark Blue */
+  --ipc-info-bg: #F5F5F5;
+  /* Neutral Grey Background */
+
+  /* Borders & Structure - Sharp & Thin */
+  --ipc-border: #E0E0E0;
+  /* Gray 300 */
+  --ipc-divider: #EEEEEE;
+  --ipc-border-strong: #000000;
+  /* Solid Black for emphasis */
+
+  --ipc-radius-sm: 0px;
+  /* Sharp - Bloomberg Style */
+  --ipc-radius-md: 0px;
+  /* Sharp */
+  --ipc-radius-lg: 2px;
+  /* Minimal rounding */
+
+  /* Shadows - Minimal / Flat */
+  --ipc-shadow-sm: none;
+  --ipc-shadow-md: 0 4px 20px rgba(0, 0, 0, 0.06);
+  /* Subtle depth */
+  --ipc-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Global Utility Classes for Editorial Look */
+
+.ipc-page-container {
+  background-color: var(--ipc-bg-primary);
+  color: var(--ipc-text-primary);
+  min-height: 100vh;
+  font-family: var(--ipc-font-sans);
+}
+
+/* Headers */
+h1,
+h2,
+h3,
+.ipc-font-serif {
+  font-family: var(--ipc-font-serif-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ipc-text-primary);
+}
+
+h4,
+h5,
+h6 {
+  font-family: var(--ipc-font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ipc-text-primary);
+  /* Darker headers for monochrome feel */
+}
+
+/* Cards - Flat & bordered */
+.ipc-card {
+  background-color: var(--ipc-bg-panel);
+  border: 1px solid var(--ipc-border);
+  border-radius: var(--ipc-radius-sm);
+  box-shadow: none;
+  /* Flat design */
+  transition: all 0.2s ease-in-out;
+}
+
+.ipc-card:hover {
+  border-color: var(--ipc-text-primary);
+  /* Highlight with black border */
+}
+
+/* Dividers */
+.ipc-section-divider {
+  border-bottom: 2px solid var(--ipc-text-primary);
+  margin-bottom: 24px;
+}
+
+.ipc-header-text {
+  font-family: var(--ipc-font-serif-display);
+  color: var(--ipc-text-primary);
+  font-weight: 800;
+  /* Bolder */
+}
+
+.ipc-sub-text {
+  font-family: var(--ipc-font-serif-text);
+  color: var(--ipc-text-secondary);
+  line-height: 1.7;
+}
+
+/* Input Fields - Sharp */
+.ipc-input-field fieldset {
+  border-color: var(--ipc-border) !important;
+  border-radius: 0px !important;
+  /* Sharp inputs */
+}
+
+.ipc-input-field:hover fieldset {
+  border-color: var(--ipc-text-primary) !important;
+  /* Black on hover */
+}
+
+.ipc-chip-success {
+  background-color: var(--ipc-bg-subtle) !important;
+  /* Grey background */
+  color: var(--ipc-text-primary) !important;
+  /* Black text */
+  border: 1px solid var(--ipc-border);
+  font-weight: 600;
+}
+
+/* Chart Tooltips - Sharp */
+.ipc-chart-tooltip {
+  background-color: #FFFFFF;
+  border: 1px solid #000000;
+  border-radius: 0;
+  padding: 10px;
+  font-family: var(--ipc-font-mono);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+  /* Hard shadow */
+}

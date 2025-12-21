@@ -3,53 +3,67 @@ import { Box, Typography, Paper, Switch, List, ListItem, ListItemText, ListItemS
 import { Settings } from '@mui/icons-material';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    border: '#2A2F3A'
+    bg: '#FFFFFF',
+    panel: '#FFFFFF',
+    text: '#121212', // Editorial Black
+    textDim: '#757575', // Corporate Grey
+    border: '#121212',
+    hairline: '#E0E0E0',
+    accent: '#C5A065' // Journalistic Gold
 };
 
 const SettingsPage: React.FC = () => {
     return (
         <Box sx={{ p: 4, maxWidth: 800, margin: '0 auto', color: THEME.text }}>
-            <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Settings sx={{ fontSize: 36, color: THEME.text }} />
-                <Typography variant="h4" fontWeight="bold">환경 설정</Typography>
+            <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2, borderBottom: `1px solid ${THEME.border}`, pb: 2 }}>
+                <Settings sx={{ fontSize: 40, color: THEME.text }} />
+                <Box>
+                    <Typography variant="h4" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold', color: THEME.text }}>Settings</Typography>
+                    <Typography variant="body1" sx={{ fontFamily: '"Playfair Display", serif', fontStyle: 'italic', color: THEME.textDim }}>System Configurations</Typography>
+                </Box>
             </Box>
 
-            <Paper sx={{ bgcolor: THEME.panel, border: `1px solid ${THEME.border}`, borderRadius: 2 }}>
+            <Paper sx={{ bgcolor: THEME.panel, border: `1px solid ${THEME.border}`, borderRadius: 0, boxShadow: 'none' }}>
                 <List>
-                    <ListItem>
+                    <ListItem sx={{ py: 3 }}>
                         <ListItemText
-                            primary="다크 모드"
-                            secondary="어두운 테마를 항상 유지합니다."
-                            primaryTypographyProps={{ fontWeight: 'bold' }}
-                            secondaryTypographyProps={{ color: THEME.textDim }}
+                            primary={
+                                <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold', mb: 0.5 }}>
+                                    Dark Mode
+                                </Typography>
+                            }
+                            secondary="Maintain a dark editorial theme throughout the session."
+                            secondaryTypographyProps={{ color: THEME.textDim, sx: { fontStyle: 'italic' } }}
                         />
                         <ListItemSecondaryAction>
-                            <Switch edge="end" checked={true} />
+                            <Switch edge="end" checked={false} color="default" sx={{ '& .MuiSwitch-thumb': { backgroundColor: THEME.text } }} />
                         </ListItemSecondaryAction>
                     </ListItem>
-                    <Divider sx={{ borderColor: THEME.border }} />
-                    <ListItem>
+                    <Divider sx={{ borderColor: THEME.hairline }} />
+                    <ListItem sx={{ py: 3 }}>
                         <ListItemText
-                            primary="알림 설정"
-                            secondary="중요한 시장 변화나 목표 달성 시 알림을 받습니다."
-                            primaryTypographyProps={{ fontWeight: 'bold' }}
-                            secondaryTypographyProps={{ color: THEME.textDim }}
+                            primary={
+                                <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold', mb: 0.5 }}>
+                                    Notifications
+                                </Typography>
+                            }
+                            secondary="Receive alerts for significant market movements."
+                            secondaryTypographyProps={{ color: THEME.textDim, sx: { fontStyle: 'italic' } }}
                         />
                         <ListItemSecondaryAction>
-                            <Switch edge="end" checked={true} />
+                            <Switch edge="end" checked={true} color="default" sx={{ '& .MuiSwitch-thumb': { backgroundColor: THEME.accent } }} />
                         </ListItemSecondaryAction>
                     </ListItem>
-                    <Divider sx={{ borderColor: THEME.border }} />
-                    <ListItem>
+                    <Divider sx={{ borderColor: THEME.hairline }} />
+                    <ListItem sx={{ py: 3 }}>
                         <ListItemText
-                            primary="시뮬레이션 데이터 초기화"
-                            secondary="저장된 모든 포트폴리오와 가정치를 초기화합니다."
-                            primaryTypographyProps={{ fontWeight: 'bold', color: '#EF4565' }}
-                            secondaryTypographyProps={{ color: THEME.textDim }}
+                            primary={
+                                <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 'bold', mb: 0.5, color: '#D32F2F' }}>
+                                    Reset Simulation Data
+                                </Typography>
+                            }
+                            secondary="Clear all saved portfolios and assumptions."
+                            secondaryTypographyProps={{ color: THEME.textDim, sx: { fontStyle: 'italic' } }}
                         />
                     </ListItem>
                 </List>

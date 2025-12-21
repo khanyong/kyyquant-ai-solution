@@ -4,16 +4,16 @@ import { Delete, Add, MoneyOff, ReportProblem } from '@mui/icons-material';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    success: '#2CB67D',
-    warning: '#FFBB28',
-    danger: '#EF4565',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    success: 'var(--ipc-success)',
+    warning: 'var(--ipc-warning)',
+    danger: 'var(--ipc-danger)',
+    border: 'var(--ipc-border)'
 };
 
 interface Loan {
@@ -114,7 +114,7 @@ const DebtManagement: React.FC = () => {
                                 <TextField
                                     fullWidth size="small"
                                     value={newLoan.name} onChange={(e) => setNewLoan({ ...newLoan, name: e.target.value })}
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                    sx={{ bgcolor: '#f5f5f5' }}
                                 />
                             </Box>
                             <Box>
@@ -122,7 +122,7 @@ const DebtManagement: React.FC = () => {
                                 <TextField
                                     type="number" fullWidth size="small"
                                     value={newLoan.principal} onChange={(e) => setNewLoan({ ...newLoan, principal: Number(e.target.value) })}
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                    sx={{ bgcolor: '#f5f5f5' }}
                                 />
                             </Box>
                             <Grid container spacing={2}>
@@ -131,7 +131,7 @@ const DebtManagement: React.FC = () => {
                                     <TextField
                                         type="number" fullWidth size="small"
                                         value={newLoan.rate} onChange={(e) => setNewLoan({ ...newLoan, rate: Number(e.target.value) })}
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                        sx={{ bgcolor: '#f5f5f5' }}
                                     />
                                 </Grid>
                                 <Grid item xs={6}>
@@ -139,7 +139,7 @@ const DebtManagement: React.FC = () => {
                                     <TextField
                                         type="number" fullWidth size="small"
                                         value={newLoan.term} onChange={(e) => setNewLoan({ ...newLoan, term: Number(e.target.value) })}
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                        sx={{ bgcolor: '#f5f5f5' }}
                                     />
                                 </Grid>
                             </Grid>
@@ -148,7 +148,7 @@ const DebtManagement: React.FC = () => {
                                 <Select
                                     fullWidth size="small"
                                     value={newLoan.paymentType} onChange={(e) => setNewLoan({ ...newLoan, paymentType: e.target.value as any })}
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+                                    sx={{ bgcolor: '#f5f5f5' }}
                                 >
                                     <MenuItem value="amortization">원리금균등상환</MenuItem>
                                     <MenuItem value="interest_only">만기일시상환 (이자만)</MenuItem>
@@ -235,7 +235,7 @@ const DebtManagement: React.FC = () => {
                                         </defs>
                                         <XAxis dataKey="year" stroke={THEME.textDim} tickFormatter={(val) => `${val}년후`} />
                                         <YAxis stroke={THEME.textDim} tickFormatter={(val) => `₩${(val / 100000000).toFixed(1)}억`} />
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                                         <Tooltip
                                             contentStyle={{ backgroundColor: THEME.bg, border: `1px solid ${THEME.border}` }}
                                             formatter={(value: number) => `₩${value.toLocaleString()}`}

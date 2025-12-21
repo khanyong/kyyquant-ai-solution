@@ -394,7 +394,7 @@ export default function AutoTradingPanelV2() {
     <Box sx={{ p: 3 }}>
       {/* 헤더 */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Typography variant="h5" fontWeight="bold">
+        <Typography variant="h5" fontWeight="bold" fontFamily="serif">
           💼 자동매매 포트폴리오
         </Typography>
         <Stack direction="row" spacing={1}>
@@ -433,9 +433,9 @@ export default function AutoTradingPanelV2() {
 
       {/* 활성 전략 목록 */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" fontWeight="bold" gutterBottom>
+        <Typography variant="h6" fontWeight="bold" gutterBottom fontFamily="serif">
           📈 활성 전략별 현황
-          <Chip label="Source: 전략설정" color="success" size="small" variant="outlined" sx={{ ml: 1, verticalAlign: 'middle' }} />
+          <Chip label="Source: 전략설정" size="small" variant="outlined" sx={{ ml: 1, verticalAlign: 'middle', borderColor: '#2E7D32', color: '#2E7D32' }} />
           {lastUpdated && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1, verticalAlign: 'middle' }}>
               ({lastUpdated.toLocaleString('ko-KR')})

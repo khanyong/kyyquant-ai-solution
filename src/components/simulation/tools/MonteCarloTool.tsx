@@ -17,16 +17,16 @@ interface MonteCarloToolProps {
 }
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    success: '#2CB67D',
-    warning: '#FFBB28',
-    danger: '#EF4565',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    success: 'var(--ipc-success)',
+    warning: 'var(--ipc-warning)',
+    danger: 'var(--ipc-danger)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    border: 'var(--ipc-border)'
 };
 
 const MetricCard = ({ label, value, subValue, icon, color }: any) => (
@@ -128,7 +128,7 @@ const MonteCarloTool: React.FC<MonteCarloToolProps> = ({ activePortfolio, params
                                     <stop offset="95%" stopColor={THEME.primary} stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                             <XAxis dataKey="year" stroke={THEME.textDim} />
                             <YAxis
                                 stroke={THEME.textDim}

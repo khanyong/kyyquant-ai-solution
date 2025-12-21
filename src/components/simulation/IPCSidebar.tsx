@@ -8,11 +8,11 @@ import {
 } from '@mui/icons-material';
 
 const THEME = {
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    hover: '#1E232F'
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    hover: 'var(--ipc-bg-hover)'
 };
 
 interface IPCSidebarProps {
@@ -70,15 +70,12 @@ const IPCSidebar: React.FC<IPCSidebarProps> = ({ activeTool, setActiveTool }) =>
                 bgcolor: THEME.panel,
                 display: 'flex',
                 flexDirection: 'column',
-                borderRight: '1px solid #2A2F3A',
+                borderRight: '1px solid #e0e0e0',
                 borderRadius: 0
             }}
             elevation={0}
         >
-            <Box sx={{ p: 2, borderBottom: '1px solid #2A2F3A', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <IconButton onClick={() => navigate(-1)} sx={{ color: THEME.textDim, p: 0.5 }}>
-                    <ArrowBack />
-                </IconButton>
+            <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="h6" fontWeight="900" sx={{ letterSpacing: 1, color: THEME.text }}>
                     IPC <span style={{ color: THEME.primary, fontWeight: 400 }}>Terminal</span>
                 </Typography>
@@ -96,7 +93,7 @@ const IPCSidebar: React.FC<IPCSidebarProps> = ({ activeTool, setActiveTool }) =>
                                     selected={activeTool === item.id}
                                     onClick={() => setActiveTool(item.id)}
                                     sx={{
-                                        '&.Mui-selected': { bgcolor: 'rgba(0, 209, 255, 0.1)', borderRight: `3px solid ${THEME.primary}` },
+                                        '&.Mui-selected': { bgcolor: 'var(--ipc-primary-light)', borderRight: `3px solid ${THEME.primary}` },
                                         '&:hover': { bgcolor: THEME.hover }
                                     }}
                                 >

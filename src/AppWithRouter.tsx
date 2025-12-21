@@ -32,7 +32,7 @@ import BacktestResults from './components/BacktestResults'
 import BacktestResultsList from './components/BacktestResultsList'
 import BacktestRunner from './components/BacktestRunner'
 import SignalMonitor from './components/SignalMonitor'
-import PerformanceDashboard from './components/PerformanceDashboard'
+import StrategyMarket from './components/StrategyMarket'
 import AutoTradingPanel from './components/trading/AutoTradingPanelV2'
 import OrderPanel from './components/trading/OrderPanel'
 import PortfolioPanel from './components/trading/PortfolioPanel'
@@ -167,12 +167,7 @@ function MainApp() {
   }, [authUser, dispatch])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    if (isAdmin && newValue === 7) {
-      // Admin tab - keep as separate route for security
-      navigate('/admin')
-    } else {
-      setCurrentTab(newValue)
-    }
+    setCurrentTab(newValue)
   }
 
   return (
@@ -196,7 +191,9 @@ function MainApp() {
               elevation={3}
               sx={{
                 mb: 3,
-                background: 'linear-gradient(135deg, rgba(25, 28, 51, 0.9) 0%, rgba(30, 30, 46, 0.95) 100%)',
+                bgcolor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
                 borderRadius: 2,
                 overflow: 'hidden'
               }}
@@ -205,41 +202,27 @@ function MainApp() {
                 value={currentTab}
                 onChange={handleTabChange}
                 variant="fullWidth"
+                textColor="primary"
+                indicatorColor="primary"
                 sx={{
-                  '& .MuiTabs-indicator': {
-                    backgroundColor: '#90caf9',
-                    height: 4,
-                    borderRadius: '2px 2px 0 0'
-                  },
                   '& .MuiTab-root': {
                     textTransform: 'none',
                     fontSize: '0.9rem',
                     fontWeight: 600,
-                    color: 'rgba(255, 255, 255, 0.6)',
                     minHeight: 64,
                     padding: '8px 12px',
-                    transition: 'all 0.3s ease',
-                    borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRight: '1px solid',
+                    borderColor: 'divider',
                     flex: 1,
                     minWidth: 0,
                     '&:last-child': {
                       borderRight: 'none'
-                    },
-                    '&:hover': {
-                      backgroundColor: 'rgba(144, 202, 249, 0.08)',
-                      color: 'rgba(255, 255, 255, 0.9)'
-                    },
-                    '&.Mui-selected': {
-                      color: '#fff',
-                      backgroundColor: 'rgba(144, 202, 249, 0.2)',
-                      borderBottom: 'none'
                     },
                     '& .MuiSvgIcon-root': {
                       fontSize: '1.3rem',
                       marginBottom: '2px'
                     }
                   },
-                  borderBottom: '2px solid rgba(255, 255, 255, 0.1)',
                   '& .MuiTabs-flexContainer': {
                     justifyContent: 'space-between'
                   }
@@ -249,23 +232,13 @@ function MainApp() {
                   icon={<Announcement />}
                   label={t('tabs.community')}
                   sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#ffc107'
-                      }
-                    }
+                    // inheriting global theme 
                   }}
                 />
                 <Tab
                   icon={<Code />}
                   label={t('tabs.strategy_builder')}
-                  sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#4caf50'
-                      }
-                    }
-                  }}
+                  sx={{}}
                 />
                 <Tab
                   icon={<SettingsIcon />}
@@ -274,82 +247,39 @@ function MainApp() {
                       <span>{t('tabs.investment_settings')}</span>
                     </Stack>
                   }
-                  sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#607d8b'
-                      }
-                    }
-                  }}
+                  sx={{}}
                 />
                 <Tab
                   icon={<Assessment />}
                   label={t('tabs.backtesting')}
-                  sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#ff9800'
-                      }
-                    }
-                  }}
+                  sx={{}}
                 />
                 <Tab
                   icon={<Monitor />}
                   label={t('tabs.realtime_signals')}
-                  sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#00bcd4'
-                      }
-                    }
-                  }}
+                  sx={{}}
                 />
                 <Tab
                   icon={<TrendingUp />}
                   label={t('tabs.auto_trading')}
-                  sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#f44336'
-                      }
-                    }
-                  }}
+                  sx={{}}
                 />
                 <Tab
                   icon={<ShowChart />}
-                  label={t('tabs.performance')}
-                  sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#9c27b0'
-                      }
-                    }
-                  }}
+                  label={"Strategy Market"}
+                  sx={{}}
                 />
                 {isAdmin && (
                   <Tab
                     icon={<AdminPanelSettings />}
                     label={t('tabs.admin')}
-                    sx={{
-                      '&.Mui-selected': {
-                        '& .MuiSvgIcon-root': {
-                          color: '#ff5722'
-                        }
-                      }
-                    }}
+                    sx={{}}
                   />
                 )}
                 <Tab
                   icon={<Speed />}
                   label="IPC"
-                  onClick={() => navigate('/consulting')}
-                  sx={{
-                    '&.Mui-selected': {
-                      '& .MuiSvgIcon-root': {
-                        color: '#00e676'
-                      }
-                    }
-                  }}
+                  sx={{}}
                 />
               </Tabs>
             </Paper>
@@ -434,7 +364,17 @@ function MainApp() {
             </TabPanel>
 
             <TabPanel value={currentTab} index={6}>
-              <PerformanceDashboard />
+              <StrategyMarket />
+            </TabPanel>
+
+            {isAdmin && (
+              <TabPanel value={currentTab} index={7}>
+                <AdminDashboard />
+              </TabPanel>
+            )}
+
+            <TabPanel value={currentTab} index={isAdmin ? 8 : 7}>
+              <VisualRetirementPlanner />
             </TabPanel>
           </Container>
         </>
@@ -454,11 +394,6 @@ function App() {
       <Routes>
         <Route path="/" element={<MainApp />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/consulting" element={
-          <Container maxWidth="xl" sx={{ mt: 3 }}>
-            <VisualRetirementPlanner />
-          </Container>
-        } />
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/backtest/results" element={<BacktestResultsList />} />
@@ -466,7 +401,6 @@ function App() {
         <Route path="/investment-settings" element={<TradingSettings />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/mypage" element={<MyPage />} />
-        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/api-test" element={<ApiKeyTest />} />
         <Route path="*" element={<Navigate to="/" replace />} />

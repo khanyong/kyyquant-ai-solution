@@ -3,16 +3,16 @@ import { Box, Typography, Paper, Grid, Card, CardContent, Chip, Table, TableBody
 import { TrendingUp, AccountBalance, Speed, AttachMoney, Security, Close, House } from '@mui/icons-material';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    success: '#2CB67D',
-    warning: '#FFBB28',
-    danger: '#EF4565',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    success: 'var(--ipc-success)',
+    warning: 'var(--ipc-warning)',
+    danger: 'var(--ipc-danger)',
+    border: 'var(--ipc-border)'
 };
 
 const RecommendationSection = () => {
@@ -68,7 +68,7 @@ const RecommendationSection = () => {
     }, [age, goal, horizon, risk]);
 
     return (
-        <Paper sx={{ p: 4, bgcolor: '#121212', border: `1px solid ${THEME.border}`, borderRadius: 2 }}>
+        <Paper sx={{ p: 4, bgcolor: '#ffffff', border: `1px solid ${THEME.border}`, borderRadius: 2 }}>
             <Grid container spacing={4}>
                 {/* Inputs */}
                 <Grid item xs={12} md={5}>
@@ -121,7 +121,7 @@ const RecommendationSection = () => {
                             {rec.desc}
                         </Typography>
 
-                        <Paper sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
+                        <Paper sx={{ bgcolor: 'var(--ipc-bg-subtle)', borderRadius: 2 }}>
                             <Table size="small">
                                 <TableHead>
                                     <TableRow>
@@ -150,7 +150,7 @@ const RecommendationSection = () => {
 
 const DetailedGuideDialog = ({ open, onClose }: { open: boolean, onClose: () => void }) => {
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { bgcolor: '#1a1d26', color: '#E0E6ED', backgroundImage: 'none' } }}>
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { bgcolor: '#ffffff', color: '#2c3e50', backgroundImage: 'none' } }}>
             <DialogTitle sx={{ borderBottom: '1px solid ' + THEME.border, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" fontWeight="bold">커버드 콜 (Covered Call) 완벽 가이드</Typography>
                 <IconButton onClick={onClose} sx={{ color: THEME.textDim }}><Close /></IconButton>
@@ -163,7 +163,7 @@ const DetailedGuideDialog = ({ open, onClose }: { open: boolean, onClose: () => 
                         "미래의 대박 수익을 포기하는 대신, 당장의 현금(보너스)을 챙기는 전략"
                     </Typography>
 
-                    <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, mb: 3 }}>
+                    <Paper sx={{ p: 3, bgcolor: 'var(--ipc-bg-subtle)', borderRadius: 2, mb: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                             <House sx={{ color: THEME.warning, fontSize: 40, mr: 2 }} />
                             <Typography variant="h6" fontWeight="bold">아파트 매매 계약 비유</Typography>
@@ -228,10 +228,10 @@ const DetailedGuideDialog = ({ open, onClose }: { open: boolean, onClose: () => 
                     <Typography variant="h5" fontWeight="bold" color={THEME.primary} sx={{ mb: 2 }}>3단계: JEPI vs JEPQ 차이점</Typography>
                     <Typography sx={{ mb: 2 }}>둘 다 전략은 같지만, <b>'어떤 아파트(주식)'를 가지고 하느냐</b>의 차이입니다.</Typography>
 
-                    <TableContainer component={Paper} sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
+                    <TableContainer component={Paper} sx={{ bgcolor: 'var(--ipc-bg-subtle)' }}>
                         <Table>
                             <TableHead>
-                                <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}>
+                                <TableRow sx={{ bgcolor: '#e0e0e0' }}>
                                     <TableCell sx={{ color: THEME.textDim }}>구분</TableCell>
                                     <TableCell sx={{ color: THEME.text, fontWeight: 'bold' }}>JEPI (안정형)</TableCell>
                                     <TableCell sx={{ color: THEME.text, fontWeight: 'bold' }}>JEPQ (성장형)</TableCell>

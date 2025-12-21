@@ -4,15 +4,15 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Add, Remove } from '@mui/icons-material';
 
 const THEME = {
-    bg: '#0B0E14',
-    panel: '#151921',
-    text: '#E0E6ED',
-    textDim: '#94A1B2',
-    primary: '#00D1FF',
-    secondary: '#7F5AF0',
-    success: '#2CB67D',
-    danger: '#EF4565',
-    border: '#2A2F3A'
+    bg: 'var(--ipc-bg-primary)',
+    panel: 'var(--ipc-bg-panel)',
+    text: 'var(--ipc-text-primary)',
+    textDim: 'var(--ipc-text-secondary)',
+    primary: 'var(--ipc-primary)',
+    secondary: 'var(--ipc-secondary)',
+    success: 'var(--ipc-success)',
+    danger: 'var(--ipc-danger)',
+    border: 'var(--ipc-border)'
 };
 
 const PensionPage: React.FC = () => {
@@ -63,11 +63,11 @@ const PensionPage: React.FC = () => {
     // Helper for Stepper Style
     const StepperControl = ({ onDec, onInc, children }: { onDec: () => void, onInc: () => void, children: React.ReactNode }) => (
         <Stack direction="row" spacing={1} alignItems="center">
-            <IconButton onClick={onDec} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+            <IconButton onClick={onDec} size="small" sx={{ bgcolor: '#f5f5f5', borderRadius: 1, '&:hover': { bgcolor: '#e0e0e0' } }}>
                 <Remove fontSize="small" />
             </IconButton>
             <Box sx={{ flex: 1 }}>{children}</Box>
-            <IconButton onClick={onInc} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+            <IconButton onClick={onInc} size="small" sx={{ bgcolor: '#f5f5f5', borderRadius: 1, '&:hover': { bgcolor: '#e0e0e0' } }}>
                 <Add fontSize="small" />
             </IconButton>
         </Stack>
@@ -119,7 +119,7 @@ const PensionPage: React.FC = () => {
                                         const val = Number(e.target.value.replace(/,/g, ''));
                                         if (!isNaN(val)) setMonthlyContribution(val);
                                     }}
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.05)', input: { color: THEME.text, textAlign: 'center' } }}
+                                    sx={{ bgcolor: '#f5f5f5', input: { color: THEME.text, textAlign: 'center' } }}
                                 />
                             </StepperControl>
                         </Box>
@@ -136,7 +136,7 @@ const PensionPage: React.FC = () => {
                                         const val = Number(e.target.value.replace(/,/g, ''));
                                         if (!isNaN(val)) setCurrentSavings(val);
                                     }}
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.05)', input: { color: THEME.text, textAlign: 'center' } }}
+                                    sx={{ bgcolor: '#f5f5f5', input: { color: THEME.text, textAlign: 'center' } }}
                                 />
                             </StepperControl>
                         </Box>
@@ -165,7 +165,7 @@ const PensionPage: React.FC = () => {
                                             const val = Number(e.target.value.replace(/,/g, ''));
                                             if (!isNaN(val)) setNationalPension(val);
                                         }}
-                                        sx={{ bgcolor: 'rgba(0,0,0,0.2)', input: { color: THEME.text, textAlign: 'center' } }}
+                                        sx={{ bgcolor: '#f5f5f5', input: { color: THEME.text, textAlign: 'center' } }}
                                     />
                                 </StepperControl>
                             </Box>
@@ -227,7 +227,7 @@ const PensionPage: React.FC = () => {
                                 </defs>
                                 <XAxis dataKey="age" stroke={THEME.textDim} />
                                 <YAxis tickFormatter={(val) => `₩${(val / 100000000).toFixed(1)}억`} stroke={THEME.textDim} width={80} />
-                                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                                 <Tooltip formatter={(val: number) => `₩${val.toLocaleString()}`} contentStyle={{ backgroundColor: THEME.bg, border: '1px solid ' + THEME.border }} />
                                 <Area type="monotone" dataKey="balance" stroke={THEME.primary} fillOpacity={1} fill="url(#colorPv)" />
                             </AreaChart>
