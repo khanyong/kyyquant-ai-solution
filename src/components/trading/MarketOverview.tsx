@@ -40,22 +40,16 @@ const MarketOverview: React.FC = () => {
     loading: true
   })
 
-  /* Debug State */
-  const [debugError, setDebugError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>("");
-
   // 시장 지수 데이터 로드 (Backend API 사용)
   const loadMarketIndices = async () => {
     try {
       setMarketData(prev => ({ ...prev, loading: true }))
-      setDebugError(null)
 
       // API 호출 (VITE_API_URL 사용, 없으면 로컬호스트 기본값)
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001'
       const response = await axios.get(`${apiUrl}/api/market/global-indices`)
 
       const data = response.data
-      setDebugInfo(`Items: ${Array.isArray(data) ? data.length : 'Not Array'} | First: ${JSON.stringify(data[0] || {})}`)
 
       if (!data || !Array.isArray(data)) throw new Error("Invalid API response")
 
@@ -112,7 +106,6 @@ const MarketOverview: React.FC = () => {
       })
     } catch (error: any) {
       console.error('시장 지수 로드 실패:', error)
-      setDebugError(error.message || "Unknown Error")
       setMarketData(prev => ({ ...prev, loading: false }))
     }
   }
@@ -133,259 +126,250 @@ const MarketOverview: React.FC = () => {
   }, [marketData, dispatch])
 
   return (
-    <Box>
-      {/* Debug Info Overlay */}
-      {(debugError || debugInfo) && (
-        <Paper sx={{ p: 1, mb: 2, bgcolor: '#fff3e0', color: '#e65100', fontSize: '0.75rem' }}>
-          <b>Debug:</b> {debugError ? `Error: ${debugError}` : debugInfo}
+    <Grid container spacing={2}>
+      {/* 1. KOSPI */}
+      <Grid item xs={12} md={3}>
+        <Paper sx={{ p: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                KOSPI
+              </Typography>
+              <Typography variant="h5">
+                {marketData.kospi.value.toFixed(2)}
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                {marketData.kospi.change >= 0 ? (
+                  <TrendingUp color="error" fontSize="small" />
+                ) : (
+                  <TrendingDown color="primary" fontSize="small" />
+                )}
+                <Typography
+                  variant="body2"
+                  color={marketData.kospi.change >= 0 ? 'error.main' : 'primary.main'}
+                >
+                  {marketData.kospi.change >= 0 ? '+' : ''}{marketData.kospi.change.toFixed(2)}
+                </Typography>
+                <Chip
+                  label={`${marketData.kospi.changeRate >= 0 ? '+' : ''}${marketData.kospi.changeRate.toFixed(2)}%`}
+                  color={marketData.kospi.changeRate >= 0 ? 'error' : 'primary'}
+                  size="small"
+                />
+              </Stack>
+            </Box>
+          </Stack>
         </Paper>
-      )}
-
-      <Grid container spacing={2}>
-        {/* 1. KOSPI */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  KOSPI
-                </Typography>
-                <Typography variant="h5">
-                  {marketData.kospi.value.toFixed(2)}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  {marketData.kospi.change >= 0 ? (
-                    <TrendingUp color="error" fontSize="small" />
-                  ) : (
-                    <TrendingDown color="primary" fontSize="small" />
-                  )}
-                  <Typography
-                    variant="body2"
-                    color={marketData.kospi.change >= 0 ? 'error.main' : 'primary.main'}
-                  >
-                    {marketData.kospi.change >= 0 ? '+' : ''}{marketData.kospi.change.toFixed(2)}
-                  </Typography>
-                  <Chip
-                    label={`${marketData.kospi.changeRate >= 0 ? '+' : ''}${marketData.kospi.changeRate.toFixed(2)}%`}
-                    color={marketData.kospi.changeRate >= 0 ? 'error' : 'primary'}
-                    size="small"
-                  />
-                </Stack>
-              </Box>
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* 2. KOSDAQ */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  KOSDAQ
-                </Typography>
-                <Typography variant="h5">
-                  {marketData.kosdaq.value.toFixed(2)}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  {marketData.kosdaq.change >= 0 ? (
-                    <TrendingUp color="error" fontSize="small" />
-                  ) : (
-                    <TrendingDown color="primary" fontSize="small" />
-                  )}
-                  <Typography
-                    variant="body2"
-                    color={marketData.kosdaq.change >= 0 ? 'error.main' : 'primary.main'}
-                  >
-                    {marketData.kosdaq.change >= 0 ? '+' : ''}{marketData.kosdaq.change.toFixed(2)}
-                  </Typography>
-                  <Chip
-                    label={`${marketData.kosdaq.changeRate >= 0 ? '+' : ''}${marketData.kosdaq.changeRate.toFixed(2)}%`}
-                    color={marketData.kosdaq.changeRate >= 0 ? 'error' : 'primary'}
-                    size="small"
-                  />
-                </Stack>
-              </Box>
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* 3. S&P 500 */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  S&P 500
-                </Typography>
-                <Typography variant="h5">
-                  {marketData.sp500.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  {marketData.sp500.change >= 0 ? (
-                    <TrendingUp color="error" fontSize="small" />
-                  ) : (
-                    <TrendingDown color="primary" fontSize="small" />
-                  )}
-                  <Typography
-                    variant="body2"
-                    color={marketData.sp500.change >= 0 ? 'error.main' : 'primary.main'}
-                  >
-                    {marketData.sp500.change >= 0 ? '+' : ''}{marketData.sp500.change.toFixed(2)}
-                  </Typography>
-                  <Chip
-                    label={`${marketData.sp500.changeRate >= 0 ? '+' : ''}${marketData.sp500.changeRate.toFixed(2)}%`}
-                    color={marketData.sp500.changeRate >= 0 ? 'error' : 'primary'}
-                    size="small"
-                  />
-                </Stack>
-              </Box>
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* 4. NASDAQ */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  NASDAQ
-                </Typography>
-                <Typography variant="h5">
-                  {marketData.nasdaq.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  {marketData.nasdaq.change >= 0 ? (
-                    <TrendingUp color="error" fontSize="small" />
-                  ) : (
-                    <TrendingDown color="primary" fontSize="small" />
-                  )}
-                  <Typography
-                    variant="body2"
-                    color={marketData.nasdaq.change >= 0 ? 'error.main' : 'primary.main'}
-                  >
-                    {marketData.nasdaq.change >= 0 ? '+' : ''}{marketData.nasdaq.change.toFixed(2)}
-                  </Typography>
-                  <Chip
-                    label={`${marketData.nasdaq.changeRate >= 0 ? '+' : ''}${marketData.nasdaq.changeRate.toFixed(2)}%`}
-                    color={marketData.nasdaq.changeRate >= 0 ? 'error' : 'primary'}
-                    size="small"
-                  />
-                </Stack>
-              </Box>
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* 5. USD/KRW */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  USD/KRW
-                </Typography>
-                <Typography variant="h5">
-                  {marketData.usd.value.toFixed(2)}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  {marketData.usd.change >= 0 ? (
-                    <TrendingUp color="error" fontSize="small" />
-                  ) : (
-                    <TrendingDown color="primary" fontSize="small" />
-                  )}
-                  <Typography
-                    variant="body2"
-                    color={marketData.usd.change >= 0 ? 'error.main' : 'primary.main'}
-                  >
-                    {marketData.usd.change >= 0 ? '+' : ''}{marketData.usd.change.toFixed(2)}
-                  </Typography>
-                </Stack>
-              </Box>
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* 6. IEF */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  US Treasury 10Y (IEF)
-                </Typography>
-                <Typography variant="h6">
-                  ${marketData.ief.value.toFixed(2)}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography
-                    variant="caption"
-                    color={marketData.ief.change >= 0 ? 'success.main' : 'error.main'}
-                    fontWeight="bold"
-                  >
-                    {marketData.ief.changeRate >= 0 ? '+' : ''}{marketData.ief.changeRate.toFixed(2)}%
-                  </Typography>
-                </Stack>
-              </Box>
-              <Chip label="금리/중기채" size="small" variant="outlined" />
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* 7. TLT */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  US Treasury 20Y+ (TLT)
-                </Typography>
-                <Typography variant="h6">
-                  ${marketData.tlt.value.toFixed(2)}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography
-                    variant="caption"
-                    color={marketData.tlt.change >= 0 ? 'success.main' : 'error.main'}
-                    fontWeight="bold"
-                  >
-                    {marketData.tlt.changeRate >= 0 ? '+' : ''}{marketData.tlt.changeRate.toFixed(2)}%
-                  </Typography>
-                </Stack>
-              </Box>
-              <Chip label="장기채/금리민감" size="small" variant="outlined" />
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* 8. LQD */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Corp Bond Inv.Gr (LQD)
-                </Typography>
-                <Typography variant="h6">
-                  ${marketData.lqd.value.toFixed(2)}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography
-                    variant="caption"
-                    color={marketData.lqd.change >= 0 ? 'success.main' : 'error.main'}
-                    fontWeight="bold"
-                  >
-                    {marketData.lqd.changeRate >= 0 ? '+' : ''}{marketData.lqd.changeRate.toFixed(2)}%
-                  </Typography>
-                </Stack>
-              </Box>
-              <Chip label="회사채/신용" size="small" variant="outlined" />
-            </Stack>
-          </Paper>
-        </Grid>
       </Grid>
-    </Box>
+
+      {/* 2. KOSDAQ */}
+      <Grid item xs={12} md={3}>
+        <Paper sx={{ p: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                KOSDAQ
+              </Typography>
+              <Typography variant="h5">
+                {marketData.kosdaq.value.toFixed(2)}
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                {marketData.kosdaq.change >= 0 ? (
+                  <TrendingUp color="error" fontSize="small" />
+                ) : (
+                  <TrendingDown color="primary" fontSize="small" />
+                )}
+                <Typography
+                  variant="body2"
+                  color={marketData.kosdaq.change >= 0 ? 'error.main' : 'primary.main'}
+                >
+                  {marketData.kosdaq.change >= 0 ? '+' : ''}{marketData.kosdaq.change.toFixed(2)}
+                </Typography>
+                <Chip
+                  label={`${marketData.kosdaq.changeRate >= 0 ? '+' : ''}${marketData.kosdaq.changeRate.toFixed(2)}%`}
+                  color={marketData.kosdaq.changeRate >= 0 ? 'error' : 'primary'}
+                  size="small"
+                />
+              </Stack>
+            </Box>
+          </Stack>
+        </Paper>
+      </Grid>
+
+      {/* 3. S&P 500 */}
+      <Grid item xs={12} md={3}>
+        <Paper sx={{ p: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                S&P 500
+              </Typography>
+              <Typography variant="h5">
+                {marketData.sp500.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                {marketData.sp500.change >= 0 ? (
+                  <TrendingUp color="error" fontSize="small" />
+                ) : (
+                  <TrendingDown color="primary" fontSize="small" />
+                )}
+                <Typography
+                  variant="body2"
+                  color={marketData.sp500.change >= 0 ? 'error.main' : 'primary.main'}
+                >
+                  {marketData.sp500.change >= 0 ? '+' : ''}{marketData.sp500.change.toFixed(2)}
+                </Typography>
+                <Chip
+                  label={`${marketData.sp500.changeRate >= 0 ? '+' : ''}${marketData.sp500.changeRate.toFixed(2)}%`}
+                  color={marketData.sp500.changeRate >= 0 ? 'error' : 'primary'}
+                  size="small"
+                />
+              </Stack>
+            </Box>
+          </Stack>
+        </Paper>
+      </Grid>
+
+      {/* 4. NASDAQ */}
+      <Grid item xs={12} md={3}>
+        <Paper sx={{ p: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                NASDAQ
+              </Typography>
+              <Typography variant="h5">
+                {marketData.nasdaq.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                {marketData.nasdaq.change >= 0 ? (
+                  <TrendingUp color="error" fontSize="small" />
+                ) : (
+                  <TrendingDown color="primary" fontSize="small" />
+                )}
+                <Typography
+                  variant="body2"
+                  color={marketData.nasdaq.change >= 0 ? 'error.main' : 'primary.main'}
+                >
+                  {marketData.nasdaq.change >= 0 ? '+' : ''}{marketData.nasdaq.change.toFixed(2)}
+                </Typography>
+                <Chip
+                  label={`${marketData.nasdaq.changeRate >= 0 ? '+' : ''}${marketData.nasdaq.changeRate.toFixed(2)}%`}
+                  color={marketData.nasdaq.changeRate >= 0 ? 'error' : 'primary'}
+                  size="small"
+                />
+              </Stack>
+            </Box>
+          </Stack>
+        </Paper>
+      </Grid>
+
+      {/* 5. USD/KRW */}
+      <Grid item xs={12} md={3}>
+        <Paper sx={{ p: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                USD/KRW
+              </Typography>
+              <Typography variant="h5">
+                {marketData.usd.value.toFixed(2)}
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                {marketData.usd.change >= 0 ? (
+                  <TrendingUp color="error" fontSize="small" />
+                ) : (
+                  <TrendingDown color="primary" fontSize="small" />
+                )}
+                <Typography
+                  variant="body2"
+                  color={marketData.usd.change >= 0 ? 'error.main' : 'primary.main'}
+                >
+                  {marketData.usd.change >= 0 ? '+' : ''}{marketData.usd.change.toFixed(2)}
+                </Typography>
+              </Stack>
+            </Box>
+          </Stack>
+        </Paper>
+      </Grid>
+
+      {/* 6. IEF */}
+      <Grid item xs={12} md={3}>
+        <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                US Treasury 10Y (IEF)
+              </Typography>
+              <Typography variant="h6">
+                ${marketData.ief.value.toFixed(2)}
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography
+                  variant="caption"
+                  color={marketData.ief.change >= 0 ? 'success.main' : 'error.main'}
+                  fontWeight="bold"
+                >
+                  {marketData.ief.changeRate >= 0 ? '+' : ''}{marketData.ief.changeRate.toFixed(2)}%
+                </Typography>
+              </Stack>
+            </Box>
+            <Chip label="금리/중기채" size="small" variant="outlined" />
+          </Stack>
+        </Paper>
+      </Grid>
+
+      {/* 7. TLT */}
+      <Grid item xs={12} md={3}>
+        <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                US Treasury 20Y+ (TLT)
+              </Typography>
+              <Typography variant="h6">
+                ${marketData.tlt.value.toFixed(2)}
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography
+                  variant="caption"
+                  color={marketData.tlt.change >= 0 ? 'success.main' : 'error.main'}
+                  fontWeight="bold"
+                >
+                  {marketData.tlt.changeRate >= 0 ? '+' : ''}{marketData.tlt.changeRate.toFixed(2)}%
+                </Typography>
+              </Stack>
+            </Box>
+            <Chip label="장기채/금리민감" size="small" variant="outlined" />
+          </Stack>
+        </Paper>
+      </Grid>
+
+      {/* 8. LQD */}
+      <Grid item xs={12} md={3}>
+        <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                Corp Bond Inv.Gr (LQD)
+              </Typography>
+              <Typography variant="h6">
+                ${marketData.lqd.value.toFixed(2)}
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography
+                  variant="caption"
+                  color={marketData.lqd.change >= 0 ? 'success.main' : 'error.main'}
+                  fontWeight="bold"
+                >
+                  {marketData.lqd.changeRate >= 0 ? '+' : ''}{marketData.lqd.changeRate.toFixed(2)}%
+                </Typography>
+              </Stack>
+            </Box>
+            <Chip label="회사채/신용" size="small" variant="outlined" />
+          </Stack>
+        </Paper>
+      </Grid>
+    </Grid>
   )
 }
 
