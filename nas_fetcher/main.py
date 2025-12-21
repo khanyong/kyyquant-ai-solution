@@ -5,8 +5,10 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 
-# AWS Backend Endpoint
-AWS_API_URL = "http://13.209.204.159:8001/api/market/update-data"
+import os
+
+# AWS Backend Endpoint (Default if not set in env)
+AWS_API_URL = os.getenv("AWS_API_URL", "http://13.209.204.159:8001/api/market/update-data")
 
 def fetch_data():
     print(f"[{datetime.now()}] Starting fetch...")

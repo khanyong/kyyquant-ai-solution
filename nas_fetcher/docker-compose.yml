@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  market-fetcher:
+    build: .
+    container_name: auto_stock_fetcher
+    image: auto_stock_fetcher:latest
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1 # 로그 즉시 출력 (버퍼링 해제)
+      - TZ=Asia/Seoul
+      - AWS_API_URL=http://13.209.204.159:8001/api/market/update-data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
