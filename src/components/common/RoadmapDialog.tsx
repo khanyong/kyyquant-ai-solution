@@ -2382,13 +2382,39 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         }
       ]
+    },
+    {
+      id: 42,
+      title: '인프라 클라우드 마이그레이션 (NAS → AWS)',
+      status: 'done',
+      priority: 'high',
+      icon: <Settings />, // Assuming Settings or maybe Cloud icon if available, but Settings is safe
+      period: '2025.12.20',
+      description: '안정적인 24/7 트레이딩 환경 구축을 위한 백엔드 서버 AWS 이전',
+      subtasks: [
+        {
+          title: '✅ 백엔드 서버 AWS Lightsail 이전',
+          details: [
+            'Migration: 로컬 Synology NAS에서 AWS Lightsail 클라우드 인스턴스로 백엔드 서버 완전 이전',
+            'Stability: 가정용 네트워크(ISP) 리스크 제거 및 99.9% 가동률 확보',
+            'Performance: 거래소 서버와의 네트워크 레이턴시 최적화'
+          ]
+        },
+        {
+          title: '✅ 배포 및 운영 환경 최적화',
+          details: [
+            'Environment: 개발(Local)과 운영(Cloud) 환경 분리로 안정적인 배포 파이프라인 구축',
+            'Security: AWS VPC 및 보안 그룹 적용으로 데이터 보안 강화'
+          ]
+        }
+      ]
     }
   ];
 
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 98 // 2025-12-21 기준 진행률 (테마 및 네비게이션 통합 완료)
+  const progress = 99 // 2025-12-21 기준 진행률 (AWS 마이그레이션 완료)
 
   const getStatusIcon = (status: string) => {
     switch (status) {
