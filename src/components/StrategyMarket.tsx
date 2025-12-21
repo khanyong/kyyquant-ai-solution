@@ -300,166 +300,194 @@ const StrategyMarket: React.FC = () => {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredStrategies.map((row, index) => {
-                                            // Determine data source and metrics
+                                        filteredStrategies.flatMap((row, index) => {
+                                            // Determine data availability
                                             const hasLiveProfit = row.total_profit !== undefined && row.total_profit !== 0
-
-                                            // Use Average Return for Backtest view as requested
                                             const backtestReturn = row.backtest_metrics?.avg_return || row.backtest_metrics?.best_return
                                             const backtestCount = row.backtest_count || 0
                                             const hasBacktest = backtestReturn !== undefined
 
-                                            let displayReturn = 0
-                                            let displaySource: 'MOCK' | 'BACKTEST' | 'REAL' = 'BACKTEST'
-                                            let mdd = row.backtest_metrics?.mdd || 0
-                                            let trades = row.total_trades || row.backtest_metrics?.total_trades || 0
+                                            const rowsToRender = []
 
-                                            // Period String Logic
-                                            let periodString = '-'
-                                            if (row.backtest_metrics?.start_date && row.backtest_metrics?.end_date) {
-                                                const start = new Date(row.backtest_metrics.start_date)
-                                                const end = new Date(row.backtest_metrics.end_date)
-                                                const diffTime = Math.abs(end.getTime() - start.getTime())
-                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-                                                periodString = `${diffDays} Days`
+                                            // 1. Live/Mock Row
+                                            if (hasLiveProfit || !hasBacktest) {
+                                                rowsToRender.push({ ...row, _displaySource: 'MOCK', _keySuffix: 'mock' })
                                             }
 
-                                            if (hasLiveProfit) {
-                                                displaySource = 'MOCK'
-                                            } else {
-                                                displayReturn = backtestReturn || 0
-                                                displaySource = 'BACKTEST'
+                                            // 2. Backtest Row (Only if valid backtest data exists)
+                                            if (hasBacktest) {
+                                                // If we ALREADY added a MOCK row, this is the second row.
+                                                // If we didn't (because !hasLiveProfit), this is the first/only row.
+                                                // BUT, the logic above: if (!hasBacktest) we force MOCK. 
+                                                // So if hasBacktest is true, we adding a BT row.
+                                                // If we ALSO have hasLiveProfit, we have two rows.
+
+                                                // Wait, if hasLiveProfit is FALSE, and hasBacktest is TRUE:
+                                                // Block 1 runs? No (false || false).
+                                                // Block 2 runs? Yes.
+                                                // Correct.
+
+                                                // If hasLiveProfit is TRUE, and hasBacktest is TRUE:
+                                                // Block 1 runs.
+                                                // Block 2 runs.
+                                                // Two rows. Correct.
+
+                                                rowsToRender.push({ ...row, _displaySource: 'BACKTEST', _keySuffix: 'bt' })
                                             }
 
-                                            // Determine Return Value to Show
-                                            if (displaySource === 'BACKTEST') {
-                                                displayReturn = backtestReturn || 0
-                                            } else {
-                                                if (row.allocated_capital && row.allocated_capital > 0) {
-                                                    displayReturn = ((row.total_profit || 0) / row.allocated_capital) * 100
-                                                } else {
-                                                    displayReturn = 0
+                                            return rowsToRender.map((renderRow) => {
+                                                const displaySource = renderRow._displaySource as 'MOCK' | 'BACKTEST'
+
+                                                let displayReturn = 0
+                                                let mdd = renderRow.backtest_metrics?.mdd || 0
+                                                let trades = renderRow.total_trades || renderRow.backtest_metrics?.total_trades || 0
+
+                                                // Period String Logic
+                                                let periodString = '-'
+                                                if (renderRow.backtest_metrics?.start_date && renderRow.backtest_metrics?.end_date) {
+                                                    const start = new Date(renderRow.backtest_metrics.start_date)
+                                                    const end = new Date(renderRow.backtest_metrics.end_date)
+                                                    const diffTime = Math.abs(end.getTime() - start.getTime())
+                                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                                                    periodString = `${diffDays} Days`
                                                 }
-                                            }
 
-                                            // Profit calculation for coloring (Live absolute or BT %)
-                                            const isProfit = (displaySource === 'MOCK' ? (row.total_profit || 0) : displayReturn) >= 0
+                                                // Determine Return Value
+                                                if (displaySource === 'BACKTEST') {
+                                                    displayReturn = backtestReturn || 0
+                                                } else {
+                                                    if (renderRow.allocated_capital && renderRow.allocated_capital > 0) {
+                                                        displayReturn = ((renderRow.total_profit || 0) / renderRow.allocated_capital) * 100
+                                                    } else {
+                                                        displayReturn = 0
+                                                    }
+                                                }
 
-                                            return (
-                                                <TableRow
-                                                    key={row.id}
-                                                    sx={{ '&:hover': { bgcolor: '#F5F5F5' }, borderBottom: `1px solid ${THEME.hairline}` }}
-                                                >
-                                                    {/* Rank */}
-                                                    <TableCell align="center">
-                                                        {getRankBadge(row.rank)}
-                                                    </TableCell>
+                                                const isProfit = (displaySource === 'MOCK' ? (renderRow.total_profit || 0) : displayReturn) >= 0
 
-                                                    {/* Strategy Info */}
-                                                    {/* Strategy Info */}
-                                                    <TableCell onClick={() => setSelectedStrategy(row)} sx={{ cursor: 'pointer' }}>
-                                                        <Box>
-                                                            <Typography sx={{ fontWeight: 600, color: THEME.text }}>{row.name}</Typography>
-                                                            <Tooltip title={row.description || (row.profiles?.name ? `Created by ${row.profiles.name}` : '')}>
-                                                                <Typography variant="caption" sx={{
-                                                                    color: THEME.textDim,
-                                                                    display: '-webkit-box',
-                                                                    overflow: 'hidden',
-                                                                    WebkitBoxOrient: 'vertical',
-                                                                    WebkitLineClamp: 1,
-                                                                    maxWidth: 200,
-                                                                }}>
-                                                                    {row.profiles?.name ? `by ${row.profiles.name}` : ''}
-                                                                    {row.description ? ` | ${row.description}` : ''}
-                                                                </Typography>
-                                                            </Tooltip>
-                                                        </Box>
-                                                    </TableCell>
+                                                return (
+                                                    <TableRow
+                                                        key={`${renderRow.id}-${renderRow._keySuffix}`}
+                                                        sx={{ '&:hover': { bgcolor: '#F5F5F5' }, borderBottom: `1px solid ${THEME.hairline}` }}
+                                                    >
+                                                        {/* Rank */}
+                                                        <TableCell align="center">
+                                                            {getRankBadge(renderRow.rank)}
+                                                        </TableCell>
 
-                                                    {/* Source Badge */}
-                                                    {/* Source Badge */}
-                                                    <TableCell align="center">
-                                                        <Chip
-                                                            label={displaySource}
-                                                            size="small"
-                                                            onClick={() => setSelectedStrategy(row)}
-                                                            sx={{
-                                                                fontSize: '0.65rem',
-                                                                height: 20,
-                                                                fontWeight: 'bold',
-                                                                color: displaySource === 'MOCK' ? '#fff' : THEME.text,
-                                                                bgcolor: displaySource === 'MOCK' ? THEME.info : '#E0E0E0',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        />
-                                                    </TableCell>
+                                                        {/* Strategy Info */}
+                                                        <TableCell onClick={() => setSelectedStrategy(renderRow)} sx={{ cursor: 'pointer' }}>
+                                                            <Box>
+                                                                <Typography sx={{ fontWeight: 600, color: THEME.text }}>{renderRow.name}</Typography>
+                                                                <Tooltip title={renderRow.description || (renderRow.profiles?.name ? `Created by ${renderRow.profiles.name}` : '')}>
+                                                                    <Typography variant="caption" sx={{
+                                                                        color: THEME.textDim,
+                                                                        display: '-webkit-box',
+                                                                        overflow: 'hidden',
+                                                                        WebkitBoxOrient: 'vertical',
+                                                                        WebkitLineClamp: 1,
+                                                                        maxWidth: 200,
+                                                                    }}>
+                                                                        {renderRow.profiles?.name ? `by ${renderRow.profiles.name}` : ''}
+                                                                        {renderRow.description ? ` | ${renderRow.description}` : ''}
+                                                                    </Typography>
+                                                                </Tooltip>
+                                                            </Box>
+                                                        </TableCell>
 
-                                                    {/* Return */}
-                                                    <TableCell align="right">
-                                                        <Box>
-                                                            <Typography sx={{ color: isProfit ? THEME.success : THEME.danger, fontWeight: 700 }}>
-                                                                {displaySource === 'MOCK'
-                                                                    ? `${(row.total_profit || 0).toLocaleString()} ₩`
-                                                                    : `${displayReturn.toFixed(1)}%`
-                                                                }
-                                                            </Typography>
-                                                            {displaySource === 'MOCK' && hasBacktest && (
-                                                                <Typography variant="caption" sx={{ display: 'block', color: THEME.textDim, fontSize: '0.7rem' }}>
-                                                                    (BT: {backtestReturn?.toFixed(1)}%)
-                                                                </Typography>
-                                                            )}
-                                                        </Box>
-                                                    </TableCell>
-
-                                                    {/* MDD */}
-                                                    <TableCell align="right" sx={{ color: THEME.danger }}>
-                                                        {mdd ? `-${mdd.toFixed(1)}%` : '-'}
-                                                    </TableCell>
-
-                                                    {/* Stats (Trades / Period) */}
-                                                    <TableCell align="center">
-                                                        <Stack alignItems="center" spacing={0}>
-                                                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{backtestCount > 0 ? `${backtestCount} Runs` : `${trades} Trades`}</Typography>
-                                                            <Typography variant="caption" sx={{ color: THEME.textDim, fontSize: '0.7rem' }}>{backtestCount > 0 ? 'Avg Return' : periodString}</Typography>
-                                                        </Stack>
-                                                    </TableCell>
-
-                                                    {/* Trend (Mini Chart) */}
-                                                    <TableCell align="center">
-                                                        <Box sx={{ width: 100, height: 30, display: 'inline-block' }}>
-                                                            <Line
-                                                                data={generateAreaChartData(isProfit)}
-                                                                options={{
-                                                                    responsive: true,
-                                                                    maintainAspectRatio: false,
-                                                                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                                                                    scales: { x: { display: false }, y: { display: false } },
-                                                                    elements: { point: { radius: 0 }, line: { borderWidth: 1 } }
+                                                        {/* Source Badge */}
+                                                        <TableCell align="center">
+                                                            <Chip
+                                                                label={displaySource}
+                                                                size="small"
+                                                                onClick={() => setSelectedStrategy(renderRow)}
+                                                                sx={{
+                                                                    fontSize: '0.65rem',
+                                                                    height: 20,
+                                                                    fontWeight: 'bold',
+                                                                    color: displaySource === 'MOCK' ? '#fff' : THEME.text,
+                                                                    bgcolor: displaySource === 'MOCK' ? THEME.info : '#E0E0E0',
+                                                                    cursor: 'pointer'
                                                                 }}
                                                             />
-                                                        </Box>
-                                                    </TableCell>
+                                                        </TableCell>
 
-                                                    {/* Action Button */}
-                                                    <TableCell align="center">
-                                                        <Button
-                                                            variant="outlined"
-                                                            size="small"
-                                                            startIcon={copyingId === row.id ? <CircularProgress size={16} /> : <ContentCopy />}
-                                                            onClick={() => handleCopyStrategy(row)}
-                                                            disabled={!!copyingId}
-                                                            sx={{
-                                                                color: THEME.text,
-                                                                borderColor: THEME.hairline,
-                                                                borderRadius: 0,
-                                                                '&:hover': { borderColor: THEME.text, bgcolor: 'rgba(0,0,0,0.05)' }
-                                                            }}
-                                                        >
-                                                            Get
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )
+                                                        {/* Return */}
+                                                        <TableCell align="right">
+                                                            <Box>
+                                                                <Typography sx={{ color: isProfit ? THEME.success : THEME.danger, fontWeight: 700 }}>
+                                                                    {displaySource === 'MOCK'
+                                                                        ? `${(renderRow.total_profit || 0).toLocaleString()} ₩`
+                                                                        : `${displayReturn.toFixed(1)}%`
+                                                                    }
+                                                                </Typography>
+                                                                {displaySource === 'MOCK' && hasBacktest && (
+                                                                    <Typography variant="caption" sx={{ display: 'block', color: THEME.textDim, fontSize: '0.7rem' }}>
+                                                                        (BT: {backtestReturn?.toFixed(1)}%)
+                                                                    </Typography>
+                                                                )}
+                                                            </Box>
+                                                        </TableCell>
+
+                                                        {/* MDD */}
+                                                        <TableCell align="right" sx={{ color: THEME.danger }}>
+                                                            {displaySource === 'BACKTEST' ? (mdd ? `-${mdd.toFixed(1)}%` : '-') : '-'}
+                                                        </TableCell>
+
+                                                        {/* Stats (Trades / Period) */}
+                                                        <TableCell align="center">
+                                                            <Stack alignItems="center" spacing={0}>
+                                                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                                                                    {displaySource === 'BACKTEST'
+                                                                        ? (backtestCount > 0 ? `${backtestCount} Runs` : `${trades} Trades`)
+                                                                        : `${trades} Trades`
+                                                                    }
+                                                                </Typography>
+                                                                <Typography variant="caption" sx={{ color: THEME.textDim, fontSize: '0.7rem' }}>
+                                                                    {displaySource === 'BACKTEST'
+                                                                        ? (backtestCount > 0 ? 'Avg Return' : periodString)
+                                                                        : 'Live'}
+                                                                </Typography>
+                                                            </Stack>
+                                                        </TableCell>
+
+                                                        {/* Trend (Mini Chart) */}
+                                                        <TableCell align="center">
+                                                            <Box sx={{ width: 100, height: 30, display: 'inline-block' }}>
+                                                                <Line
+                                                                    data={generateAreaChartData(isProfit)}
+                                                                    options={{
+                                                                        responsive: true,
+                                                                        maintainAspectRatio: false,
+                                                                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                                                                        scales: { x: { display: false }, y: { display: false } },
+                                                                        elements: { point: { radius: 0 }, line: { borderWidth: 1 } }
+                                                                    }}
+                                                                />
+                                                            </Box>
+                                                        </TableCell>
+
+                                                        {/* Action Button */}
+                                                        <TableCell align="center">
+                                                            <Button
+                                                                variant="outlined"
+                                                                size="small"
+                                                                startIcon={copyingId === renderRow.id ? <CircularProgress size={16} /> : <ContentCopy />}
+                                                                onClick={(e) => { e.stopPropagation(); handleCopyStrategy(renderRow); }}
+                                                                disabled={!!copyingId}
+                                                                sx={{
+                                                                    color: THEME.text,
+                                                                    borderColor: THEME.hairline,
+                                                                    borderRadius: 0,
+                                                                    '&:hover': { borderColor: THEME.text, bgcolor: 'rgba(0,0,0,0.05)' }
+                                                                }}
+                                                            >
+                                                                Get
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })
                                         })
                                     )}
                                 </TableBody>
