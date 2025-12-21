@@ -377,71 +377,108 @@ def fetch_global_indices_background():
     global GLOBAL_INDICES_CACHE, LAST_UPDATED_TIME
     print(f"[Market Scheduler] Starting update at {datetime.datetime.now()}...")
     
-    indices_map = {
-        'KOSPI': '^KS11',
-        'KOSDAQ': '^KQ11',
-        'USD_KRW': 'KRW=X',
-        'SPX': '^GSPC',
-        'COMP': '^IXIC',
-        'IEF': 'IEF',
-        'TLT': 'TLT',
-        'LQD': 'LQD'
+    # KOSPI, KOSDAQ, USD/KRW (Use FinanceDataReader - Naver Finance source is reliable on AWS)
+    import FinanceDataReader as fdr
+    
+    fdr_indices = {
+        "KOSPI": "KS11",
+        "KOSDAQ": "KQ11", 
+        "USD_KRW": "USD/KRW",
+        "SPX": "S&P500",
+        "COMP": "IXIC"
     }
-    
+
+    # Bonds (Use yfinance as fallback or specific tickers)
+    yf_indices = {
+        "IEF": "IEF",
+        "TLT": "TLT",
+        "LQD": "LQD"
+    }
+
     new_data = []
-    session = get_yfinance_session()
-    
+
     try:
-        for code, symbol in indices_map.items():
+        # 1. Fetch from FinanceDataReader
+        for name, ticker in fdr_indices.items():
             try:
-                # Use Ticker with custom session
-                ticker = yf.Ticker(symbol, session=session)
+                # Get last 5 days
+                # Use pandas for reliable time handling
+                start_date = (pd.Timestamp.now() - pd.Timedelta(days=7)).strftime('%Y-%m-%d')
+                df = fdr.DataReader(ticker, start_date)
                 
-                # Fetch 5 days history (robustness)
-                # fast_info is faster but history is more reliable for "Close"
-                hist = ticker.history(period="5d")
-                
-                if hist.empty:
-                    print(f"  [Fail] {code} ({symbol}): No data (blocked/delisted?)")
+                if df is None or df.empty:
+                    print(f"  [Fail] FDR {name}: No data")
                     continue
-
-                current_price = float(hist['Close'].iloc[-1])
-                prev_close = float(hist['Close'].iloc[-2]) if len(hist) > 1 else current_price
-
-                # NaN check
-                import math
-                if math.isnan(current_price):
-                    current_price = prev_close if not math.isnan(prev_close) else 0
-
-                change_value = current_price - prev_close
-                change_rate = (change_value / prev_close) * 100 if prev_close != 0 else 0
                 
+                last_row = df.iloc[-1]
+                prev_row = df.iloc[-2] if len(df) > 1 else last_row 
+                
+                current = float(last_row['Close'])
+                prev_close = float(prev_row['Close'])
+                
+                change = current - prev_close
+                change_rate = (change / prev_close * 100) if prev_close != 0 else 0.0
+
                 new_data.append({
-                    "index_code": code,
-                    "current_value": round(current_price, 2),
-                    "change_value": round(change_value, 2),
+                    "index_code": name,
+                    "current_value": round(current, 2),
+                    "change_value": round(change, 2),
                     "change_rate": round(change_rate, 2),
-                    "updated_at": datetime.datetime.now().isoformat()
+                    "updated_at": pd.Timestamp.now().isoformat()
                 })
-                
-            except Exception as e:
-                print(f"  [Error] {code}: {e}")
-                continue
+                print(f"[Market Scheduler] Fetched {name} (FDR): {current}")
 
-        if new_data:
-            GLOBAL_INDICES_CACHE = new_data
-            LAST_UPDATED_TIME = datetime.datetime.now()
-            
-            # Save to Disk
-            try:
-                with open(DATA_FILE_PATH, "w", encoding="utf-8") as f:
-                    json.dump(new_data, f, ensure_ascii=False, indent=4)
-                print(f"[Market Scheduler] Success! Updated {len(new_data)} items and saved to disk.")
             except Exception as e:
-                print(f"[Market Scheduler] Updated memory but failed to save disk: {e}")
+                print(f"[Market Scheduler] FDR fetch failed for {name}: {e}")
+
+        # 2. Fetch from yfinance (for Bonds/others)
+        session = requests.Session()
+        session.headers['User-Agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36"
+        
+        for name, ticker in yf_indices.items():
+            try:
+                tick = yf.Ticker(ticker, session=session)
+                hist = tick.history(period="5d")
+                if hist.empty:
+                    continue
                 
+                last_row = hist.iloc[-1]
+                prev_row = hist.iloc[-2] if len(hist) > 1 else last_row
+                
+                current = float(last_row['Close'])
+                prev_close = float(prev_row['Close'])
+                change = current - prev_close
+                change_rate = (change / prev_close) * 100 if prev_close != 0 else 0
+
+                new_data.append({
+                    "index_code": name,
+                    "current_value": round(current, 2),
+                    "change_value": round(change, 2),
+                    "change_rate": round(change_rate, 2),
+                    "updated_at": pd.Timestamp.now().isoformat()
+                })
+                print(f"[Market Scheduler] Fetched {name} (YF): {current}")
+            except Exception as e:
+                print(f"[Market Scheduler] YF fetch failed for {name}: {e}")
+
+        # Update cache if we got data
+        if len(new_data) > 0:
+            # Upsert into Cache
+            current_map = {item['index_code']: item for item in GLOBAL_INDICES_CACHE}
+            for item in new_data:
+                current_map[item['index_code']] = item
+            
+            GLOBAL_INDICES_CACHE = list(current_map.values())
+            
+            # Save to disk
+            try:
+                with open(DATA_FILE_PATH, 'w', encoding='utf-8') as f:
+                    json.dump(GLOBAL_INDICES_CACHE, f, ensure_ascii=False, indent=2)
+                print(f"[Market Scheduler] Persisted {len(GLOBAL_INDICES_CACHE)} items to disk.")
+            except Exception as e:
+                print(f"[Market Scheduler] Failed to save to disk: {e}")
         else:
-            print("[Market Scheduler] Fetch returned 0 items. Keeping old cache.")
+             print("[Market Scheduler] Fetch returned 0 items. Keeping old cache.")
 
     except Exception as e:
         print(f"[Market Scheduler] Critical Error: {e}")
