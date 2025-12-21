@@ -1,15 +1,12 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
     Box,
     Typography,
     Grid,
-    Card,
-    CardContent,
-    Stack,
+    Paper,
     Chip,
     Button,
-    Avatar,
     Tab,
     Tabs,
     TextField,
@@ -20,20 +17,31 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Paper,
-    Divider,
-    MenuItem,
-    Select
+    Stack,
+    CircularProgress,
+    Alert,
+    Snackbar,
+    Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    IconButton
 } from '@mui/material'
 import {
     Search,
-    Verified,
+    CorporateFare,
+    ShowChart,
+    PieChart,
     FilterList,
     Download,
     Refresh,
-    ShowChart,
-    PieChart,
-    CorporateFare
+    ContentCopy,
+    EmojiEvents, // for ranking trophy
+    TrendingUp,
+    TrendingDown,
+    Close,
+    History
 } from '@mui/icons-material'
 import {
     Chart as ChartJS,
@@ -42,11 +50,12 @@ import {
     PointElement,
     LineElement,
     Title,
-    Tooltip,
+    Tooltip as ChartTooltip,
     Legend,
     Filler
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
+import strategyService, { Strategy } from '../services/strategyService'
 
 ChartJS.register(
     CategoryScale,
@@ -54,16 +63,26 @@ ChartJS.register(
     PointElement,
     LineElement,
     Title,
-    Tooltip,
+    ChartTooltip,
     Legend,
     Filler
 )
 
+interface MarketStrategy extends Strategy {
+    rank: number
+}
+
 const StrategyMarket: React.FC = () => {
-    const [tabValue, setTabValue] = useState(0)
+    const [tabValue, setTabValue] = useState(1) // Default to List view for now
+    const [strategies, setStrategies] = useState<MarketStrategy[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [copyingId, setCopyingId] = useState<string | null>(null)
+    const [selectedStrategy, setSelectedStrategy] = useState<MarketStrategy | null>(null)
+    const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
     // Korean Market Colors (Adapted for Light Theme)
-    // Editorial Theme
     const THEME = {
         bg: '#FFFFFF',
         panel: '#FFFFFF',
@@ -72,22 +91,60 @@ const StrategyMarket: React.FC = () => {
         border: '#121212',
         hairline: '#E0E0E0',
         accent: '#C5A065', // Journalistic Gold
-        success: '#121212', // Black for financial positive (or keeping red/blue for market data but muted)
-        danger: '#D32F2F', // Brick Red
-        info: '#1976D2'   // Corporate Blue
+        success: '#D32F2F', // Red for profit in KR market
+        danger: '#1976D2', // Blue for loss in KR market
+        info: '#1976D2'
     }
 
-    // Chart Colors (Editorial)
-    const COLOR_UP = '#D32F2F' // Brick Red
-    const COLOR_DOWN = '#1976D2' // Corporate Blue
+    const fetchStrategies = async () => {
+        setLoading(true)
+        try {
+            const data = await strategyService.getMarketStrategies()
+            const strategiesWithRank = data.map((s, index) => ({ ...s, rank: index + 1 }))
+            setStrategies(strategiesWithRank)
+        } catch (err) {
+            console.error(err)
+            setError('전략 목록을 불러오는데 실패했습니다.')
+        } finally {
+            setLoading(false)
+        }
+    }
 
-    // Mock Data for Area Chart
+    useEffect(() => {
+        fetchStrategies()
+    }, [])
+
+    const handleCopyStrategy = async (strategy: Strategy) => {
+        if (!confirm(`'${strategy.name}' 전략을 내 전략으로 복사하시겠습니까?`)) return
+
+        setCopyingId(strategy.id)
+        try {
+            const result = await strategyService.copyStrategy(strategy.id)
+            if (result) {
+                setNotification({ message: '전략이 성공적으로 복사되었습니다.', type: 'success' })
+            } else {
+                setNotification({ message: '전략 복사에 실패했습니다.', type: 'error' })
+            }
+        } catch (err) {
+            setNotification({ message: '오류가 발생했습니다.', type: 'error' })
+        } finally {
+            setCopyingId(null)
+        }
+    }
+
+    // Filter strategies based on search query
+    const filteredStrategies = strategies.filter(s =>
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.profiles?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    // Mock chart data generation (can be replaced with actual history later)
     const generateAreaChartData = (isProfit: boolean) => ({
         labels: Array.from({ length: 30 }, (_, i) => i),
         datasets: [
             {
                 data: Array.from({ length: 30 }, () => 100 + Math.random() * 20 - (isProfit ? 5 : 15)),
-                borderColor: isProfit ? COLOR_UP : COLOR_DOWN,
+                borderColor: isProfit ? THEME.success : THEME.danger,
                 backgroundColor: isProfit ? 'rgba(211, 47, 47, 0.1)' : 'rgba(25, 118, 210, 0.1)',
                 borderWidth: 2,
                 tension: 0.4,
@@ -97,84 +154,29 @@ const StrategyMarket: React.FC = () => {
         ]
     })
 
-    // Mock Strategies
-    const strategies = [
-        {
-            id: 1,
-            rank: 1,
-            title: 'Global Macro Alpha',
-            author: 'QuantMaster',
-            year: 2023,
-            category: 'Multi-Asset',
-            cagr: 32.5,
-            mdd: 8.4,
-            aum: '52억',
-            location: '서울(Seoul)',
-            isVerified: true,
-            description: '거시경제 지표 기반의 멀티에셋 전략'
-        },
-        {
-            id: 2,
-            rank: 2,
-            title: 'Neutral Equity Arb',
-            author: 'DeltaOne',
-            year: 2022,
-            category: 'Market Neutral',
-            cagr: 12.8,
-            mdd: 2.1,
-            aum: '125억',
-            location: '부산(Busan)',
-            isVerified: true,
-            description: '가격 비효율성을 포착하는 차익거래'
-        },
-        {
-            id: 3,
-            rank: 3,
-            title: 'KOSPI200 Enhanced',
-            author: 'IndexPlus',
-            year: 2021,
-            category: 'Equity Long',
-            cagr: 15.2,
-            mdd: 18.5,
-            aum: '8.5억',
-            location: '판교(Pangyo)',
-            isVerified: true,
-            description: '코스피200 추종 및 알파 전략'
-        },
-        {
-            id: 4,
-            rank: 4,
-            title: 'Clean Energy Rotation',
-            author: 'GreenFund',
-            year: 2024,
-            category: 'Sector',
-            cagr: -5.4,
-            mdd: 22.1,
-            aum: '3.2억',
-            location: '여의도(Yeouido)',
-            isVerified: false,
-            description: '신재생 에너지 섹터 로테이션'
-        },
-        {
-            id: 5,
-            rank: 5,
-            title: 'Volatility Short',
-            author: 'VixTrader',
-            year: 2023,
-            category: 'Derivatives',
-            cagr: 45.2,
-            mdd: 45.5,
-            aum: '1.2억',
-            location: '강남(Gangnam)',
-            isVerified: false,
-            description: 'VIX 선물을 이용한 변동성 매도'
-        }
-    ]
+    const getRankBadge = (rank: number) => {
+        if (rank === 1) return <EmojiEvents sx={{ color: '#FFD700' }} /> // Gold
+        if (rank === 2) return <EmojiEvents sx={{ color: '#C0C0C0' }} /> // Silver
+        if (rank === 3) return <EmojiEvents sx={{ color: '#CD7F32' }} /> // Bronze
+        return <Typography variant="body2" sx={{ fontWeight: 'bold', color: THEME.textDim }}>{rank}</Typography>
+    }
 
     return (
         <Box sx={{ color: THEME.text, bgcolor: '#FFFFFF', minHeight: '100vh', p: 3 }}>
 
-            {/* Title Header - Masthead Style */}
+            {/* Notification */}
+            <Snackbar
+                open={!!notification}
+                autoHideDuration={6000}
+                onClose={() => setNotification(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setNotification(null)} severity={notification?.type || 'info'} sx={{ width: '100%' }}>
+                    {notification?.message}
+                </Alert>
+            </Snackbar>
+
+            {/* Header */}
             <Box sx={{ mb: 4, borderBottom: `1px solid ${THEME.border}`, pb: 2 }}>
                 <Stack direction="row" alignItems="center" spacing={2} mb={1}>
                     <CorporateFare sx={{ fontSize: 32, color: THEME.text }} />
@@ -183,44 +185,9 @@ const StrategyMarket: React.FC = () => {
                     </Typography>
                 </Stack>
                 <Typography variant="body1" sx={{ color: THEME.textDim, fontFamily: '"Playfair Display", serif', fontStyle: 'italic' }}>
-                    Professional Marketplace Analysis & Tracking
+                    Top Performing Strategies & Rankings
                 </Typography>
             </Box>
-
-            {/* Summary Cards (Pastel Style) */}
-            {/* Summary Cards (Editorial Style) */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                {/* 1. Total Strategies */}
-                <Grid item xs={12} md={3}>
-                    <Paper sx={{ p: 3, bgcolor: THEME.panel, borderTop: `4px solid ${THEME.text}`, borderLeft: `1px solid ${THEME.hairline}`, borderRight: `1px solid ${THEME.hairline}`, borderBottom: `1px solid ${THEME.hairline}`, borderRadius: 0, height: '100%' }}>
-                        <Typography variant="body2" sx={{ color: THEME.textDim, fontWeight: 600, mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>Total Strategies</Typography>
-                        <Typography variant="h4" sx={{ color: THEME.text, fontWeight: 700, fontFamily: '"Playfair Display", serif' }}>34,415</Typography>
-                    </Paper>
-                </Grid>
-                {/* 2. Avg Return (Gold Accent) */}
-                <Grid item xs={12} md={3}>
-                    <Paper sx={{ p: 3, bgcolor: THEME.panel, borderTop: `4px solid ${THEME.accent}`, borderLeft: `1px solid ${THEME.hairline}`, borderRight: `1px solid ${THEME.hairline}`, borderBottom: `1px solid ${THEME.hairline}`, borderRadius: 0, height: '100%' }}>
-                        <Typography variant="body2" sx={{ color: THEME.textDim, fontWeight: 600, mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>Avg Return (YTD)</Typography>
-                        <Stack direction="row" alignItems="baseline" spacing={1}>
-                            <Typography variant="h4" sx={{ color: THEME.accent, fontWeight: 700, fontFamily: '"Playfair Display", serif' }}>+12.4%</Typography>
-                        </Stack>
-                    </Paper>
-                </Grid>
-                {/* 3. AUM */}
-                <Grid item xs={12} md={3}>
-                    <Paper sx={{ p: 3, bgcolor: THEME.panel, borderTop: `4px solid ${THEME.text}`, borderLeft: `1px solid ${THEME.hairline}`, borderRight: `1px solid ${THEME.hairline}`, borderBottom: `1px solid ${THEME.hairline}`, borderRadius: 0, height: '100%' }}>
-                        <Typography variant="body2" sx={{ color: THEME.textDim, fontWeight: 600, mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>Total AUM</Typography>
-                        <Typography variant="h4" sx={{ color: THEME.text, fontWeight: 700, fontFamily: '"Playfair Display", serif' }}>1,437 <span style={{ fontSize: '1rem', color: THEME.textDim }}>Billion KRW</span></Typography>
-                    </Paper>
-                </Grid>
-                {/* 4. Top Sector */}
-                <Grid item xs={12} md={3}>
-                    <Paper sx={{ p: 3, bgcolor: THEME.panel, borderTop: `4px solid ${THEME.text}`, borderLeft: `1px solid ${THEME.hairline}`, borderRight: `1px solid ${THEME.hairline}`, borderBottom: `1px solid ${THEME.hairline}`, borderRadius: 0, height: '100%' }}>
-                        <Typography variant="body2" sx={{ color: THEME.textDim, fontWeight: 600, mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>Dominant Sector</Typography>
-                        <Typography variant="h4" sx={{ color: THEME.text, fontWeight: 700, fontFamily: '"Playfair Display", serif' }}>Tech <span style={{ fontSize: '1rem', color: THEME.textDim }}>IT/Semi</span></Typography>
-                    </Paper>
-                </Grid>
-            </Grid>
 
             {/* Filter Bar */}
             <Paper elevation={0} sx={{ p: 2, mb: 3, border: `1px solid ${THEME.hairline}`, borderRadius: 0, bgcolor: THEME.panel }}>
@@ -228,35 +195,33 @@ const StrategyMarket: React.FC = () => {
                     <Grid item>
                         <FilterList sx={{ color: THEME.text }} />
                     </Grid>
-                    <Grid item xs={2}>
-                        <Select fullWidth size="small" defaultValue="all" sx={{ bgcolor: 'white', borderRadius: 0, border: `1px solid ${THEME.hairline}` }}>
-                            <MenuItem value="all">Global (All)</MenuItem>
-                            <MenuItem value="kr">South Korea</MenuItem>
-                            <MenuItem value="us">United States</MenuItem>
-                        </Select>
-                    </Grid>
-                    <Grid item xs={2}>
-                        <Select fullWidth size="small" defaultValue="all" sx={{ bgcolor: 'white', borderRadius: 0, border: `1px solid ${THEME.hairline}` }}>
-                            <MenuItem value="all">All Sectors</MenuItem>
-                            <MenuItem value="tech">Technology</MenuItem>
-                            <MenuItem value="finance">Finance</MenuItem>
-                        </Select>
-                    </Grid>
                     <Grid item xs>
                         <TextField
                             fullWidth
                             size="small"
-                            placeholder="Search Strategy..."
+                            placeholder="Search Strategy or Author..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
                             InputProps={{
                                 startAdornment: <InputAdornment position="start"><Search sx={{ color: THEME.textDim }} /></InputAdornment>
                             }}
                         />
                     </Grid>
+                    <Grid item>
+                        <Button
+                            startIcon={<Refresh />}
+                            onClick={fetchStrategies}
+                            disabled={loading}
+                            sx={{ color: THEME.text, borderColor: THEME.text }}
+                        >
+                            Refresh
+                        </Button>
+                    </Grid>
                 </Grid>
             </Paper>
 
-            {/* Main Content Area */}
+            {/* Tabs */}
             <Box sx={{ borderBottom: `1px solid ${THEME.border}`, mb: 2 }}>
                 <Tabs
                     value={tabValue}
@@ -274,120 +239,300 @@ const StrategyMarket: React.FC = () => {
                 </Tabs>
             </Box>
 
-            {/* Dashboard View (Top Performer chart from previous design, restyled) */}
-            {tabValue === 0 && (
-                <Grid container spacing={3}>
-                    <Grid item xs={12} md={8}>
-                        <Paper elevation={0} sx={{ p: 3, border: `1px solid ${THEME.border}`, borderRadius: 0, height: 400 }}>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, borderBottom: `1px solid ${THEME.hairline}`, pb: 1 }}>
-                                <ShowChart sx={{ color: THEME.text }} />
-                                <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700 }}>Benchmark Analysis (YoY)</Typography>
-                            </Stack>
-                            <Box sx={{ height: 320, width: '100%' }}>
-                                <Line
-                                    data={generateAreaChartData(true)}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: { legend: { display: false } },
-                                        scales: {
-                                            x: { grid: { display: false } },
-                                            y: { grid: { color: '#f0f0f0' }, border: { display: false } }
-                                        },
-                                        elements: { line: { tension: 0.4 } }
-                                    }}
-                                />
-                            </Box>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                        <Paper elevation={0} sx={{ p: 3, border: `1px solid ${THEME.border}`, borderRadius: 0, height: 400 }}>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, borderBottom: `1px solid ${THEME.hairline}`, pb: 1 }}>
-                                <PieChart sx={{ color: THEME.text }} />
-                                <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700 }}>Sector Distribution</Typography>
-                            </Stack>
-                            {/* Placeholder for Pie Chart content */}
-                            <Stack spacing={2} sx={{ mt: 4 }}>
-                                {['IT/Semi (45%)', 'Finance (25%)', 'Healthcare (15%)', 'Consumer (10%)', 'Others (5%)'].map((item, idx) => (
-                                    <Box key={idx}>
-                                        <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                                            <Typography variant="body2">{item.split('(')[0]}</Typography>
-                                            <Typography variant="body2" fontWeight={600}>{item.split('(')[1].replace(')', '')}</Typography>
-                                        </Stack>
-                                        <Box sx={{ width: '100%', height: 4, bgcolor: '#eee', borderRadius: 0 }}>
-                                            <Box sx={{ width: item.split('(')[1].replace(')', ''), height: '100%', bgcolor: [THEME.text, THEME.textDim, '#9E9E9E', '#BDBDBD', '#E0E0E0'][idx], borderRadius: 0 }} />
-                                        </Box>
+            {/* Content */}
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+                    <CircularProgress sx={{ color: THEME.accent }} />
+                </Box>
+            ) : error ? (
+                <Alert severity="error">{error}</Alert>
+            ) : (
+                <>
+                    {/* Dashboard View (Placeholder) */}
+                    {tabValue === 0 && (
+                        <Grid container spacing={3}>
+                            <Grid item xs={12} md={8}>
+                                <Paper elevation={0} sx={{ p: 3, border: `1px solid ${THEME.border}`, borderRadius: 0, height: 400 }}>
+                                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, borderBottom: `1px solid ${THEME.hairline}`, pb: 1 }}>
+                                        <ShowChart sx={{ color: THEME.text }} />
+                                        <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700 }}>Benchmark Analysis</Typography>
+                                    </Stack>
+                                    <Box sx={{ height: 320, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Typography color="text.secondary">Market Overview Chart (Coming Soon)</Typography>
                                     </Box>
-                                ))}
-                            </Stack>
-                        </Paper>
-                    </Grid>
-                </Grid>
-            )}
+                                </Paper>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <Paper elevation={0} sx={{ p: 3, border: `1px solid ${THEME.border}`, borderRadius: 0, height: 400 }}>
+                                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, borderBottom: `1px solid ${THEME.hairline}`, pb: 1 }}>
+                                        <PieChart sx={{ color: THEME.text }} />
+                                        <Typography variant="h6" sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700 }}>Sector Distribution</Typography>
+                                    </Stack>
+                                    <Box sx={{ height: 320, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Typography color="text.secondary">Sector Analysis (Coming Soon)</Typography>
+                                    </Box>
+                                </Paper>
+                            </Grid>
+                        </Grid>
+                    )}
 
-            {/* Table View */}
-            {tabValue === 1 && (
-                <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${THEME.border}`, borderRadius: 0 }}>
-                    <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', borderBottom: `1px solid ${THEME.hairline}` }}>
-                        <Button startIcon={<Refresh />} size="small" sx={{ mr: 1, color: THEME.text }}>Refresh</Button>
-                        <Button startIcon={<Download />} variant="outlined" size="small" sx={{ color: THEME.text, borderColor: THEME.text, borderRadius: 0 }}>Export CSV</Button>
-                    </Box>
-                    <Table sx={{ minWidth: 650 }} aria-label="strategy table">
-                        <TableHead sx={{ bgcolor: THEME.panel }}>
-                            <TableRow sx={{ borderBottom: `2px solid ${THEME.text}` }}>
-                                <TableCell sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>ID</TableCell>
-                                <TableCell sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Strategy Name</TableCell>
-                                <TableCell sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Year</TableCell>
-                                <TableCell sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Firm / Location</TableCell>
-                                <TableCell sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Category</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>CAGR</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>MDD</TableCell>
-                                <TableCell align="center" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>30-Day Trend</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {strategies.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    sx={{ '&:hover': { bgcolor: '#F5F5F5' }, borderBottom: `1px solid ${THEME.hairline}` }}
-                                >
-                                    <TableCell component="th" scope="row" sx={{ color: THEME.textDim, fontFamily: '"Playfair Display", serif' }}>
-                                        #{row.id.toString().padStart(3, '0')}
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 600, color: THEME.text }}>
-                                        {row.title}
-                                    </TableCell>
-                                    <TableCell sx={{ color: THEME.textDim }}>{row.year}</TableCell>
-                                    <TableCell sx={{ color: THEME.textDim }}>{row.location}</TableCell>
-                                    <TableCell>
-                                        <Chip label={row.category} size="small" variant="outlined" sx={{ color: THEME.textDim, borderColor: THEME.hairline, borderRadius: 0 }} />
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ color: row.cagr >= 0 ? THEME.success : THEME.danger, fontWeight: 700 }}>
-                                        {row.cagr >= 0 ? '+' : ''}{row.cagr}%
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ color: THEME.textDim }}>
-                                        {row.mdd}%
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Box sx={{ width: 100, height: 30, display: 'inline-block' }}>
-                                            <Line
-                                                data={generateAreaChartData(row.cagr >= 0)}
-                                                options={{
-                                                    responsive: true,
-                                                    maintainAspectRatio: false,
-                                                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                                                    scales: { x: { display: false }, y: { display: false } },
-                                                    elements: { point: { radius: 0 }, line: { borderWidth: 1 } }
-                                                }}
-                                            />
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                    {/* Table View (Strategy List) */}
+                    {tabValue === 1 && (
+                        <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${THEME.border}`, borderRadius: 0 }}>
+                            <Table sx={{ minWidth: 650 }} aria-label="strategy table">
+                                <TableHead sx={{ bgcolor: THEME.panel }}>
+                                    <TableRow sx={{ borderBottom: `2px solid ${THEME.text}` }}>
+                                        <TableCell align="center" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text, width: '5%' }}>Rank</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Strategy</TableCell>
+                                        <TableCell align="center" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Source</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Return</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>MDD</TableCell>
+                                        <TableCell align="center" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Stats</TableCell>
+                                        <TableCell align="center" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Trend</TableCell>
+                                        <TableCell align="center" sx={{ fontWeight: 700, fontFamily: '"Playfair Display", serif', color: THEME.text }}>Action</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredStrategies.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
+                                                검색 결과가 없습니다.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredStrategies.map((row, index) => {
+                                            // Determine data source and metrics
+                                            const hasLiveProfit = row.total_profit !== undefined && row.total_profit !== 0
+
+                                            // Use Average Return for Backtest view as requested
+                                            const backtestReturn = row.backtest_metrics?.avg_return || row.backtest_metrics?.best_return
+                                            const backtestCount = row.backtest_count || 0
+                                            const hasBacktest = backtestReturn !== undefined
+
+                                            let displayReturn = 0
+                                            let displaySource: 'MOCK' | 'BACKTEST' | 'REAL' = 'BACKTEST'
+                                            let mdd = row.backtest_metrics?.mdd || 0
+                                            let trades = row.total_trades || row.backtest_metrics?.total_trades || 0
+
+                                            // Period String Logic
+                                            let periodString = '-'
+                                            if (row.backtest_metrics?.start_date && row.backtest_metrics?.end_date) {
+                                                const start = new Date(row.backtest_metrics.start_date)
+                                                const end = new Date(row.backtest_metrics.end_date)
+                                                const diffTime = Math.abs(end.getTime() - start.getTime())
+                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                                                periodString = `${diffDays} Days`
+                                            }
+
+                                            if (hasLiveProfit) {
+                                                displaySource = 'MOCK'
+                                            } else {
+                                                displayReturn = backtestReturn || 0
+                                                displaySource = 'BACKTEST'
+                                            }
+
+                                            // Determine Return Value to Show
+                                            if (displaySource === 'BACKTEST') {
+                                                displayReturn = backtestReturn || 0
+                                            } else {
+                                                if (row.allocated_capital && row.allocated_capital > 0) {
+                                                    displayReturn = ((row.total_profit || 0) / row.allocated_capital) * 100
+                                                } else {
+                                                    displayReturn = 0
+                                                }
+                                            }
+
+                                            // Profit calculation for coloring (Live absolute or BT %)
+                                            const isProfit = (displaySource === 'MOCK' ? (row.total_profit || 0) : displayReturn) >= 0
+
+                                            return (
+                                                <TableRow
+                                                    key={row.id}
+                                                    sx={{ '&:hover': { bgcolor: '#F5F5F5' }, borderBottom: `1px solid ${THEME.hairline}` }}
+                                                >
+                                                    {/* Rank */}
+                                                    <TableCell align="center">
+                                                        {getRankBadge(row.rank)}
+                                                    </TableCell>
+
+                                                    {/* Strategy Info */}
+                                                    {/* Strategy Info */}
+                                                    <TableCell onClick={() => setSelectedStrategy(row)} sx={{ cursor: 'pointer' }}>
+                                                        <Box>
+                                                            <Typography sx={{ fontWeight: 600, color: THEME.text }}>{row.name}</Typography>
+                                                            <Tooltip title={row.description || (row.profiles?.name ? `Created by ${row.profiles.name}` : '')}>
+                                                                <Typography variant="caption" sx={{
+                                                                    color: THEME.textDim,
+                                                                    display: '-webkit-box',
+                                                                    overflow: 'hidden',
+                                                                    WebkitBoxOrient: 'vertical',
+                                                                    WebkitLineClamp: 1,
+                                                                    maxWidth: 200,
+                                                                }}>
+                                                                    {row.profiles?.name ? `by ${row.profiles.name}` : ''}
+                                                                    {row.description ? ` | ${row.description}` : ''}
+                                                                </Typography>
+                                                            </Tooltip>
+                                                        </Box>
+                                                    </TableCell>
+
+                                                    {/* Source Badge */}
+                                                    {/* Source Badge */}
+                                                    <TableCell align="center">
+                                                        <Chip
+                                                            label={displaySource}
+                                                            size="small"
+                                                            onClick={() => setSelectedStrategy(row)}
+                                                            sx={{
+                                                                fontSize: '0.65rem',
+                                                                height: 20,
+                                                                fontWeight: 'bold',
+                                                                color: displaySource === 'MOCK' ? '#fff' : THEME.text,
+                                                                bgcolor: displaySource === 'MOCK' ? THEME.info : '#E0E0E0',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        />
+                                                    </TableCell>
+
+                                                    {/* Return */}
+                                                    <TableCell align="right">
+                                                        <Box>
+                                                            <Typography sx={{ color: isProfit ? THEME.success : THEME.danger, fontWeight: 700 }}>
+                                                                {displaySource === 'MOCK'
+                                                                    ? `${(row.total_profit || 0).toLocaleString()} ₩`
+                                                                    : `${displayReturn.toFixed(1)}%`
+                                                                }
+                                                            </Typography>
+                                                            {displaySource === 'MOCK' && hasBacktest && (
+                                                                <Typography variant="caption" sx={{ display: 'block', color: THEME.textDim, fontSize: '0.7rem' }}>
+                                                                    (BT: {backtestReturn?.toFixed(1)}%)
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                    </TableCell>
+
+                                                    {/* MDD */}
+                                                    <TableCell align="right" sx={{ color: THEME.danger }}>
+                                                        {mdd ? `-${mdd.toFixed(1)}%` : '-'}
+                                                    </TableCell>
+
+                                                    {/* Stats (Trades / Period) */}
+                                                    <TableCell align="center">
+                                                        <Stack alignItems="center" spacing={0}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{backtestCount > 0 ? `${backtestCount} Runs` : `${trades} Trades`}</Typography>
+                                                            <Typography variant="caption" sx={{ color: THEME.textDim, fontSize: '0.7rem' }}>{backtestCount > 0 ? 'Avg Return' : periodString}</Typography>
+                                                        </Stack>
+                                                    </TableCell>
+
+                                                    {/* Trend (Mini Chart) */}
+                                                    <TableCell align="center">
+                                                        <Box sx={{ width: 100, height: 30, display: 'inline-block' }}>
+                                                            <Line
+                                                                data={generateAreaChartData(isProfit)}
+                                                                options={{
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: false,
+                                                                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                                                                    scales: { x: { display: false }, y: { display: false } },
+                                                                    elements: { point: { radius: 0 }, line: { borderWidth: 1 } }
+                                                                }}
+                                                            />
+                                                        </Box>
+                                                    </TableCell>
+
+                                                    {/* Action Button */}
+                                                    <TableCell align="center">
+                                                        <Button
+                                                            variant="outlined"
+                                                            size="small"
+                                                            startIcon={copyingId === row.id ? <CircularProgress size={16} /> : <ContentCopy />}
+                                                            onClick={() => handleCopyStrategy(row)}
+                                                            disabled={!!copyingId}
+                                                            sx={{
+                                                                color: THEME.text,
+                                                                borderColor: THEME.hairline,
+                                                                borderRadius: 0,
+                                                                '&:hover': { borderColor: THEME.text, bgcolor: 'rgba(0,0,0,0.05)' }
+                                                            }}
+                                                        >
+                                                            Get
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </>
             )}
+            <Dialog
+                open={!!selectedStrategy}
+                onClose={() => setSelectedStrategy(null)}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogTitle sx={{ m: 0, p: 2 }}>
+                    {selectedStrategy?.name} - Performance History
+                    <IconButton
+                        aria-label="close"
+                        onClick={() => setSelectedStrategy(null)}
+                        sx={{
+                            position: 'absolute',
+                            right: 8,
+                            top: 8,
+                            color: (theme) => theme.palette.grey[500],
+                        }}
+                    >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>Strategy Description</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {selectedStrategy?.description || "No description provided."}
+                        </Typography>
+                    </Box>
+
+                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 3 }}>Backtest History</Typography>
+                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee' }}>
+                        <Table size="small">
+                            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                                <TableRow>
+                                    <TableCell>Date</TableCell>
+                                    <TableCell align="right">Return</TableCell>
+                                    <TableCell align="right">Win Rate</TableCell>
+                                    <TableCell align="right">MDD</TableCell>
+                                    <TableCell align="right">Sharpe</TableCell>
+                                    <TableCell align="right">Trades</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {selectedStrategy?.backtest_history?.map((bt: any, idx: number) => (
+                                    <TableRow key={bt.id || idx}>
+                                        <TableCell>{new Date(bt.created_at || Date.now()).toLocaleDateString()}</TableCell>
+                                        <TableCell align="right" sx={{ color: (bt.total_return_rate || 0) >= 0 ? THEME.success : THEME.danger, fontWeight: 600 }}>
+                                            {(bt.total_return_rate || 0).toFixed(2)}%
+                                        </TableCell>
+                                        <TableCell align="right">{(bt.win_rate || 0).toFixed(1)}%</TableCell>
+                                        <TableCell align="right" sx={{ color: THEME.danger }}>{bt.max_drawdown ? `${bt.max_drawdown.toFixed(1)}%` : '-'}</TableCell>
+                                        <TableCell align="right">{bt.sharpe_ratio ? bt.sharpe_ratio.toFixed(2) : '-'}</TableCell>
+                                        <TableCell align="right">{bt.total_trades}</TableCell>
+                                    </TableRow>
+                                ))}
+                                {(!selectedStrategy?.backtest_history || selectedStrategy.backtest_history.length === 0) && (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center">No backtest history available.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </DialogContent>
+            </Dialog>
         </Box>
     )
 }
