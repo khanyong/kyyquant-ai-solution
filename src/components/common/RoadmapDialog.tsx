@@ -2408,6 +2408,41 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         }
       ]
+    },
+    {
+      id: 43,
+      title: '하이브리드 시장 데이터 시스템 구축 (AWS + NAS)',
+      status: 'done',
+      priority: 'high',
+      icon: <Storage />,
+      period: '2025.12.22',
+      description: '클라우드 IP 차단 문제를 해결하기 위한 NAS-AWS 하이브리드 데이터 수집 아키텍처 구현',
+      subtasks: [
+        {
+          title: '✅ 하이브리드 아키텍처 설계 및 구현',
+          details: [
+            'Architecture: 수집(NAS Fetcher)과 수신(AWS Backend) 역할 분리',
+            'Network: 가정용 IP(NAS)를 활용한 네이버/Yahoo 금융 크롤링 우회',
+            'Protocol: NAS → AWS 데이터 푸시(Push) 방식의 단방향 통신 구현'
+          ]
+        },
+        {
+          title: '✅ NAS Fetcher (데이터 수집기) 개발',
+          details: [
+            'Python: FinanceDataReader 및 yfinance 기반 수집 스크립트(main.py) 구현',
+            'Docker: Synology NAS 전용 경량 Docker 이미지 및 Compose 구성',
+            'Optimization: Pandas Timestamp 기반의 시간 동기화 및 에러 핸들링'
+          ]
+        },
+        {
+          title: '✅ AWS Backend 수신 시스템',
+          details: [
+            'API: 외부 데이터 수신을 위한 POST /update-data 엔드포인트 개설',
+            'Cache: 수신 데이터의 메모리 캐싱 및 디스크 영속성(Persistence) 보장',
+            'Frontend: 실시간 인덱스(KOSPI, S&P500 등) 대시보드 연동 완료'
+          ]
+        }
+      ]
     }
   ];
 
