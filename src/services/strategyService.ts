@@ -55,6 +55,7 @@ export interface Strategy {
   }
   backtest_count?: number
   backtest_history?: any[] // Detailed history for drill-down
+  universes?: { id: string, name: string }[]
 }
 
 export interface TradingSignal {
@@ -189,6 +190,45 @@ class StrategyService {
         }
       }
 
+
+      // Fetch Universe Links
+      const universesByStrategy = new Map<string, { id: string, name: string }[]>()
+      if (strategyIds.length > 0) {
+        try {
+          // 1. Link strategy to filters
+          const { data: links } = await supabase
+            .from('strategy_universes')
+            .select('strategy_id, investment_filter_id')
+            .in('strategy_id', strategyIds)
+            .eq('is_active', true)
+
+          if (links && links.length > 0) {
+            const filterIds = Array.from(new Set(links.map(l => l.investment_filter_id)))
+            // 2. Fetch filter details
+            if (filterIds.length > 0) {
+              const { data: filters } = await supabase
+                .from('kw_investment_filters')
+                .select('id, name')
+                .in('id', filterIds)
+
+              const filterMap = new Map<string, string>()
+              filters?.forEach(f => filterMap.set(f.id, f.name))
+
+              links.forEach(l => {
+                const filterName = filterMap.get(l.investment_filter_id)
+                if (filterName) {
+                  const list = universesByStrategy.get(l.strategy_id) || []
+                  list.push({ id: l.investment_filter_id, name: filterName })
+                  universesByStrategy.set(l.strategy_id, list)
+                }
+              })
+            }
+          }
+        } catch (e) {
+          console.warn('유니버스 정보 조회 실패:', e)
+        }
+      }
+
       // 4. 데이터 병합
       const mergedStrategies = strategies.map(s => {
         const profile = profileMap.get(s.user_id)
@@ -213,6 +253,7 @@ class StrategyService {
         return {
           ...s,
           profiles: profile || { name: 'Unknown' },
+          universes: universesByStrategy.get(s.id) || [],
           backtest_count: history.length,
           backtest_history: history,
           backtest_metrics: bestRun ? {

@@ -302,7 +302,7 @@ const StrategyMarket: React.FC = () => {
                                     ) : (
                                         filteredStrategies.flatMap((row, index) => {
                                             // Determine data availability
-                                            const hasLiveProfit = row.total_profit !== undefined && row.total_profit !== 0
+                                            const hasLiveActivity = (row.total_trades || 0) > 0 || (row.total_profit || 0) !== 0
                                             const backtestReturn = row.backtest_metrics?.avg_return || row.backtest_metrics?.best_return
                                             const backtestCount = row.backtest_count || 0
                                             const hasBacktest = backtestReturn !== undefined
@@ -310,7 +310,7 @@ const StrategyMarket: React.FC = () => {
                                             const rowsToRender = []
 
                                             // 1. Live/Mock Row
-                                            if (hasLiveProfit || !hasBacktest) {
+                                            if (hasLiveActivity || !hasBacktest) {
                                                 rowsToRender.push({ ...row, _displaySource: 'MOCK', _keySuffix: 'mock' })
                                             }
 
@@ -392,6 +392,30 @@ const StrategyMarket: React.FC = () => {
                                                                         {renderRow.description ? ` | ${renderRow.description}` : ''}
                                                                     </Typography>
                                                                 </Tooltip>
+                                                                {/* Display Universes Tags */}
+                                                                {renderRow.universes && renderRow.universes.length > 0 && (
+                                                                    <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                                                                        {renderRow.universes.slice(0, 3).map((u, i) => (
+                                                                            <Chip
+                                                                                key={i}
+                                                                                label={u.name}
+                                                                                size="small"
+                                                                                sx={{
+                                                                                    fontSize: '0.6rem',
+                                                                                    height: 18,
+                                                                                    bgcolor: '#F5F5F5',
+                                                                                    color: THEME.textDim,
+                                                                                    border: `1px solid ${THEME.hairline}`
+                                                                                }}
+                                                                            />
+                                                                        ))}
+                                                                        {renderRow.universes.length > 3 && (
+                                                                            <Typography variant="caption" sx={{ color: THEME.textDim, fontSize: '0.6rem', alignSelf: 'center' }}>
+                                                                                +{renderRow.universes.length - 3}
+                                                                            </Typography>
+                                                                        )}
+                                                                    </Stack>
+                                                                )}
                                                             </Box>
                                                         </TableCell>
 
@@ -525,12 +549,30 @@ const StrategyMarket: React.FC = () => {
                         </Typography>
                     </Box>
 
+                    {selectedStrategy?.universes && selectedStrategy.universes.length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>Investment Universe</Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                {selectedStrategy.universes.map((u, idx) => (
+                                    <Chip
+                                        key={idx}
+                                        label={u.name}
+                                        size="medium"
+                                        icon={<FilterList sx={{ fontSize: '1rem !important' }} />}
+                                        sx={{ mb: 1 }}
+                                    />
+                                ))}
+                            </Stack>
+                        </Box>
+                    )}
+
                     <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mt: 3 }}>Backtest History</Typography>
                     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee' }}>
                         <Table size="small">
                             <TableHead sx={{ bgcolor: '#f5f5f5' }}>
                                 <TableRow>
-                                    <TableCell>Date</TableCell>
+                                    <TableCell>Run Date</TableCell>
+                                    <TableCell>Test Period</TableCell>
                                     <TableCell align="right">Return</TableCell>
                                     <TableCell align="right">Win Rate</TableCell>
                                     <TableCell align="right">MDD</TableCell>
@@ -542,6 +584,20 @@ const StrategyMarket: React.FC = () => {
                                 {selectedStrategy?.backtest_history?.map((bt: any, idx: number) => (
                                     <TableRow key={bt.id || idx}>
                                         <TableCell>{new Date(bt.created_at || Date.now()).toLocaleDateString()}</TableCell>
+                                        <TableCell>
+                                            {bt.start_date && bt.end_date ? (
+                                                <Box>
+                                                    <Typography variant="caption" display="block" sx={{ fontSize: '0.75rem', lineHeight: 1.2 }}>
+                                                        {new Date(bt.start_date).toLocaleDateString()} ~
+                                                    </Typography>
+                                                    <Typography variant="caption" display="block" sx={{ fontSize: '0.75rem', lineHeight: 1.2 }}>
+                                                        {new Date(bt.end_date).toLocaleDateString()}
+                                                    </Typography>
+                                                </Box>
+                                            ) : (
+                                                <Typography variant="caption" color="text.secondary">-</Typography>
+                                            )}
+                                        </TableCell>
                                         <TableCell align="right" sx={{ color: (bt.total_return_rate || 0) >= 0 ? THEME.success : THEME.danger, fontWeight: 600 }}>
                                             {(bt.total_return_rate || 0).toFixed(2)}%
                                         </TableCell>
@@ -553,7 +609,7 @@ const StrategyMarket: React.FC = () => {
                                 ))}
                                 {(!selectedStrategy?.backtest_history || selectedStrategy.backtest_history.length === 0) && (
                                     <TableRow>
-                                        <TableCell colSpan={6} align="center">No backtest history available.</TableCell>
+                                        <TableCell colSpan={7} align="center">No backtest history available.</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
