@@ -8,6 +8,7 @@ from typing import List, Dict, Optional
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
+import asyncio
 
 from indicators.calculator import IndicatorCalculator
 from data.provider import DataProvider
@@ -80,6 +81,38 @@ async def calculate_indicators(request: CalculateRequest):
             )
 
         logger.info(f"📊 Loaded {len(df)} days of historical data")
+
+        # 1.5 현재가 병합 (frontend logic과 동일하게 맞춤)
+        # kw_price_current 테이블에서 최신 가격 조회
+        try:
+             # run_in_executor for sync supabase call
+            loop = asyncio.get_event_loop()
+            curr_resp = await loop.run_in_executor(None, lambda: data_provider.supabase.table('kw_price_current').select('*').eq('stock_code', request.stock_code).execute())
+            
+            if curr_resp.data and len(curr_resp.data) > 0:
+                row = curr_resp.data[0]
+                current_price = float(row.get('current_price') or 0)
+                
+                if current_price > 0:
+                    now = datetime.now()
+                    last_date = df.index[-1]
+                    # 오늘 날짜의 데이터가 없으면 추가
+                    if last_date.date() < now.date():
+                        new_row = pd.DataFrame([{
+                            'open': current_price, 'high': current_price, 
+                            'low': current_price, 'close': current_price, 
+                            'volume': 0 
+                        }], index=[pd.Timestamp(now)])
+                        df = pd.concat([df, new_row])
+                        logger.info(f"➕ Appended current price {current_price} for {request.stock_code}")
+                    # 오늘 날짜 데이터가 있으면 업데이트 (종가=현재가)
+                    elif last_date.date() == now.date():
+                        df.iloc[-1, df.columns.get_loc('close')] = current_price
+                        logger.info(f"🔄 Updated today's close to {current_price} for {request.stock_code}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to merge current price: {e}")
+            # 실패해도 과거 데이터로 계산 계속 진행
+
 
         # 2. 지표 계산
         # Use lazy initialization

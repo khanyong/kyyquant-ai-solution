@@ -1,0 +1,596 @@
+{
+  "name": "AWS - Workflow V9-4: Batch Optimized (Stable)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/20 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 20 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        112
+      ],
+      "id": "98418120-ff3e-4497-97d8-49610e477ddb"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "={{$env.SUPABASE_URL || 'https://hznkyaomtrpzcayayayh.supabase.co'}}"
+            },
+            {
+              "name": "SUPABASE_SERVICE_ROLE_KEY",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "BACKEND_API_URL",
+              "value": "http://auto-stock-backend:8001"
+            },
+            {
+              "name": "DEBUG_INFO",
+              "value": "v9-4: Batch Optimized"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Env Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        112
+      ],
+      "id": "9e57fa6a-29af-41b3-a57e-ad669dfe0060"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json[\"SUPABASE_URL\"] + '/rest/v1/rpc/get_active_strategies_with_universe' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {}
+      },
+      "name": "Get Active Strategies (RPC)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -344,
+        112
+      ],
+      "id": "e55fc741-1efd-4e0c-9433-7f0829b49fb1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare monitoring tasks\nconst strategy = $input.item.json;\n\nlet universe = [];\nif (strategy.filtered_stocks) {\n  if (Array.isArray(strategy.filtered_stocks)) {\n    universe = strategy.filtered_stocks.filter(code => code && typeof code === 'string');\n  } else if (typeof strategy.filtered_stocks === 'object') {\n    universe = Object.values(strategy.filtered_stocks).filter(code => code && typeof code === 'string');\n  }\n}\n\nconst outputs = [];\nconst strategyId = strategy.strategy_id || strategy.id;\nconst strategyName = strategy.strategy_name || strategy.name;\n\n// 1. Entry monitoring\nif (strategy.entry_conditions && universe.length > 0) {\n  universe.forEach(stock_code => {\n    outputs.push({\n      json: {\n        strategy_id: strategyId,\n        user_id: strategy.user_id,\n        strategy_name: strategyName,\n        stock_code: stock_code,\n        monitoring_type: 'ENTRY',\n        conditions: strategy.entry_conditions,\n        position_size: strategy.position_size\n      }\n    });\n  });\n}\n\n// 2. Exit monitoring\nif (strategy.exit_conditions) {\n  outputs.push({\n    json: {\n      strategy_id: strategyId,\n      user_id: strategy.user_id,\n      strategy_name: strategyName,\n      monitoring_type: 'EXIT_QUERY',\n      conditions: strategy.exit_conditions,\n      position_size: strategy.position_size\n    }\n  });\n}\n\nreturn outputs;"
+      },
+      "name": "Prepare Monitoring Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -152,
+        101
+      ],
+      "id": "4e33c004-5f77-4d9b-824c-f033d9737df1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.monitoring_type === 'EXIT_QUERY');"
+      },
+      "name": "Filter Exit Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        56,
+        0
+      ],
+      "id": "093127f2-1fe6-487c-909d-357003adc371"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.monitoring_type !== 'EXIT_QUERY');"
+      },
+      "name": "Filter Entry Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        56,
+        208
+      ],
+      "id": "f86ad00b-017d-4813-9211-70546bd5546c"
+    },
+    {
+      "parameters": {
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/kw_portfolio?select=stock_code&user_id=eq.{{$json.user_id}}&quantity=gt.0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Held Stocks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        264,
+        0
+      ],
+      "id": "35a3d90a-d399-43be-a992-77deb1d3d67a"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert held stocks to exit monitoring tasks\nconst strategy = $('If Exit Query').first().json;\nconst heldStocks = $input.all().map(item => item.json).filter(s => s.stock_code);\n\nif (!heldStocks || heldStocks.length === 0) {\n  return [{ json: { monitoring_type: 'SKIP' } }];\n}\n\nconst uniqueStockCodes = [...new Set(heldStocks.map(s => s.stock_code))];\n\nreturn uniqueStockCodes.map(stockCode => ({\n  json: {\n    strategy_id: strategy.strategy_id,\n    user_id: strategy.user_id,\n    strategy_name: strategy.strategy_name,\n    stock_code: stockCode,\n    monitoring_type: 'EXIT',\n    conditions: strategy.conditions,\n    position_size: strategy.position_size\n  }\n}));"
+      },
+      "name": "Create Exit Monitoring Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        456,
+        0
+      ],
+      "id": "9a602c2e-4e6d-4c9d-a44c-e95f0646f68b"
+    },
+    {
+      "parameters": {},
+      "name": "Merge Tasks",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        264,
+        208
+      ],
+      "id": "67c56feb-4b2d-4d7a-8996-d7582707d310"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [
+        456,
+        208
+      ],
+      "id": "fb21f697-d9f1-4017-b4cf-2f02e031cba8"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.monitoring_type }}",
+              "operation": "notEqual",
+              "value2": "SKIP"
+            }
+          ]
+        }
+      },
+      "name": "If Valid Task",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        664,
+        208
+      ],
+      "id": "1f1a59a3-53ca-4d90-83af-73d6b6bf6a81"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json[\"BACKEND_API_URL\"] + '/api/strategy/check-signal' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"strategy_id\": \"{{ $json.strategy_id }}\",\n  \"stock_code\": \"{{ $json.stock_code }}\"\n}",
+        "options": {}
+      },
+      "name": "Check Strategy Signal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        856,
+        208
+      ],
+      "id": "53d6d489-3dce-4463-af7b-adac9354caa9"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process API Response and Merge Logic\nconst originalTask = $('If Valid Task').item.json;\nconst apiResponse = $input.item.json;\n\n// Determine conditions met based on signal type\nconst entryMet = apiResponse.signal_type === 'BUY' ? apiResponse.entry_conditions_met : {};\nconst exitMet = apiResponse.signal_type === 'SELL' ? apiResponse.exit_conditions_met : {};\n\n// Scale strength\nconst score = (apiResponse.signal_strength || 0) * 100;\n\nreturn {\n  json: {\n    ...apiResponse,\n    monitoring_type: originalTask.monitoring_type,\n    strategy_id: originalTask.strategy_id,\n    stock_code: originalTask.stock_code,\n    stock_name: apiResponse.stock_name || originalTask.stock_name || originalTask.stock_code,\n    current_price: apiResponse.current_price,\n    condition_match_score: score,\n    conditions_met: entryMet,\n    exit_conditions_met: exitMet,\n    is_near_condition: score >= 80,\n    is_held: originalTask.monitoring_type === 'EXIT'\n  }\n};"
+      },
+      "name": "Process API Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1064,
+        208
+      ],
+      "id": "13b10d8e-aec1-4aaf-817b-b932941ea919"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.condition_match_score }}",
+              "operation": "largerEqual",
+              "value2": 50
+            }
+          ]
+        }
+      },
+      "name": "If Score >= 50",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1256,
+        208
+      ],
+      "id": "864a4f53-9380-4c1e-96b8-48d2fad81c2e"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Env Config').first().json[\"SUPABASE_URL\"]}}/rest/v1/strategy_monitoring?on_conflict=strategy_id,stock_code",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates, return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  strategy_id: $json.strategy_id,\n  stock_code: $json.stock_code,\n  stock_name: $json.stock_name,\n  current_price: $json.current_price,\n  condition_match_score: $json.condition_match_score,\n  conditions_met: $json.conditions_met,\n  is_near_entry: $json.is_near_condition,\n  exit_condition_match_score: $json.monitoring_type === 'EXIT' ? $json.condition_match_score : null,\n  exit_conditions_met: $json.monitoring_type === 'EXIT' ? $json.exit_conditions_met : null,\n  is_near_exit: $json.monitoring_type === 'EXIT' ? $json.is_near_condition : null,\n  is_held: $json.is_held,\n  updated_at: 'now()'\n} }}",
+        "options": {}
+      },
+      "name": "Upsert to Strategy Monitoring",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1464,
+        112
+      ],
+      "id": "ad03ea63-942e-4a16-905b-618109928521"
+    },
+    {
+      "parameters": {
+        "unit": "seconds"
+      },
+      "name": "Wait Loop",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1656,
+        208
+      ],
+      "id": "89d4fe5d-7346-4bdc-b642-27106ba183af",
+      "webhookId": "c01591b4-5bf8-4b1c-a80b-edea23b21f23"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Env Config').first().json[\"BACKEND_API_URL\"] + '/api/market/market-status' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "26185d31-a47c-4966-b39d-eac3f39888f3",
+      "name": "장 운영 상태 조회 (API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -552,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_open }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-market-open",
+      "name": "장 열림 여부 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        288
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 20 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Env Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Env Config": {
+      "main": [
+        [
+          {
+            "node": "장 운영 상태 조회 (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장 운영 상태 조회 (API)": {
+      "main": [
+        [
+          {
+            "node": "장 열림 여부 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장 열림 여부 확인": {
+      "main": [
+        [
+          {
+            "node": "Get Active Strategies (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Strategies (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Prepare Monitoring Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Monitoring Tasks": {
+      "main": [
+        [
+          {
+            "node": "Filter Exit Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter Entry Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Exit Tasks": {
+      "main": [
+        [
+          {
+            "node": "Get Held Stocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Entry Tasks": {
+      "main": [
+        [
+          {
+            "node": "Merge Tasks",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Held Stocks": {
+      "main": [
+        [
+          {
+            "node": "Create Exit Monitoring Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Exit Monitoring Tasks": {
+      "main": [
+        [
+          {
+            "node": "Merge Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Tasks": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "If Valid Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Valid Task": {
+      "main": [
+        [
+          {
+            "node": "Check Strategy Signal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Strategy Signal": {
+      "main": [
+        [
+          {
+            "node": "Process API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process API Response": {
+      "main": [
+        [
+          {
+            "node": "If Score >= 50",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Score >= 50": {
+      "main": [
+        [
+          {
+            "node": "Upsert to Strategy Monitoring",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert to Strategy Monitoring": {
+      "main": [
+        [
+          {
+            "node": "Wait Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Loop": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "0bc5cc2159a2dbed51051542250cf9a7487534fd99dde18e520ed8db75a37ba7"
+  },
+  "tags": []
+}

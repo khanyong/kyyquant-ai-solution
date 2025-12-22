@@ -1,0 +1,351 @@
+{
+  "name": "AWS - 시장 현재가 업데이트 V4-1 (모의투자용)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "1분마다 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "SUPABASE_URL",
+              "value": "={{$env.SUPABASE_URL || 'https://hznkyaomtrpzcayayayh.supabase.co'}}"
+            },
+            {
+              "name": "SUPABASE_SERVICE_ROLE_KEY",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "SUPABASE_ANON_KEY",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            },
+            {
+              "name": "KIWOOM_APP_KEY",
+              "value": "={{$env.KIWOOM_APP_KEY}}"
+            },
+            {
+              "name": "KIWOOM_APP_SECRET",
+              "value": "={{$env.KIWOOM_APP_SECRET}}"
+            },
+            {
+              "name": "BACKEND_API_URL",
+              "value": "http://auto-stock-backend:8001"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "env-config",
+      "name": "Env Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Env Config').first().json[\"BACKEND_API_URL\"] + '/api/market/market-status' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-market-status",
+      "name": "장 운영 상태 조회 (API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_open }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-market-open",
+      "name": "장 열림 여부 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/oauth2/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"grant_type\": \"client_credentials\",\n  \"appkey\": \"{{$('Env Config').first().json[\"KIWOOM_APP_KEY\"]}}\",\n  \"secretkey\": \"{{$('Env Config').first().json[\"KIWOOM_APP_SECRET\"]}}\"\n}",
+        "options": {}
+      },
+      "id": "get-token",
+      "name": "키움 토큰 발급",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Env Config').first().json[\"SUPABASE_URL\"] + '/rest/v1/rpc/get_active_strategies_with_universe' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json[\"SUPABASE_SERVICE_ROLE_KEY\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {}
+      },
+      "id": "get-active-strategies",
+      "name": "자동매매 전략 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst envVars = $('Env Config').first().json;\nconst tokenData = $('키움 토큰 발급').first().json;\n\n// v44 로직 그대로: 중복 제거 로직 추가\nconst uniqueStocks = new Set();\n\nfor (const item of items) {\n  const strategy = item.json;\n  let stockCodes = [];\n\n  if (strategy.filtered_stocks) {\n    if (Array.isArray(strategy.filtered_stocks)) {\n      stockCodes = strategy.filtered_stocks.filter(code => code && typeof code === 'string');\n    } else if (typeof strategy.filtered_stocks === 'object') {\n      stockCodes = Object.values(strategy.filtered_stocks).filter(code => code && typeof code === 'string');\n    }\n  }\n\n  stockCodes.forEach(code => uniqueStocks.add(code));\n}\n\n// v44와 동일한 구조로 결과 생성\nconst results = Array.from(uniqueStocks).map((stockCode, index) => ({\n  json: {\n    stock_code: stockCode,\n    index: index,\n    total: uniqueStocks.size,\n    access_token: tokenData.access_token || tokenData.token,\n    SUPABASE_URL: envVars.SUPABASE_URL,\n    SUPABASE_SERVICE_ROLE_KEY: envVars.SUPABASE_SERVICE_ROLE_KEY\n  }\n}));\n\nconsole.log(`📊 Total unique stocks to process: ${results.length}`);\nreturn results;"
+      },
+      "id": "extract-stocks",
+      "name": "종목 코드 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mockapi.kiwoom.com/api/dostk/mrkcond",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "name": "authorization",
+              "value": "={{'Bearer ' + $json.access_token}}"
+            },
+            {
+              "name": "cont-yn",
+              "value": "N"
+            },
+            {
+              "name": "api-id",
+              "value": "ka10004"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"stk_cd\": \"{{$json.stock_code}}\"}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          }
+        }
+      },
+      "id": "get-price",
+      "name": "키움 호가 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// v44 '원본 데이터 병합' + '데이터 파싱' 통합\n// HTTP Request 노드(키움 호가 조회)의 출력과 그 이전 노드(종목 코드 추출)의 출력을 매핑\n\nconst kiwoomResponses = $input.all();\n// '종목 코드 추출' 노드의 데이터가 필요함. \n// n8n에서는 노드 이름으로 직접 참조 가능.\nconst originalInputs = $('종목 코드 추출').all();\n\nconst results = [];\n\nfor (let i = 0; i < kiwoomResponses.length; i++) {\n  const kiwoomResponse = kiwoomResponses[i].json;\n  // 순서가 보장된다고 가정 (batching을 써도 순차 실행이므로)\n  const original = originalInputs[i];\n\n  if (!original) continue;\n\n  const parsePrice = (price) => {\n    if (!price) return 0;\n    return parseFloat(String(price).replace(/[+\\-]/g, ''));\n  };\n\n  const selPrice = parsePrice(kiwoomResponse.sel_fpr_bid);\n  const buyPrice = parsePrice(kiwoomResponse.buy_fpr_bid);\n  const estimatedPrice = (selPrice + buyPrice) / 2;\n\n  const selVolume = parseInt(String(kiwoomResponse.sel_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n  const buyVolume = parseInt(String(kiwoomResponse.buy_fpr_req || 0).replace(/[+\\-]/g, '')) || 0;\n\n  results.push({\n    json: {\n      stock_code: original.json.stock_code,\n      current_price: estimatedPrice,\n      change_price: 0,\n      change_rate: 0,\n      volume: selVolume + buyVolume,\n      high_52w: selPrice,\n      low_52w: buyPrice,\n      updated_at: new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "parse-data",
+      "name": "데이터 파싱 및 병합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$('Env Config').first().json.SUPABASE_URL}}/rest/v1/kw_price_current",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stock_code\": \"{{$json.stock_code}}\",\n  \"current_price\": {{$json.current_price}},\n  \"volume\": {{$json.volume}},\n  \"high_52w\": {{$json.high_52w}},\n  \"low_52w\": {{$json.low_52w}},\n  \"updated_at\": \"{{$json.updated_at}}\"\n}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$('Env Config').first().json.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $('Env Config').first().json.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates, return=representation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "upsert",
+      "name": "Supabase UPSERT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2050, 300]
+    }
+  ],
+  "connections": {
+    "1분마다 실행": {
+      "main": [
+        [
+          {
+            "node": "Env Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Env Config": {
+      "main": [
+        [
+          {
+            "node": "장 운영 상태 조회 (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장 운영 상태 조회 (API)": {
+      "main": [
+        [
+          {
+            "node": "장 열림 여부 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "장 열림 여부 확인": {
+      "main": [
+        [
+          {
+            "node": "키움 토큰 발급",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 토큰 발급": {
+      "main": [
+        [
+          {
+            "node": "자동매매 전략 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "자동매매 전략 조회": {
+      "main": [
+        [
+          {
+            "node": "종목 코드 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "종목 코드 추출": {
+      "main": [
+        [
+          {
+            "node": "키움 호가 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "키움 호가 조회": {
+      "main": [
+        [
+          {
+            "node": "데이터 파싱 및 병합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "데이터 파싱 및 병합": {
+      "main": [
+        [
+          {
+            "node": "Supabase UPSERT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true
+}

@@ -549,3 +549,146 @@ async def get_global_indices():
     Zero latency, no blocking.
     """
     return GLOBAL_INDICES_CACHE
+
+
+# --- [Backfill & Daily Close Logic] ---
+class SyncHistoryRequest(BaseModel):
+    stock_codes: List[str]
+    days: int = 100
+
+@router.post("/sync-history")
+async def sync_history(request: SyncHistoryRequest):
+    """
+    특정 종목들의 과거 데이터를 백필합니다. (FinanceDataReader 사용)
+    - stock_codes: 대상 종목 코드 리스트
+    - days: 백필할 기간 (기본 100일)
+    """
+    import FinanceDataReader as fdr
+    import pandas as pd
+    
+    supabase = get_supabase_client()
+    results = {"success": [], "failed": []}
+    
+    start_date = (datetime.datetime.now() - timedelta(days=request.days)).strftime('%Y-%m-%d')
+    
+    print(f"[Market] Starting backfill for {len(request.stock_codes)} stocks (since {start_date})...")
+    
+    for code in request.stock_codes:
+        try:
+            # Fetch data from Naver Finance via FDR
+            df = fdr.DataReader(code, start_date)
+            
+            if df is None or df.empty:
+                results["failed"].append({"code": code, "reason": "No data returned"})
+                continue
+                
+            # Prepare for DB Insert
+            records = []
+            for date, row in df.iterrows():
+                # Ensure date is string
+                trade_date = date.strftime('%Y-%m-%d')
+                
+                records.append({
+                    "stock_code": code,
+                    "trade_date": trade_date,
+                    "open": float(row['Open']),
+                    "high": float(row['High']),
+                    "low": float(row['Low']),
+                    "close": float(row['Close']),
+                    "volume": int(row['Volume']),
+                    "change_rate": float(row['Change']) * 100 if 'Change' in row else 0
+                })
+            
+            if not records:
+                continue
+
+            # Upsert to Supabase
+            # Note: Supabase bulk upsert matches on Primary Key (assumed: stock_code + trade_date)
+            response = supabase.table('kw_price_daily').upsert(records).execute()
+            
+            results["success"].append({"code": code, "count": len(records)})
+            print(f"[Market] Backfilled {code}: {len(records)} rows")
+            
+        except Exception as e:
+            print(f"[Market] Failed backfill for {code}: {e}")
+            results["failed"].append({"code": code, "reason": str(e)})
+            
+    return results
+
+
+@router.post("/daily-close")
+async def daily_close_batch():
+    """
+    [장 마감 배치]
+    모든 활성 전략의 유니버스 종목에 대해 '최근 5일' 데이터를 동기화합니다.
+    - 장 마감 후 실행 권장 (15:40 이후)
+    - 누락된 데이터 자동 복구
+    """
+    import FinanceDataReader as fdr
+    
+    supabase = get_supabase_client()
+    
+    # 1. Fetch all active stock codes using RPC
+    try:
+        rpc_response = supabase.rpc('get_active_strategies_with_universe').execute()
+        strategies = rpc_response.data if rpc_response.data else []
+        
+        unique_stocks = set()
+        for strategy in strategies:
+            stocks = strategy.get('filtered_stocks', [])
+            if isinstance(stocks, list):
+                for s in stocks:
+                    unique_stocks.add(s)
+            elif isinstance(stocks, dict):
+                 for s in stocks.values():
+                    unique_stocks.add(s)
+                    
+        target_codes = list(unique_stocks)
+        print(f"[DailyClose] Found {len(target_codes)} unique stocks to sync.")
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch active universe: {e}")
+
+    # 2. Sync Last 5 Days for all targets
+    # We reuse the logic from sync_history but with fixed 5 days
+    results = {"success": [], "failed": []}
+    days_to_sync = 5
+    start_date = (datetime.datetime.now() - timedelta(days=days_to_sync)).strftime('%Y-%m-%d')
+    
+    for code in target_codes:
+        try:
+            df = fdr.DataReader(code, start_date)
+            
+            if df is None or df.empty:
+                results["failed"].append(code)
+                continue
+                
+            records = []
+            for date, row in df.iterrows():
+                trade_date = date.strftime('%Y-%m-%d')
+                records.append({
+                    "stock_code": code,
+                    "trade_date": trade_date,
+                    "open": float(row['Open']),
+                    "high": float(row['High']),
+                    "low": float(row['Low']),
+                    "close": float(row['Close']),
+                    "volume": int(row['Volume']),
+                    "change_rate": float(row['Change']) * 100 if 'Change' in row else 0
+                })
+            
+            if records:
+                supabase.table('kw_price_daily').upsert(records).execute()
+                results["success"].append(code)
+                
+        except Exception as e:
+            print(f"[DailyClose] Error {code}: {e}")
+            results["failed"].append(code)
+            
+    return {
+        "status": "completed",
+        "total_targets": len(target_codes),
+        "success_count": len(results["success"]),
+        "fail_count": len(results["failed"]),
+        "failed_stocks": results["failed"]
+    }
