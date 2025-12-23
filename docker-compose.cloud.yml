@@ -49,6 +49,8 @@ services:
       - TZ=Asia/Seoul
       - N8N_HOST=stock.bll-pro.com
       - WEBHOOK_URL=https://stock.bll-pro.com/
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
     volumes:
       - n8n_data:/home/node/.n8n
     networks:

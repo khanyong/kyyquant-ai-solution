@@ -27,7 +27,7 @@ class CalculateRequest(BaseModel):
     """지표 계산 요청 모델"""
     stock_code: str
     indicators: List[IndicatorRequest]
-    days: int = 60  # 과거 데이터 일수
+    days: int = 200  # 과거 데이터 일수 (정확도 향상을 위해 60 -> 200일로 증량)
 
 
 class CalculateResponse(BaseModel):
