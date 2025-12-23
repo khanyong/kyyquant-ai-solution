@@ -33,9 +33,8 @@ interface EmergencyControlPanelProps {
 export default function EmergencyControlPanel({ onOpComplete }: EmergencyControlPanelProps) {
     const [loading, setLoading] = useState(false)
 
-    // Dialog States
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-    const [actionType, setActionType] = useState<'HALT' | 'CANCEL_ORDERS' | 'LIQUIDATE_ALL' | null>(null)
+    const [actionType, setActionType] = useState<'HALT' | 'CANCEL_ORDERS' | 'LIQUIDATE_ALL'>('HALT')
     const [confirmInput, setConfirmInput] = useState('')
     const [confirmError, setConfirmError] = useState('')
 
