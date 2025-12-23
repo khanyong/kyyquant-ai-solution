@@ -37,42 +37,9 @@ class KiwoomAPIClient:
         self.token_expires_at = None
 
     def _get_access_token(self) -> str:
-        """OAuth 2.0 액세스 토큰 발급"""
-        if self.access_token and self.token_expires_at:
-            if datetime.now() < self.token_expires_at:
-                return self.access_token
-
-        url = f"{self.base_url}/oauth2/token"
-        headers = {
-            "Content-Type": "application/json;charset=UTF-8"
-        }
-        data = {
-            "grant_type": "client_credentials",
-            "appkey": self.app_key.strip() if self.app_key else "",
-            "secretkey": self.app_secret.strip() if self.app_secret else ""
-        }
-
-        try:
-            print(f"[KiwoomAPI] Requesting Token from {url}")
-            response = requests.post(url, headers=headers, data=json.dumps(data), timeout=10)
-            result = response.json()
-
-            if 'error' in result:
-                 raise Exception(f"Token issuance failed: {result}")
-
-            self.access_token = result.get('token') or result.get('access_token')
-            if not self.access_token:
-                 raise Exception(f"Token not found in response: {result}")
-
-            expires_in = int(result.get('expires_in', 86400))
-            self.token_expires_at = datetime.now() + timedelta(seconds=expires_in - 300)
-
-            print(f"[KiwoomAPI] Access token issued successfully (expires at {self.token_expires_at})")
-            return self.access_token
-
-        except requests.exceptions.RequestException as e:
-            print(f"[KiwoomAPI] Token issuance failed: {e}")
-            raise Exception(f"Failed to get access token: {str(e)}")
+        """OAuth 2.0 액세스 토큰 발급 (TokenManager 사용)"""
+        from .token_manager import get_token_manager
+        return get_token_manager(self.is_demo).get_token()
 
     def get_current_price(self, stock_code: str) -> Optional[Dict[str, Any]]:
         """실시간 현재가 조회 (ka10001)"""
@@ -123,11 +90,14 @@ class KiwoomAPIClient:
             }
             # Step 1: Fetch Summary (qry_tp=1)
             # This returns accurate Total Assets, Cash, etc.
+            # Step 1: Fetch Summary (qry_tp=1)
+            # This returns accurate Total Assets, Cash, etc.
             data_summary = {
                 "qry_tp": "1",          
-                "dmst_stex_tp": "KRX",
-                "acnt_no": self.account_no if self.account_no else ""
+                "dmst_stex_tp": "KRX"
             }
+            if not self.is_demo:
+                 data_summary["acnt_no"] = self.account_no if self.account_no else ""
             
             summary = {}
             try:
@@ -155,9 +125,10 @@ class KiwoomAPIClient:
             # This returns accurate Average Price (pur_pric) and individual details
             data_detail = {
                 "qry_tp": "2",          
-                "dmst_stex_tp": "KRX",
-                "acnt_no": self.account_no if self.account_no else ""
+                "dmst_stex_tp": "KRX"
             }
+            if not self.is_demo:
+                 data_detail["acnt_no"] = self.account_no if self.account_no else ""
             
             holdings = []
             try:
@@ -173,8 +144,12 @@ class KiwoomAPIClient:
                          if avg_price == 0:
                              avg_price = float(item.get('buy_avg_prc', 0))
                              
+                         # [FIX] Strip 'A' prefix from stock code (e.g. A005930 -> 005930)
+                         raw_code = item.get('stk_cd', '')
+                         stock_code = raw_code[1:] if raw_code.startswith('A') else raw_code
+                             
                          holdings.append({
-                            'stock_code': item.get('stk_cd'),
+                            'stock_code': stock_code,
                             'stock_name': item.get('stk_nm'),
                             'quantity': int(item.get('rmnd_qty', 0)),
                             'current_price': float(item.get('cur_prc', 0)),
@@ -234,6 +209,10 @@ class KiwoomAPIClient:
                 "next-key": ""
             }
             
+            # [FIX] Kiwoom API requires code without 'A' prefix
+            if stock_code.startswith('A'):
+                stock_code = stock_code[1:]
+
             # 시장가(3) vs 지정가(0)
             trade_type = "3" if price == 0 else "0"
             price_str = "" if price == 0 else str(price)
@@ -255,8 +234,12 @@ class KiwoomAPIClient:
             print(f"[KiwoomAPI] Order Response: {result}")
 
             if result.get('return_code') != '0' and result.get('return_code') != 0:
-                print(f"[KiwoomAPI] Order Failed: {result.get('return_msg')}")
-                return None
+                error_msg = result.get('return_msg', 'Unknown Error')
+                print(f"[KiwoomAPI] Order Failed: {error_msg}")
+                return {
+                    'status': 'error',
+                    'message': error_msg
+                }
             
             return {
                 'status': 'success',

@@ -52,35 +52,13 @@ class KiwoomWebSocketClient:
         logger.info(f"[KiwoomWS] Initialized - URL: {self.ws_url}, Account: {self.account_no}")
 
     async def _get_access_token(self) -> str:
-        """OAuth 2.0 액세스 토큰 발급 (REST API 사용)"""
-        import aiohttp
-
-        if self.is_demo:
-            token_url = "https://mockapi.kiwoom.com/oauth2/token"
-        else:
-            token_url = "https://openapi.kiwoom.com:9443/oauth2/token"
-
-        payload = {
-            "grant_type": "client_credentials",
-            "appkey": self.app_key,
-            "secretkey": self.app_secret
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(token_url, json=payload) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    raise Exception(f"토큰 발급 실패: {error_text}")
-
-                result = await response.json()
-
-                # 다양한 응답 형식 지원
-                token = result.get('access_token') or result.get('token') or result.get('accessToken')
-                if not token:
-                    raise Exception(f"토큰을 찾을 수 없음: {result}")
-
-                logger.info(f"[KiwoomWS] Access token obtained: {token[:20]}...")
-                return token
+        """OAuth 2.0 액세스 토큰 발급 (TokenManager 사용)"""
+        from .token_manager import get_token_manager
+        
+        loop = asyncio.get_event_loop()
+        # Blocking call to TokenManager within executor
+        token = await loop.run_in_executor(None, get_token_manager(self.is_demo).get_token)
+        return token
 
     async def connect(self):
         """WebSocket 연결"""

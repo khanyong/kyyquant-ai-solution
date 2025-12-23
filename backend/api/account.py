@@ -68,14 +68,16 @@ async def get_account_info():
                 detail="계좌 정보 조회 실패 - 키움 API 연결을 확인하세요"
             )
 
+        summary = balance_data.get('summary', {})
+        
         return AccountInfoResponse(
             account_no=balance_data['account_no'],
             is_demo=kiwoom_client.is_demo,
-            total_asset=balance_data['total_asset'],
-            cash_balance=balance_data['cash_balance'],
-            stock_value=balance_data['stock_value'],
-            profit_loss=balance_data['profit_loss'],
-            profit_loss_rate=balance_data['profit_loss_rate'],
+            total_asset=summary.get('total_assets', 0),
+            cash_balance=summary.get('withdrawable_amount', 0),
+            stock_value=summary.get('total_evaluation_amount', 0),
+            profit_loss=summary.get('total_evaluation_profit_loss', 0),
+            profit_loss_rate=summary.get('total_earning_rate', 0),
             timestamp=datetime.now()
         )
 
@@ -105,21 +107,26 @@ async def get_balance():
             )
 
         # 보유 종목 조회
-        holdings_data = kiwoom_client.get_holdings()
-        if holdings_data is None:
-            holdings_data = []
+        holdings_data = balance_data.get('holdings', [])
 
         # 보유 종목 변환
-        holdings = [
-            StockHoldingResponse(**holding)
-            for holding in holdings_data
-        ]
+        holdings = []
+        for holding in holdings_data:
+            # Pydantic 모델에 필요한 필드 보완
+            if 'available_quantity' not in holding:
+                holding['available_quantity'] = holding.get('quantity', 0)
+            if 'value' not in holding:
+                holding['value'] = holding.get('current_price', 0) * holding.get('quantity', 0)
+            
+            holdings.append(StockHoldingResponse(**holding))
+
+        summary = balance_data.get('summary', {})
 
         return BalanceResponse(
             account_no=balance_data['account_no'],
-            total_asset=balance_data['total_asset'],
-            cash_balance=balance_data['cash_balance'],
-            stock_value=balance_data['stock_value'],
+            total_asset=summary.get('total_assets', 0),
+            cash_balance=summary.get('withdrawable_amount', 0),
+            stock_value=summary.get('total_evaluation_amount', 0),
             holdings=holdings,
             timestamp=datetime.now()
         )
@@ -141,7 +148,8 @@ async def get_holdings():
     try:
         kiwoom_client = get_kiwoom_client()
 
-        holdings_data = kiwoom_client.get_holdings()
+        balance_data = kiwoom_client.get_account_balance()
+        holdings_data = balance_data.get('holdings', []) if balance_data else []
         if holdings_data is None:
             return []
 

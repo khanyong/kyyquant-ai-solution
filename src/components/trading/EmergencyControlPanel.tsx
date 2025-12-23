@@ -119,26 +119,26 @@ export default function EmergencyControlPanel({ onOpComplete }: EmergencyControl
             } else if (actionType === 'LIQUIDATE_ALL') {
                 // 1. Get Current Holdings
                 const balance = await kiwoomApi.getAccountBalance()
-                if (!balance?.output2) {
-                    throw new Error('보유 잔고를 조회할 수 없습니다.')
-                }
 
-                const holdings = balance.output2
-                if (holdings.length === 0) {
+                // Backend returns 'holdings', incorrect raw KIS used 'output2'
+                const holdings = balance.holdings || balance.output2 || []
+
+                if (!holdings || holdings.length === 0) {
                     alert('보유 중인 종목이 없습니다.')
                 } else {
                     let successCount = 0
                     // 2. Loop and Market Sell
                     for (const item of holdings) {
-                        const stockCode = item.pdno
-                        const qty = parseInt(item.hldg_qty)
+                        // Backend: stock_code, Quantiy
+                        // Legacy KIS: pdno, hldg_qty (handle both just in case)
+                        const stockCode = item.stock_code || item.pdno
+                        const qty = item.quantity !== undefined ? item.quantity : parseInt(item.hldg_qty)
 
                         if (qty > 0) {
                             // Market Sell (00: 지정가, 03: 시장가) -> Using kiwoomApi helper
-                            // Assuming sellStock takes (code, qty, price, type). If basic, maybe 0 price for market logic handling required
-                            // Here we act as if sending 0 price is market order in our safe wrapper or backend
                             const result = await kiwoomApi.sellStock(stockCode, qty, 0)
-                            if (result?.rt_cd === '0') successCount++
+                            // Backend returns { status: 'success' }, KIS returns rt_cd='0'
+                            if (result?.status === 'success' || result?.rt_cd === '0') successCount++
                         }
                     }
                     alert(`${holdings.length}종목 중 ${successCount}종목에 대해 시장가 매도 주문을 전송했습니다.`)
@@ -146,7 +146,8 @@ export default function EmergencyControlPanel({ onOpComplete }: EmergencyControl
             }
         } catch (err: any) {
             console.error('Emergency Action Failed:', err)
-            alert(`작업 실패: ${err.message}`)
+            const errorMessage = err.response?.data?.detail || err.message || '알 수 없는 오류가 발생했습니다.'
+            alert(`작업 실패: ${errorMessage}`)
         } finally {
             setLoading(false)
             onOpComplete()
