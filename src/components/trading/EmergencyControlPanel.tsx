@@ -106,14 +106,33 @@ export default function EmergencyControlPanel({ onOpComplete }: EmergencyControl
                 if (!orders || orders.length === 0) {
                     alert('취소할 미체결 주문이 없습니다.')
                 } else {
-                    // Mocking loop cancellation (In production, replace with Kiwoom API calls)
+                    let successCount = 0
+                    let failCount = 0
+
                     for (const order of orders) {
-                        await supabase
-                            .from('orders')
-                            .update({ status: 'CANCELLED' })
-                            .eq('id', order.id)
+                        try {
+                            // Call Real Kiwoom API
+                            if (order.kiwoom_order_no || order.order_no) {
+                                const orderNo = order.kiwoom_order_no || order.order_no
+                                await kiwoomApi.cancelOrder(order.stock_code, orderNo, 0) // 0 means cancel all
+
+                                // Update DB only after API success
+                                await supabase
+                                    .from('orders')
+                                    .update({ status: 'CANCELLED' })
+                                    .eq('id', order.id)
+
+                                successCount++
+                            } else {
+                                console.warn('Order missing kiwoom_order_no:', order)
+                                failCount++
+                            }
+                        } catch (e) {
+                            console.error('Failed to cancel order:', order.id, e)
+                            failCount++
+                        }
                     }
-                    alert(`${orders.length}건의 미체결 주문을 취소 요청했습니다.`)
+                    alert(`${orders.length}건 중 ${successCount}건 취소 성공, ${failCount}건 실패 (실제 API 요청됨)`)
                 }
 
             } else if (actionType === 'LIQUIDATE_ALL') {

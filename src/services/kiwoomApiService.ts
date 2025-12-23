@@ -91,6 +91,24 @@ export class KiwoomApiService {
   }
 
   /**
+   * Cancel Order via Backend
+   * POST /api/order/cancel
+   */
+  async cancelOrder(stockCode: string, orderNo: string, quantity: number = 0): Promise<any> {
+    try {
+      const response = await axios.post(`${this.config.baseUrl}/api/order/cancel`, {
+        stock_code: stockCode,
+        order_no: orderNo,
+        quantity: quantity
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error cancelling order:', error)
+      throw error
+    }
+  }
+
+  /**
    * Get Account Balance via Backend
    * GET /api/account/balance
    */
