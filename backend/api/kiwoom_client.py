@@ -152,9 +152,9 @@ class KiwoomAPIClient:
                     for item in result_det.get('acnt_evlt_remn_indv_tot', []):
                          # Map 'pur_pric' to 'average_price' for correct investment calculation
                          # 'buy_avg_prc' often 0 in mock.
-                         avg_price = float(item.get('pur_pric', 0))
+                         avg_price = self._safe_float(item.get('pur_pric'))
                          if avg_price == 0:
-                             avg_price = float(item.get('buy_avg_prc', 0))
+                             avg_price = self._safe_float(item.get('buy_avg_prc'))
                              
                          # [FIX] Strip 'A' prefix from stock code (e.g. A005930 -> 005930)
                          raw_code = item.get('stk_cd', '')
@@ -165,6 +165,7 @@ class KiwoomAPIClient:
                             'stock_name': item.get('stk_nm'),
                             'quantity': self._safe_int(item.get('hldg_qty')),
                             'purchase_price': self._safe_float(item.get('pur_pric')),
+                            'average_price': avg_price,
                             'current_price': self._safe_float(item.get('cur_prc')),
                             'evaluation_amount': self._safe_float(item.get('evlt_amt')),
                             'profit_loss_amount': self._safe_float(item.get('evlt_pfls_amt')),
@@ -202,7 +203,10 @@ class KiwoomAPIClient:
             return {'account_no': self.account_no, 'summary': summary, 'holdings': holdings}
 
         except Exception as e:
-            print(f"[KiwoomAPI] Balance fetch failed: {e}")
+            import sys
+            print(f"[KiwoomAPI] Balance fetch failed: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
             return []
 
     def _fetch_account_password(self) -> str:
