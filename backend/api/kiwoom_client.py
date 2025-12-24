@@ -88,34 +88,46 @@ class KiwoomAPIClient:
 
     def get_account_balance(self) -> list:
         """계좌 잔고 조회 (kt00018)"""
-        try:
-            token = self._get_access_token()
-            url = f"{self.base_url}/api/dostk/acnt"
-            headers = {
-                "Content-Type": "application/json;charset=UTF-8",
-                "authorization": f"Bearer {token}",
-                "api-id": "kt00018",
-                "cont-yn": "N",
-                "next-key": ""
-            }
-            # Step 1: Fetch Summary (qry_tp=1)
-            # This returns accurate Total Assets, Cash, etc.
-            # Step 1: Fetch Summary (qry_tp=1)
-            # This returns accurate Total Assets, Cash, etc.
-            data_summary = {
-                "qry_tp": "1",          
-                "dmst_stex_tp": "KRX"
-            }
-            # [FIX] Always send account number even in Demo Mode
-            # if not self.is_demo:
-            data_summary["acnt_no"] = self.account_no if self.account_no else ""
-            
-            summary = {}
+        from .token_manager import get_token_manager
+        
+        # Retry loop for Token Expiry (8005 error)
+        for attempt in range(2):
             try:
+                token = self._get_access_token()
+                url = f"{self.base_url}/api/dostk/acnt"
+                headers = {
+                    "Content-Type": "application/json;charset=UTF-8",
+                    "authorization": f"Bearer {token}",
+                    "api-id": "kt00018",
+                    "cont-yn": "N",
+                    "next-key": ""
+                }
+                
+                # Step 1: Fetch Summary
+                data_summary = {
+                    "qry_tp": "1",          
+                    "dmst_stex_tp": "KRX",
+                    "acnt_no": self.account_no if self.account_no else ""
+                }
+                
+                summary = {}
                 res_sum = requests.post(url, headers=headers, data=json.dumps(data_summary), timeout=10)
-                res_sum.raise_for_status()
+                # Note: Kiwoom might return 200 even with error, so checks below are key
+                if res_sum.status_code == 401 or res_sum.status_code == 400:
+                     if attempt == 0:
+                         print(f"[KiwoomAPI] HTTP {res_sum.status_code}. Invalidating token...")
+                         get_token_manager(self.is_demo).invalidate_token()
+                         continue
+
                 result_sum = res_sum.json()
                 
+                # Check for Token Error (8005)
+                if '8005' in str(result_sum.get('return_msg', '')):
+                     if attempt == 0:
+                         print(f"[KiwoomAPI] Token Error 8005 detected. Refreshing token...")
+                         get_token_manager(self.is_demo).invalidate_token()
+                         continue
+
                 if result_sum.get('return_code') == 0 or result_sum.get('return_code') == '0':
                     summary = {
                         'total_purchase_amount': float(result_sum.get('tot_pchs_amt', 0)),
@@ -124,39 +136,40 @@ class KiwoomAPIClient:
                         'total_earning_rate': float(result_sum.get('tot_evlu_pfls_rt', 0)),
                         'total_assets': float(result_sum.get('tot_asst_amt', 0)), 
                         'deposit': float(result_sum.get('dnca_tot_amt', 0)),
-                        # [FIX] Use Deposit if Orderable Amount is 0 (Common in Mock API)
                         'withdrawable_amount': float(result_sum.get('pchs_psbl_amt', 0)) or float(result_sum.get('dnca_tot_amt', 0)) 
                     }
                 else:
                     print(f"[KiwoomAPI] Balance Summary fetch error: {result_sum.get('return_msg')}")
-            except Exception as e:
-                print(f"[KiwoomAPI] Balance Summary fetch failed: {e}")
 
-            # Step 2: Fetch Holdings (qry_tp=2)
-            # This returns accurate Average Price (pur_pric) and individual details
-            data_detail = {
-                "qry_tp": "2",          
-                "dmst_stex_tp": "KRX"
-            }
-            # [FIX] Always send account number even in Demo Mode
-            # if not self.is_demo:
-            data_detail["acnt_no"] = self.account_no if self.account_no else ""
-            
-            holdings = []
-            try:
+                # Step 2: Fetch Holdings (qry_tp=2)
+                data_detail = {
+                    "qry_tp": "2",          
+                    "dmst_stex_tp": "KRX",
+                    "acnt_no": self.account_no if self.account_no else ""
+                }
+                
+                holdings = []
                 res_det = requests.post(url, headers=headers, data=json.dumps(data_detail), timeout=10)
-                res_det.raise_for_status()
+                if res_det.status_code == 401 or res_det.status_code == 400:
+                     if attempt == 0:
+                         print(f"[KiwoomAPI] HTTP {res_det.status_code}. Invalidating token...")
+                         get_token_manager(self.is_demo).invalidate_token()
+                         continue
+                         
                 result_det = res_det.json()
                 
+                if '8005' in str(result_det.get('return_msg', '')):
+                     if attempt == 0:
+                         print(f"[KiwoomAPI] Token Error 8005 detected in Detail. Refreshing token...")
+                         get_token_manager(self.is_demo).invalidate_token()
+                         continue
+
                 if result_det.get('return_code') == 0 or result_det.get('return_code') == '0':
                     for item in result_det.get('acnt_evlt_remn_indv_tot', []):
-                         # Map 'pur_pric' to 'average_price' for correct investment calculation
-                         # 'buy_avg_prc' often 0 in mock.
                          avg_price = self._safe_float(item.get('pur_pric'))
                          if avg_price == 0:
                              avg_price = self._safe_float(item.get('buy_avg_prc'))
                              
-                         # [FIX] Strip 'A' prefix from stock code (e.g. A005930 -> 005930)
                          raw_code = item.get('stk_cd', '')
                          stock_code = raw_code[1:] if raw_code.startswith('A') else raw_code
                              
@@ -173,41 +186,34 @@ class KiwoomAPIClient:
                          })
                 else:
                     print(f"[KiwoomAPI] Balance Detail fetch error: {result_det.get('return_msg')}")
-            except Exception as e:
-                 print(f"[KiwoomAPI] Balance Detail fetch failed: {e}")
             
-            # [FIX] Recalculate Summary if API returns 0 (Common in Mock/Demo)
-            if holdings:
-                calc_total_purch = sum([h['average_price'] * h['quantity'] for h in holdings])
-                calc_total_eval = sum([h['current_price'] * h['quantity'] for h in holdings])
-                calc_total_profit = calc_total_eval - calc_total_purch
-                
-                # Update summary if it's zero
-                if summary.get('total_purchase_amount', 0) == 0:
-                    summary['total_purchase_amount'] = calc_total_purch
+                # [FIX] Recalculate Summary if API returns 0
+                if holdings:
+                    calc_total_purch = sum([h['average_price'] * h['quantity'] for h in holdings])
+                    calc_total_eval = sum([h['current_price'] * h['quantity'] for h in holdings])
+                    calc_total_profit = calc_total_eval - calc_total_purch
                     
-                if summary.get('total_evaluation_amount', 0) == 0:
-                    summary['total_evaluation_amount'] = calc_total_eval
-                    
-                if summary.get('total_evaluation_profit_loss', 0) == 0:
-                    summary['total_evaluation_profit_loss'] = calc_total_profit
-                    
-                if summary.get('total_assets', 0) == 0:
-                    # Total Assets = Cash (Deposit) + Stock Evaluation
-                    summary['total_assets'] = summary.get('deposit', 0) + calc_total_eval
-                    
-                # Recalculate Profit Rate if needed
-                if summary.get('total_purchase_amount', 0) > 0:
-                     summary['total_earning_rate'] = (summary['total_evaluation_profit_loss'] / summary['total_purchase_amount']) * 100
+                    if summary.get('total_purchase_amount', 0) == 0: summary['total_purchase_amount'] = calc_total_purch
+                    if summary.get('total_evaluation_amount', 0) == 0: summary['total_evaluation_amount'] = calc_total_eval
+                    if summary.get('total_evaluation_profit_loss', 0) == 0: summary['total_evaluation_profit_loss'] = calc_total_profit
+                    if summary.get('total_assets', 0) == 0: summary['total_assets'] = summary.get('deposit', 0) + calc_total_eval
+                    if summary.get('total_purchase_amount', 0) > 0:
+                         summary['total_earning_rate'] = (summary['total_evaluation_profit_loss'] / summary['total_purchase_amount']) * 100
 
-            return {'account_no': self.account_no, 'summary': summary, 'holdings': holdings}
+                return {'account_no': self.account_no, 'summary': summary, 'holdings': holdings}
 
-        except Exception as e:
-            import sys
-            print(f"[KiwoomAPI] Balance fetch failed: {e}", file=sys.stderr)
-            import traceback
-            traceback.print_exc()
-            return []
+            except Exception as e:
+                if attempt == 0:
+                    print(f"[KiwoomAPI] Exception {e}. Retrying with fresh token...")
+                    get_token_manager(self.is_demo).invalidate_token()
+                    continue
+                import sys
+                print(f"[KiwoomAPI] Balance fetch failed: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
+                return []
+        
+        return []
 
     def _fetch_account_password(self) -> str:
         """Fetch account password from Env or Supabase"""

@@ -98,10 +98,19 @@ class TokenManager:
             logger.info("[TokenManager] New token obtained and cached")
             
             return token
-            
+
         except Exception as e:
             logger.error(f"[TokenManager] Failed to get token: {e}")
             raise
+
+    def invalidate_token(self):
+        """Invalidate cached token to force refresh on next call"""
+        if os.path.exists(self.token_file):
+            try:
+                os.remove(self.token_file)
+                logger.info("[TokenManager] Token cache invalidated")
+            except Exception as e:
+                logger.error(f"[TokenManager] Failed to remove cache file: {e}")
 
     def _save_to_cache(self, token: str, expires_at: datetime):
         """Save token to file"""
