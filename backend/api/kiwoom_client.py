@@ -76,6 +76,16 @@ class KiwoomAPIClient:
             print(f"[KiwoomAPI] Price fetch failed: {e}")
             return None
 
+    def _safe_float(self, value):
+        if not value: return 0.0
+        try: return float(value)
+        except: return 0.0
+
+    def _safe_int(self, value):
+        if not value: return 0
+        try: return int(value)
+        except: return 0
+
     def get_account_balance(self) -> list:
         """계좌 잔고 조회 (kt00018)"""
         try:
@@ -153,11 +163,12 @@ class KiwoomAPIClient:
                          holdings.append({
                             'stock_code': stock_code,
                             'stock_name': item.get('stk_nm'),
-                            'quantity': int(item.get('rmnd_qty', 0)),
-                            'current_price': float(item.get('cur_prc', 0)),
-                            'average_price': avg_price,
-                            'profit_loss': float(item.get('evltv_prft', 0)),
-                            'profit_loss_rate': float(item.get('prft_rt', 0)) # Using prft_rt from Step 3231 output
+                            'quantity': self._safe_int(item.get('hldg_qty')),
+                            'purchase_price': self._safe_float(item.get('pur_pric')),
+                            'current_price': self._safe_float(item.get('cur_prc')),
+                            'evaluation_amount': self._safe_float(item.get('evlt_amt')),
+                            'profit_loss_amount': self._safe_float(item.get('evlt_pfls_amt')),
+                            'earning_rate': self._safe_float(item.get('pft_rt'))
                          })
                 else:
                     print(f"[KiwoomAPI] Balance Detail fetch error: {result_det.get('return_msg')}")
