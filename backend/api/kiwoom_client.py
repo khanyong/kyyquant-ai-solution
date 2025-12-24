@@ -16,7 +16,7 @@ class KiwoomAPIClient:
     def __init__(self):
         self.app_key = os.getenv('KIWOOM_APP_KEY')
         self.app_secret = os.getenv('KIWOOM_APP_SECRET')
-        self.account_no = os.getenv('KIWOOM_ACCOUNT_NO', '').replace('-', '')
+        self.account_no = os.getenv('KIWOOM_ACCOUNT_NO', '')
         self.is_demo = os.getenv('KIWOOM_IS_DEMO', 'true').lower() == 'true'
 
         # 환경 변수 확인
