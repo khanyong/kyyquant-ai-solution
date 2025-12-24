@@ -192,6 +192,44 @@ class KiwoomAPIClient:
             print(f"[KiwoomAPI] Balance fetch failed: {e}")
             return []
 
+    def _fetch_account_password(self) -> str:
+        """Fetch account password from Env or Supabase"""
+        # 1. Try Environment Variable
+        pw = os.getenv('KIWOOM_ACCOUNT_PW')
+        if pw:
+            return pw
+
+        # 2. Try Supabase
+        sb_url = os.getenv('SUPABASE_URL') or os.getenv('VITE_SUPABASE_URL')
+        sb_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('VITE_SUPABASE_ANON_KEY')
+        
+        if sb_url and sb_key:
+            try:
+                headers = {
+                    "apikey": sb_key,
+                    "Authorization": f"Bearer {sb_key}"
+                }
+                # Query user_api_keys table
+                resp = requests.get(
+                    f"{sb_url}/rest/v1/user_api_keys",
+                    headers=headers,
+                    params={
+                        "select": "encrypted_value",
+                        "key_type": "eq.account_password",
+                        "limit": "1"
+                    },
+                    timeout=5
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data and len(data) > 0:
+                        print("[KiwoomAPI] Password retrieved from Supabase")
+                        return data[0]['encrypted_value']
+            except Exception as e:
+                print(f"[KiwoomAPI] Password fetch from DB failed: {e}")
+        
+        return ""
+
     def order_stock(self, stock_code: str, quantity: int, price: int, order_type: str = "buy") -> Optional[Dict[str, Any]]:
         """주식 주문 (kt10000:매수, kt10001:매도)"""
         try:
@@ -216,6 +254,10 @@ class KiwoomAPIClient:
             # 시장가(3) vs 지정가(0)
             trade_type = "3" if price == 0 else "0"
             price_str = "" if price == 0 else str(price)
+            
+            # [Added] Fetch Password
+            if not getattr(self, 'account_pw', None):
+                 self.account_pw = self._fetch_account_password()
 
             data = {
                 "dmst_stex_tp": "KRX",
@@ -223,7 +265,8 @@ class KiwoomAPIClient:
                 "ord_qty": str(quantity),
                 "ord_uv": price_str,
                 "trde_tp": trade_type,
-                "cond_uv": ""
+                "cond_uv": "",
+                "user_pw": self.account_pw or ""  # [CRITICAL] Add Password
             }
             
             print(f"[KiwoomAPI] Sending Order ({order_type}): {data}")

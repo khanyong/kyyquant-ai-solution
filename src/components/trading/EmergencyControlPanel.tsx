@@ -136,6 +136,12 @@ export default function EmergencyControlPanel({ onOpComplete }: EmergencyControl
                 }
 
             } else if (actionType === 'LIQUIDATE_ALL') {
+                // [SAFETY] Force HALT before liquidation
+                await supabase
+                    .from('strategies')
+                    .update({ is_active: false, auto_trade_enabled: false })
+                    .eq('is_active', true)
+
                 // 1. Get Current Holdings
                 const balance = await kiwoomApi.getAccountBalance()
 
