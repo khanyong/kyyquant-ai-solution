@@ -96,8 +96,9 @@ class KiwoomAPIClient:
                 "qry_tp": "1",          
                 "dmst_stex_tp": "KRX"
             }
-            if not self.is_demo:
-                 data_summary["acnt_no"] = self.account_no if self.account_no else ""
+            # [FIX] Always send account number even in Demo Mode
+            # if not self.is_demo:
+            data_summary["acnt_no"] = self.account_no if self.account_no else ""
             
             summary = {}
             try:
@@ -127,8 +128,9 @@ class KiwoomAPIClient:
                 "qry_tp": "2",          
                 "dmst_stex_tp": "KRX"
             }
-            if not self.is_demo:
-                 data_detail["acnt_no"] = self.account_no if self.account_no else ""
+            # [FIX] Always send account number even in Demo Mode
+            # if not self.is_demo:
+            data_detail["acnt_no"] = self.account_no if self.account_no else ""
             
             holdings = []
             try:
