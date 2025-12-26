@@ -144,23 +144,43 @@ export default function MarketMonitor() {
         return
       }
 
-      // 2. kw_price_current 데이터 조회 (모니터링 종목만)
+      // 2. kw_price_current 데이터 조회 (모니터링 종목만) - 배치 처리 수정
       const stockCodesArray = Array.from(monitoredStockCodes)
-      const { data: priceData, error: priceError } = await supabase
-        .from('kw_price_current')
-        .select('*')
-        .in('stock_code', stockCodesArray)
-        .gt('current_price', 0)
-        .order('updated_at', { ascending: false })
 
-      if (priceError) {
-        // 테이블이 없는 경우 조용히 무시
-        if (priceError.code === 'PGRST205') {
-          console.warn('kw_price_current 테이블이 없습니다. 시장 모니터링 기능이 비활성화됩니다.')
-          setMarketData([])
-          return
-        }
-        throw priceError
+      // 50개씩 끊어서 요청 (URL 길이 제한 방지)
+      const BATCH_SIZE = 50
+      const batches = []
+      for (let i = 0; i < stockCodesArray.length; i += BATCH_SIZE) {
+        batches.push(stockCodesArray.slice(i, i + BATCH_SIZE))
+      }
+
+      console.log(`📊 Fetching market data in ${batches.length} batches...`)
+
+      const results = await Promise.all(
+        batches.map(async (batch) => {
+          const { data, error } = await supabase
+            .from('kw_price_current')
+            .select('*')
+            .in('stock_code', batch)
+            .gt('current_price', 0)
+
+          if (error) {
+            console.warn('Batch fetch error:', error)
+            return []
+          }
+          return data || []
+        })
+      )
+
+      // 결과 병합 및 정렬
+      const priceData = results.flat().sort((a, b) => {
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      })
+      const priceError = null // 배치 처리에서는 개별 에러만 로깅
+
+      // 에러 처리는 위에서 개별 배치별로 수행됨
+      if (results.some(r => r.length === 0) && results.length > 0) {
+        // 일부 배치가 실패했어도 성공한 데이터는 표시
       }
 
       if (!priceData || priceData.length === 0) {

@@ -122,6 +122,60 @@ async def get_balance():
 
         summary = balance_data.get('summary', {})
 
+        # [AUTO-SYNC] Update DB with latest balance
+        try:
+             # Lazy import to avoid circular dependency issues if any,
+             # though provider.py checks config. Here we use raw supabase-py or env vars?
+             # backend typically has a singleton supabase client available.
+             # Checking `backend/data/provider.py` or similar for standard client access is better.
+             # But for now, using the pattern from `kiwoom_client` fetching secrets is okay?
+             # Actually, best to use os.getenv and create client locally or reuse one if available.
+             # Given this is fastapi app, let's look for a `deps.py` or similar later.
+             # For now, inline creation is safe for low-frequency calls.
+             import os
+             from supabase import create_client
+             
+             sb_url = os.getenv("VITE_SUPABASE_URL") or os.getenv("SUPABASE_URL")
+             sb_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY")
+             
+             if sb_url and sb_key:
+                 supabase = create_client(sb_url, sb_key)
+                 
+                 # 1. Update Account Balance Table
+                 # Need user_id. Quickest way is from strategies table or user_api_keys.
+                 # Assuming single user system for now as per scripts.
+                 user_res = supabase.table('strategies').select('user_id').limit(1).execute()
+                 if user_res.data:
+                     user_id = user_res.data[0]['user_id']
+                     
+                     total_asset = float(summary.get('total_assets', 0))
+                     if total_asset == 0: total_asset = float(summary.get('deposit', 0))
+                     
+                     supabase.table('kw_account_balance').upsert({
+                        'user_id': user_id,
+                        'account_number': balance_data['account_no'],
+                        'total_asset': int(total_asset),
+                        'available_cash': int(summary.get('withdrawable_amount', 0)),
+                        'deposit': int(float(summary.get('deposit', 0))),
+                        'updated_at': datetime.now().isoformat()
+                     }).execute()
+                     
+                     # 2. Update Strategy Allocation (The "System Logic")
+                     # Only if Total Asset is valid (>0)
+                     if total_asset > 0:
+                         target_alloc = int(total_asset * 0.5)
+                         strategies = ['TEST_STRATEGY_A_MACD', 'TEST_STRATEGY_B_BB']
+                         
+                         supabase.table('strategies').update({
+                            'allocated_capital': target_alloc,
+                            'allocated_percent': 0.5
+                         }).in_('name', strategies).execute()
+                         
+        except Exception as sync_e:
+            print(f"[AutoStock] Balance Sync Failed: {sync_e}")
+            # Do not fail the API response just because DB sync failed
+            pass
+
         return BalanceResponse(
             account_no=balance_data['account_no'],
             total_asset=summary.get('total_assets', 0),

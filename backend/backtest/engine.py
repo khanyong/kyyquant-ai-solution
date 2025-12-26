@@ -1027,18 +1027,33 @@ class BacktestEngine:
         print(f"[Engine] Staged signal evaluation complete: {buy_signal_count} buy signals, {sell_signal_count} sell signals")
         return df
 
-    def _resolve_indicator_name(self, row: pd.Series, indicator_name: str) -> Optional[str]:
+    def _resolve_indicator_name(self, row: pd.Series, indicator_name: Any) -> Optional[str]:
         """
         지표 이름을 실제 DataFrame 컬럼명으로 해석
 
         Args:
             row: DataFrame row
-            indicator_name: 조건에서 사용하는 지표 이름
+            indicator_name: 조건에서 사용하는 지표 이름 (str or dict)
 
         Returns:
             실제 컬럼명 또는 None
         """
         import re
+
+        # Handle dict input (e.g. {"type": "indicator", "key": "macd_hist"})
+        if isinstance(indicator_name, dict):
+             # Try 'key' first, then 'name'
+             extracted = indicator_name.get('key') or indicator_name.get('name')
+             if extracted:
+                 indicator_name = extracted
+             else:
+                 print(f"[Engine] Warning: Could not extract key/name from indicator dict: {indicator_name}")
+                 return None
+        
+        # Ensure it is now a string
+        if not isinstance(indicator_name, str):
+             print(f"[Engine] Warning: Indicator name is not a string/dict: {indicator_name} ({type(indicator_name)})")
+             return None
 
         # 1. 직접 매칭
         if indicator_name in row.index:
@@ -1091,6 +1106,26 @@ class BacktestEngine:
             (type, value) - type은 'const' 또는 'column'
         """
         import re
+
+        # Handle dict input (e.g. {"type": "constant", "value": 0})
+        if isinstance(operand, dict):
+            op_type = operand.get('type')
+            if op_type == 'constant':
+                return ('const', float(operand.get('value', 0)))
+            elif op_type in ['indicator', 'price', 'column']:
+                # Resolve indicator key
+                key = operand.get('key') or operand.get('name')
+                if not key:
+                    return ('missing', str(operand))
+                
+                # Check if key exists in row
+                resolved = self._resolve_indicator_name(row, key)
+                if resolved:
+                    return ('column', resolved)
+                return ('missing', key)
+            elif 'value' in operand:
+                # Fallback: treat as constant if value is present
+                 return ('const', float(operand.get('value', 0)))
 
         # 숫자 타입
         if isinstance(operand, (int, float)):

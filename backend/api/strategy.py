@@ -446,7 +446,21 @@ async def check_strategy_signal(request: StrategySignalRequest):
             .execute()
 
         if not price_response.data or len(price_response.data) < 20:
-            raise HTTPException(status_code=400, detail=f"Insufficient historical data for {request.stock_code}")
+             print(f"[Strategy] Insufficient historical data for {request.stock_code} (Count: {len(price_response.data) if price_response.data else 0}). Returning HOLD.")
+             return StrategySignalResponse(
+                strategy_id=request.strategy_id,
+                strategy_name=strategy.get('name', 'Unknown'),
+                stock_code=request.stock_code,
+                stock_name=request.stock_code, # Name might be unknown here
+                signal_type='HOLD',
+                signal_strength=0.0,
+                current_price=0.0,
+                indicators={},
+                entry_conditions_met={},
+                exit_conditions_met={},
+                timestamp=datetime.now(),
+                debug_info={'reason': 'Insufficient historical data'}
+            )
 
         # DataFrame 생성
         df = pd.DataFrame(price_response.data)

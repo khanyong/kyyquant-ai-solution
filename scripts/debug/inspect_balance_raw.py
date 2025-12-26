@@ -82,8 +82,8 @@ try:
     
     # 1. Summary
     data_summary = {"qry_tp": "1", "dmst_stex_tp": "KRX"}
-    if not client.is_demo:
-         data_summary["acnt_no"] = client.account_no
+    # ALWAYS SEND ACCOUNT NO
+    data_summary["acnt_no"] = client.account_no
          
     res = requests.post(url, headers=headers, data=json.dumps(data_summary))
     print(f"\n[Raw Response - Summary]: {res.status_code}")
@@ -91,8 +91,8 @@ try:
 
     # 2. Detail (Holdings)
     data_detail = {"qry_tp": "2", "dmst_stex_tp": "KRX"}
-    if not client.is_demo:
-         data_detail["acnt_no"] = client.account_no
+    # ALWAYS SEND ACCOUNT NO
+    data_detail["acnt_no"] = client.account_no
          
     res2 = requests.post(url, headers=headers, data=json.dumps(data_detail))
     print(f"\n[Raw Response - Holdings]: {res2.status_code}")

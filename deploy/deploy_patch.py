@@ -11,7 +11,10 @@ FILES_TO_DEPLOY = [
     ("backend/api/account.py", f"{REMOTE_DIR}/account.py"),
     ("backend/api/kiwoom_client.py", f"{REMOTE_DIR}/kiwoom_client.py"),
     ("backend/api/token_manager.py", f"{REMOTE_DIR}/token_manager.py"),
-    ("backend/api/kiwoom_websocket.py", f"{REMOTE_DIR}/kiwoom_websocket.py")
+    ("backend/api/kiwoom_websocket.py", f"{REMOTE_DIR}/kiwoom_websocket.py"),
+    ("backend/api/strategy.py", f"{REMOTE_DIR}/strategy.py"),
+    ("backend/backtest/engine.py", "/home/ubuntu/auto_stock/backend/backtest/engine.py"),
+    ("backend/indicators/calculator.py", "/home/ubuntu/auto_stock/backend/indicators/calculator.py")
 ]
 
 def deploy_file(local_path, remote_path):

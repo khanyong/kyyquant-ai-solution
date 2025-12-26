@@ -1,0 +1,34 @@
+
+======================================================================
+KIWOOM BRIDGE SERVER STARTING
+Version: 3.0.0
+Build Time: 2025-12-24T15:30:25.136091
+Working Dir: /app
+Python: 3.11.14
+======================================================================
+
+[OK] Backtest router registered
+[System] No disk cache found. Using Mock data.
+[OK] Market router registered
+[OK] Strategy router registered
+[OK] Account router registered
+[OK] Order router registered
+[OK] Indicators router registered
+[OK] Sync router registered
+[OK] System router registered
+[System] Executing startup tasks...
+[System] Market Data Scheduler Started (Internal Fetch Disabled - Waiting for NAS Push)
+[Main] Starting Kiwoom WebSocket Client...
+INFO:     127.0.0.1:53906 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46184 - "GET /health HTTP/1.1" 200 OK
+[KiwoomAPI] Credentials loaded - APP_KEY: S0FEQ8I3UY..., MODE: DEMO
+[KiwoomAPI] Base URL set to: https://mockapi.kiwoom.com
+[KiwoomAPI] Balance Summary fetch error: 인증에 실패했습니다[8005:Token이 유효하지 않습니다]
+[KiwoomAPI] Balance Detail fetch failed: 429 Client Error: null for url: https://mockapi.kiwoom.com/api/dostk/acnt
+INFO:     172.18.0.4:53620 - "GET /api/account/balance HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35172 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50796 - "GET /health HTTP/1.1" 200 OK
+[KiwoomAPI] Balance Summary fetch error: 인증에 실패했습니다[8005:Token이 유효하지 않습니다]
+[KiwoomAPI] Balance Detail fetch failed: 429 Client Error: null for url: https://mockapi.kiwoom.com/api/dostk/acnt
+INFO:     172.18.0.4:45708 - "GET /api/account/balance HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36404 - "GET /health HTTP/1.1" 200 OK

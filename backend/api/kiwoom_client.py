@@ -139,7 +139,15 @@ class KiwoomAPIClient:
                         'withdrawable_amount': float(result_sum.get('pchs_psbl_amt', 0)) or float(result_sum.get('dnca_tot_amt', 0)) 
                     }
                 else:
-                    print(f"[KiwoomAPI] Balance Summary fetch error: {result_sum.get('return_msg')}")
+                    return_msg = str(result_sum.get('return_msg', ''))
+                    print(f"[KiwoomAPI] Balance Summary Error: {return_msg}")
+                    
+                    # [FIX] Retry on App Key / Server Mismatch Error
+                    if 'Appkey' in return_msg or '접속서버' in return_msg:
+                         if attempt == 0:
+                             print(f"[KiwoomAPI] Server/Key Mismatch detected. Refreshing token...")
+                             get_token_manager(self.is_demo).invalidate_token()
+                             continue
 
                 # Step 2: Fetch Holdings (qry_tp=2)
                 data_detail = {

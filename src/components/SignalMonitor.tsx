@@ -309,13 +309,34 @@ export default function SignalMonitor() {
       const stockCodesArray = Array.from(monitoredStockCodes)
 
       // 종목 코드로 현재가 정보 가져오기
-      const { data, error } = await supabase
-        .from('kw_price_current')
-        .select('*')
-        .in('stock_code', stockCodesArray)
-        .order('updated_at', { ascending: false })
+      // 50개씩 끊어서 요청 (URL 길이 제한 방지)
+      const BATCH_SIZE = 50
+      const batches = []
+      for (let i = 0; i < stockCodesArray.length; i += BATCH_SIZE) {
+        batches.push(stockCodesArray.slice(i, i + BATCH_SIZE))
+      }
 
-      if (error) throw error
+      console.log(`📊 Fetching market data in ${batches.length} batches...`)
+
+      const results = await Promise.all(
+        batches.map(async (batch) => {
+          const { data, error } = await supabase
+            .from('kw_price_current')
+            .select('*')
+            .in('stock_code', batch)
+
+          if (error) {
+            console.warn('Batch fetch error:', error)
+            return []
+          }
+          return data || []
+        })
+      )
+
+      // 결과 병합 및 정렬
+      const data = results.flat().sort((a, b) => {
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      })
 
       setMarketData(data || [])
       setLastMarketUpdate(new Date())
