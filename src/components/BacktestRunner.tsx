@@ -152,7 +152,7 @@ const BacktestRunner: React.FC = () => {
         const { data, error } = await supabase
           .from('strategies')
           .select('*')
-          .eq('is_active', true)
+          // .eq('is_active', true)
           .order('created_at', { ascending: false });
 
         console.log('All strategies query result:', { data, error });
@@ -184,7 +184,7 @@ const BacktestRunner: React.FC = () => {
         .from('strategies')
         .select('*')
         // .eq('user_id', user.id)  // 개발 중 주석 처리 - 모든 사용자 전략 조회
-        .eq('is_active', true)
+        // .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       console.log('User strategies query result:', { data, error });
@@ -196,7 +196,7 @@ const BacktestRunner: React.FC = () => {
         const { data: allData, error: allError } = await supabase
           .from('strategies')
           .select('*')
-          .eq('is_active', true)
+          // .eq('is_active', true)
           .order('created_at', { ascending: false });
 
         if (allError) {
