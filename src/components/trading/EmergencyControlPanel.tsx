@@ -164,6 +164,9 @@ export default function EmergencyControlPanel({ onOpComplete }: EmergencyControl
                             const result = await kiwoomApi.sellStock(stockCode, qty, 0)
                             // Backend returns { status: 'success' }, KIS returns rt_cd='0'
                             if (result?.status === 'success' || result?.rt_cd === '0') successCount++
+
+                            // [THROTTLE] Prevent 1700 Rate Limit (300ms delay)
+                            await new Promise(resolve => setTimeout(resolve, 300))
                         }
                     }
                     alert(`${holdings.length}종목 중 ${successCount}종목에 대해 시장가 매도 주문을 전송했습니다.`)

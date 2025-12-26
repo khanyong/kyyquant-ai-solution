@@ -176,13 +176,13 @@ class KiwoomAPIClient:
                          holdings.append({
                             'stock_code': stock_code,
                             'stock_name': item.get('stk_nm'),
-                            'quantity': self._safe_int(item.get('hldg_qty')),
+                            'quantity': self._safe_int(item.get('hldg_qty') or item.get('rmnd_qty') or item.get('trde_able_qty')),
                             'purchase_price': self._safe_float(item.get('pur_pric')),
                             'average_price': avg_price,
                             'current_price': self._safe_float(item.get('cur_prc')),
-                            'evaluation_amount': self._safe_float(item.get('evlt_amt')),
-                            'profit_loss_amount': self._safe_float(item.get('evlt_pfls_amt')),
-                            'earning_rate': self._safe_float(item.get('pft_rt'))
+                            'value': self._safe_float(item.get('evlt_amt')),
+                            'profit_loss': self._safe_float(item.get('evlt_pfls_amt')),
+                            'profit_loss_rate': self._safe_float(item.get('pft_rt'))
                          })
                 else:
                     print(f"[KiwoomAPI] Balance Detail fetch error: {result_det.get('return_msg')}")
@@ -206,6 +206,8 @@ class KiwoomAPIClient:
                 if attempt == 0:
                     print(f"[KiwoomAPI] Exception {e}. Retrying with fresh token...")
                     get_token_manager(self.is_demo).invalidate_token()
+                    import time
+                    time.sleep(1)
                     continue
                 import sys
                 print(f"[KiwoomAPI] Balance fetch failed: {e}", file=sys.stderr)
