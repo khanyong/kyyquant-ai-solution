@@ -1041,6 +1041,7 @@ class BacktestEngine:
         import re
 
         # Handle dict input (e.g. {"type": "indicator", "key": "macd_hist"})
+        print(f"[Engine] DEBUG: _resolve_indicator_name input: {indicator_name} (type={type(indicator_name)})")
         if isinstance(indicator_name, dict):
              # Try 'key' first, then 'name'
              extracted = indicator_name.get('key') or indicator_name.get('name')

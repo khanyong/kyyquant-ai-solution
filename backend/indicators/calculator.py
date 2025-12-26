@@ -585,6 +585,17 @@ class IndicatorCalculator:
             options: 실행 옵션
             stock_code: 종목 코드 (캐시 키 구분용)
         """
+        if not isinstance(config, dict):
+             print(f"[Calculator] ERROR: config is not a dict: {config} (type={type(config)})")
+        
+        # Check for any unhashable types in top level
+        try:
+             json.dumps(config)
+        except Exception as e:
+             print(f"[Calculator] WARNING: config is not JSON serializable: {e}")
+
+        print(f"[Calculator] DEBUG: calculate() called with config keys={list(config.keys()) if isinstance(config, dict) else 'Not Dict'}")
+        
         start_time = time.time()
         warnings = []
 

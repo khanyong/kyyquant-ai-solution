@@ -25,8 +25,8 @@ export default async function handler(req, res) {
   try {
     console.log('[Vercel Function] Proxying to api.bll-pro.com');
 
-    // api.bll-pro.com으로 요청 전달
-    const response = await fetch('https://api.bll-pro.com/api/backtest/run', {
+    // stock-api.bll-pro.com으로 요청 전달
+    const response = await fetch('https://stock-api.bll-pro.com/api/backtest/run', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
