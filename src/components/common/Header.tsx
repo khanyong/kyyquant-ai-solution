@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -20,7 +20,6 @@ import {
 import { useAppSelector, useAppDispatch } from '../../hooks/redux'
 import { logout } from '../../store/authSlice'
 import { authService } from '../../services/auth'
-import { supabase } from '../../lib/supabase'
 import RoadmapDialog from './RoadmapDialog'
 
 interface HeaderProps {
@@ -29,21 +28,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
   const dispatch = useAppDispatch()
-  const { isConnected, user } = useAppSelector(state => state.auth)
+  const { isConnected, user, tradingMode } = useAppSelector(state => state.auth)
   const [roadmapOpen, setRoadmapOpen] = useState(false)
-  const [tradingMode, setTradingMode] = useState<'test' | 'live'>('test')
-
-  useEffect(() => {
-    if (user?.id) {
-      const fetchMode = async () => {
-        const { data } = await supabase.rpc('get_current_mode_info', { p_user_id: user.id })
-        if (data?.current_mode) {
-          setTradingMode(data.current_mode)
-        }
-      }
-      fetchMode()
-    }
-  }, [user?.id])
 
   const handleLogout = async () => {
     await authService.signOut()
