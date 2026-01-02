@@ -11,7 +11,7 @@ export const authService = {
   async signUpWithEmail(email: string, password: string, name?: string, kiwoomId?: string) {
     console.log('🔄 Starting signup process for:', email)
     console.log('📝 Signup data:', { email, name, kiwoomId })
-    
+
     try {
       console.log('📡 Calling Supabase auth.signUp...')
       const { data, error } = await supabase.auth.signUp({
@@ -36,10 +36,10 @@ export const authService = {
       // 프로필 생성 보장 (트리거가 실행되지 않을 경우 대비)
       if (data.user) {
         console.log('🔍 Checking if profile exists for user:', data.user.id)
-        
+
         // 잠시 대기 후 프로필 확인 (트리거 실행 시간 고려)
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         const { data: existingProfile, error: checkError } = await supabase
           .from('profiles')
           .select('id')
@@ -55,7 +55,7 @@ export const authService = {
               id: data.user.id,
               email: data.user.email,
               name: name || email.split('@')[0],
-              kiwoom_account: kiwoomId,
+              // kiwoom_account removed - using user_api_keys
               email_verified: false,
               email_verified_at: null,
               created_at: new Date().toISOString(),
@@ -302,7 +302,7 @@ export const authService = {
   },
 
   // 프로필 업데이트
-  async updateProfile(userId: string, updates: { name?: string; kiwoom_account?: string }) {
+  async updateProfile(userId: string, updates: { name?: string }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -318,16 +318,16 @@ export const authService = {
     }
   },
 
-  // 확장 프로필 업데이트
+  // 확장 프로필 업데이트 (consolidated to profiles)
   async updateExtendedProfile(userId: string, updates: any) {
     try {
       const { data, error } = await supabase
-        .from('user_profiles_extended')
-        .upsert({
-          user_id: userId,
+        .from('profiles')
+        .update({
           ...updates,
           updated_at: new Date().toISOString()
         })
+        .eq('id', userId)
         .select()
         .single()
 

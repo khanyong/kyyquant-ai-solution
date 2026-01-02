@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Container,
   Paper,
@@ -57,7 +58,8 @@ import {
   Science,
   TrendingUp,
   SwapHoriz,
-  Info
+  Info,
+  ArrowBack
 } from '@mui/icons-material'
 import { useAppSelector } from '../hooks/redux'
 import { supabase } from '../lib/supabase'
@@ -71,13 +73,20 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props
+
+  // Use display: none instead of unmounting to keep state/data preserved
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
+      id={`tabpanel-${index}`}
+      aria-labelledby={`tab-${index}`}
       {...other}
+      style={{ display: value === index ? 'block' : 'none' }}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      <Box sx={{ p: 3 }}>
+        {children}
+      </Box>
     </div>
   )
 }
@@ -95,17 +104,18 @@ interface ApiKey {
 }
 
 const MyPageEnhanced: React.FC = () => {
+  const navigate = useNavigate()
   const user = useAppSelector(state => state.auth.user)
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [currentAuthUser, setCurrentAuthUser] = useState<any>(null)
-  
+
   // 거래 모드 상태
   const [tradingMode, setTradingMode] = useState<'test' | 'live'>('test')
   const [modeInfo, setModeInfo] = useState<any>(null)
   const [showQuickSetup, setShowQuickSetup] = useState(false)
-  
+
   // 프로필 상태
   const [profile, setProfile] = useState({
     display_name: '',
@@ -116,7 +126,7 @@ const MyPageEnhanced: React.FC = () => {
     risk_tolerance: 'moderate',
     preferred_market: 'both'
   })
-  
+
   // API 키 상태
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false)
@@ -128,7 +138,7 @@ const MyPageEnhanced: React.FC = () => {
     is_test_mode: false
   })
   const [showApiKeyValue, setShowApiKeyValue] = useState<{ [key: string]: boolean }>({})
-  
+
   // 빠른 설정 상태 (키움 전용)
   const [quickSetup, setQuickSetup] = useState({
     app_key: '',
@@ -137,7 +147,7 @@ const MyPageEnhanced: React.FC = () => {
     cert_password: '',
     is_test_mode: true
   })
-  
+
   // 보안 설정
   const [securitySettings, setSecuritySettings] = useState({
     current_password: '',
@@ -145,14 +155,14 @@ const MyPageEnhanced: React.FC = () => {
     confirm_password: '',
     two_factor_enabled: false
   })
-  
+
   // 알림 설정
   const [notificationSettings, setNotificationSettings] = useState({
     email_notifications: true,
     sms_notifications: false,
     push_notifications: true
   })
-  
+
   useEffect(() => {
     // 초기 로드
     const loadAllData = async () => {
@@ -162,10 +172,10 @@ const MyPageEnhanced: React.FC = () => {
       await loadSettings()
       await loadTradingMode()
     }
-    
+
     loadAllData()
   }, []) // 컴포넌트 마운트 시 한 번만
-  
+
   // 탭 변경 시 API 키 재로드
   useEffect(() => {
     if (tabValue === 1) { // API 키 관리 탭
@@ -173,40 +183,70 @@ const MyPageEnhanced: React.FC = () => {
       loadApiKeys()
     }
   }, [tabValue])
-  
+
   const loadAuthUser = async () => {
     const { data: { user: authUser } } = await supabase.auth.getUser()
     if (authUser) {
       setCurrentAuthUser(authUser)
     }
   }
-  
+
   const loadProfile = async () => {
     try {
+      console.log('Loading profile...');
+
+      // Ensure we have the auth user
+      let authUser = currentAuthUser;
+      if (!authUser) {
+        const { data } = await supabase.auth.getUser();
+        authUser = data.user;
+      }
+
+      if (!authUser) {
+        console.error('No auth user found');
+        return;
+      }
+
       const { data, error } = await supabase
-        .from('user_profiles_extended')
+        .from('profiles')
         .select('*')
-        .eq('user_id', user?.id)
-        .single()
-      
+        .eq('id', authUser.id)
+        .maybeSingle()
+
+      console.log('Profile data loaded for user:', authUser.id, data);
+
       if (data) {
         setProfile(prev => ({
           ...prev,
           ...data,
-          email: currentAuthUser?.email || ''
+          // Handle schema migration discrepancies
+          display_name: data.display_name || data.name || '',
+          name: data.name || '',
+          // Ensure email is always from auth if not in profile
+          email: authUser.email || prev.email,
+          // Ensure other fields don't break if null
+          phone_number: data.phone_number || prev.phone_number || '',
+          investor_type: data.investor_type || prev.investor_type || '',
+          risk_tolerance: data.risk_tolerance || prev.risk_tolerance || '',
+          preferred_market: data.preferred_market || prev.preferred_market || ''
         }))
       } else if (!error) {
+        // Profile might not exist yet, pre-fill from Auth
+        console.log('Profile not found, using auth data');
         setProfile(prev => ({
           ...prev,
-          display_name: user?.name || '',
-          email: currentAuthUser?.email || ''
+          display_name: authUser.user_metadata?.name || '',
+          name: authUser.user_metadata?.name || '',
+          email: authUser.email || ''
         }))
+      } else {
+        console.error('Error loading profile:', error);
       }
     } catch (error) {
       console.error('Failed to load profile:', error)
     }
   }
-  
+
   const loadApiKeys = async () => {
     try {
       // Get current auth user if user.id is not available
@@ -215,19 +255,19 @@ const MyPageEnhanced: React.FC = () => {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         userId = authUser?.id;
       }
-      
+
       if (!userId) {
         console.error('No user ID available');
         return;
       }
-      
+
       // Try view first, fallback to direct table
       let { data, error } = await supabase
         .from('user_api_keys_view')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-      
+
       // If view fails, try direct table access
       if (error || !data) {
         console.log('View failed, trying direct table access');
@@ -236,7 +276,7 @@ const MyPageEnhanced: React.FC = () => {
           .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
-        
+
         if (directResult.data) {
           // Transform data to match view structure
           data = directResult.data.map(key => ({
@@ -245,7 +285,7 @@ const MyPageEnhanced: React.FC = () => {
           }))
         }
       }
-      
+
       if (data) {
         console.log('Loaded API keys:', data);
         console.log('Test keys:', data.filter(k => k.is_test_mode));
@@ -259,15 +299,23 @@ const MyPageEnhanced: React.FC = () => {
       console.error('Failed to load API keys:', error)
     }
   }
-  
+
   const loadSettings = async () => {
     try {
+      let userId = user?.id;
+      if (!userId) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        userId = authUser?.id;
+      }
+
+      if (!userId) return;
+
       const { data } = await supabase
-        .from('user_profiles_extended')
+        .from('profiles')
         .select('email_notifications, sms_notifications, push_notifications, two_factor_enabled, current_trading_mode')
-        .eq('user_id', user?.id)
+        .eq('id', userId)
         .single()
-      
+
       if (data) {
         setNotificationSettings({
           email_notifications: data.email_notifications,
@@ -284,7 +332,7 @@ const MyPageEnhanced: React.FC = () => {
       console.error('Failed to load settings:', error)
     }
   }
-  
+
   const loadTradingMode = async () => {
     try {
       // Get current auth user if user.id is not available
@@ -293,16 +341,16 @@ const MyPageEnhanced: React.FC = () => {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         userId = authUser?.id;
       }
-      
+
       if (!userId) {
         console.error('No user ID available');
         return;
       }
-      
+
       const { data, error } = await supabase.rpc('get_current_mode_info', {
         p_user_id: userId
       })
-      
+
       if (data) {
         setModeInfo(data)
         setTradingMode(data.current_mode || 'test')
@@ -311,52 +359,60 @@ const MyPageEnhanced: React.FC = () => {
       console.error('Failed to load trading mode:', error)
     }
   }
-  
+
   const handleSwitchMode = async (event: React.MouseEvent<HTMLElement>, newMode: 'test' | 'live' | null) => {
     if (newMode === null) return
-    
+
     try {
+      // 1. Get User ID safely
+      let userId = user?.id
+      if (!userId) {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        userId = authUser?.id
+      }
+      if (!userId) throw new Error('사용자 정보를 찾을 수 없습니다.')
+
       const { data, error } = await supabase.rpc('switch_trading_mode', {
-        p_user_id: user?.id,
+        p_user_id: userId,
         p_new_mode: newMode
       })
-      
+
       if (error) throw error
-      
+
       setTradingMode(newMode)
       await loadTradingMode()
       await loadApiKeys()
-      setMessage({ 
-        type: 'success', 
-        text: `${newMode === 'test' ? '모의투자' : '실전투자'} 모드로 전환되었습니다.` 
+      setMessage({
+        type: 'success',
+        text: `${newMode === 'test' ? '모의투자' : '실전투자'} 모드로 전환되었습니다.`
       })
     } catch (error: any) {
-      setMessage({ 
-        type: 'error', 
-        text: error.message || '모드 전환 실패' 
+      setMessage({
+        type: 'error',
+        text: error.message || '모드 전환 실패'
       })
     }
   }
-  
+
   const handleQuickSetup = async () => {
     setLoading(true)
     try {
       // Import the ApiKeyService
       const { ApiKeyService } = await import('../services/apiKeyService')
-      
+
       // Get current auth user if user.id is not available
       let userId = user?.id;
       if (!userId) {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         userId = authUser?.id;
       }
-      
+
       if (!userId) {
         throw new Error('사용자 ID를 찾을 수 없습니다. 다시 로그인해주세요.');
       }
-      
+
       const keyName = quickSetup.is_test_mode ? '모의투자' : '실전투자'
-      
+
       // Save App Key
       const appKeyResult = await ApiKeyService.saveApiKey(userId, {
         provider: 'kiwoom',
@@ -365,11 +421,11 @@ const MyPageEnhanced: React.FC = () => {
         keyValue: quickSetup.app_key,
         isTestMode: quickSetup.is_test_mode
       })
-      
+
       if (!appKeyResult.success) {
         throw new Error('App Key 저장 실패')
       }
-      
+
       // Save App Secret
       const appSecretResult = await ApiKeyService.saveApiKey(userId, {
         provider: 'kiwoom',
@@ -378,11 +434,11 @@ const MyPageEnhanced: React.FC = () => {
         keyValue: quickSetup.app_secret,
         isTestMode: quickSetup.is_test_mode
       })
-      
+
       if (!appSecretResult.success) {
         throw new Error('App Secret 저장 실패')
       }
-      
+
       // Save Account Number if provided
       if (quickSetup.account_number) {
         await ApiKeyService.saveApiKey(userId, {
@@ -393,7 +449,7 @@ const MyPageEnhanced: React.FC = () => {
           isTestMode: quickSetup.is_test_mode
         })
       }
-      
+
       // Save Cert Password if provided
       if (quickSetup.cert_password) {
         await ApiKeyService.saveApiKey(userId, {
@@ -404,7 +460,7 @@ const MyPageEnhanced: React.FC = () => {
           isTestMode: quickSetup.is_test_mode
         })
       }
-      
+
       await loadApiKeys()
       await loadTradingMode()
       setShowQuickSetup(false)
@@ -415,12 +471,12 @@ const MyPageEnhanced: React.FC = () => {
         cert_password: '',
         is_test_mode: true
       })
-      
+
       // Show which method was used
       const methodText = appKeyResult.method === 'direct_insert' ? ' (직접 저장)' : ''
-      setMessage({ 
-        type: 'success', 
-        text: `키움 ${quickSetup.is_test_mode ? '모의투자' : '실전투자'} 키가 저장되었습니다${methodText}` 
+      setMessage({
+        type: 'success',
+        text: `키움 ${quickSetup.is_test_mode ? '모의투자' : '실전투자'} 키가 저장되었습니다${methodText}`
       })
     } catch (error: any) {
       console.error('Quick setup error:', error)
@@ -429,26 +485,35 @@ const MyPageEnhanced: React.FC = () => {
       setLoading(false)
     }
   }
-  
+
   const handleProfileUpdate = async () => {
     setLoading(true)
     try {
+      // Ensure we have a valid user ID
+      let targetUserId = user?.id
+      if (!targetUserId) {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        targetUserId = authUser?.id
+      }
+
+      if (!targetUserId) {
+        throw new Error('사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.')
+      }
+
       const { error } = await supabase
-        .from('user_profiles_extended')
-        .upsert({
-          user_id: user?.id,
+        .from('profiles')
+        .update({
           display_name: profile.display_name,
           phone_number: profile.phone_number,
           birth_date: profile.birth_date,
           investor_type: profile.investor_type,
           risk_tolerance: profile.risk_tolerance,
           preferred_market: profile.preferred_market
-        }, {
-          onConflict: 'user_id'
         })
-      
+        .eq('id', targetUserId)
+
       if (error) throw error
-      
+
       setMessage({ type: 'success', text: '프로필이 업데이트되었습니다.' })
     } catch (error) {
       setMessage({ type: 'error', text: '프로필 업데이트 실패' })
@@ -456,24 +521,24 @@ const MyPageEnhanced: React.FC = () => {
       setLoading(false)
     }
   }
-  
+
   const handleAddApiKey = async () => {
     setLoading(true)
     try {
       // Import and use the ApiKeyService with fallback strategies
       const { ApiKeyService } = await import('../services/apiKeyService')
-      
+
       // Get current auth user if user.id is not available
       let userId = user?.id;
       if (!userId) {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         userId = authUser?.id;
       }
-      
+
       if (!userId) {
         throw new Error('사용자 ID를 찾을 수 없습니다. 다시 로그인해주세요.');
       }
-      
+
       const result = await ApiKeyService.saveApiKey(userId, {
         provider: newApiKey.provider,
         keyType: newApiKey.key_type,
@@ -481,11 +546,11 @@ const MyPageEnhanced: React.FC = () => {
         keyValue: newApiKey.key_value,
         isTestMode: newApiKey.is_test_mode
       })
-      
+
       if (!result.success) {
         throw new Error(('error' in result ? result.error : 'API 키 저장 실패') as string)
       }
-      
+
       await loadApiKeys()
       await loadTradingMode()
       setShowApiKeyDialog(false)
@@ -496,13 +561,13 @@ const MyPageEnhanced: React.FC = () => {
         key_value: '',
         is_test_mode: false
       })
-      
+
       // Show which method was used for transparency
-      const methodText = result.method === 'direct_insert' 
-        ? ' (직접 저장)' 
-        : result.method === 'rpc_standard' 
-        ? ' (RPC 표준)' 
-        : ''
+      const methodText = result.method === 'direct_insert'
+        ? ' (직접 저장)'
+        : result.method === 'rpc_standard'
+          ? ' (RPC 표준)'
+          : ''
       setMessage({ type: 'success', text: `API 키가 안전하게 저장되었습니다${methodText}` })
     } catch (error: any) {
       console.error('API key save error:', error)
@@ -511,18 +576,18 @@ const MyPageEnhanced: React.FC = () => {
       setLoading(false)
     }
   }
-  
+
   const handleDeleteApiKey = async (keyId: string) => {
     if (!window.confirm('이 API 키를 삭제하시겠습니까?')) return
-    
+
     try {
       const { error } = await supabase.rpc('delete_user_api_key', {
         p_user_id: user?.id,
         p_key_id: keyId
       })
-      
+
       if (error) throw error
-      
+
       await loadApiKeys()
       await loadTradingMode()
       setMessage({ type: 'success', text: 'API 키가 삭제되었습니다.' })
@@ -530,21 +595,21 @@ const MyPageEnhanced: React.FC = () => {
       setMessage({ type: 'error', text: 'API 키 삭제 실패' })
     }
   }
-  
+
   const handlePasswordChange = async () => {
     if (securitySettings.new_password !== securitySettings.confirm_password) {
       setMessage({ type: 'error', text: '새 비밀번호가 일치하지 않습니다.' })
       return
     }
-    
+
     setLoading(true)
     try {
       const { error } = await supabase.auth.updateUser({
         password: securitySettings.new_password
       })
-      
+
       if (error) throw error
-      
+
       setSecuritySettings({
         current_password: '',
         new_password: '',
@@ -558,21 +623,19 @@ const MyPageEnhanced: React.FC = () => {
       setLoading(false)
     }
   }
-  
+
   const handleNotificationUpdate = async () => {
     setLoading(true)
     try {
       const { error } = await supabase
-        .from('user_profiles_extended')
-        .upsert({
-          user_id: user?.id,
+        .from('profiles')
+        .update({
           ...notificationSettings
-        }, {
-          onConflict: 'user_id'
         })
-      
+        .eq('id', user?.id)
+
       if (error) throw error
-      
+
       setMessage({ type: 'success', text: '알림 설정이 저장되었습니다.' })
     } catch (error) {
       setMessage({ type: 'error', text: '알림 설정 저장 실패' })
@@ -580,7 +643,7 @@ const MyPageEnhanced: React.FC = () => {
       setLoading(false)
     }
   }
-  
+
   const getProviderName = (provider: string) => {
     const providers: { [key: string]: string } = {
       kiwoom: '키움증권',
@@ -590,7 +653,7 @@ const MyPageEnhanced: React.FC = () => {
     }
     return providers[provider] || provider
   }
-  
+
   const getKeyTypeName = (keyType: string) => {
     const types: { [key: string]: string } = {
       app_key: 'App Key',
@@ -601,63 +664,64 @@ const MyPageEnhanced: React.FC = () => {
     }
     return types[keyType] || keyType
   }
-  
-  // 모의/실전 키 분리 필터링
-  const testKeys = apiKeys.filter(k => k.is_test_mode)
-  const liveKeys = apiKeys.filter(k => !k.is_test_mode)
-  
+
+  // 모의/실전 키 분리 필터링 (계좌번호/비밀번호 제외)
+  const isApiKey = (k: ApiKey) => k.key_type !== 'account_number' && k.key_type !== 'account_password'
+  const testKeys = apiKeys.filter(k => k.is_test_mode && isApiKey(k))
+  const liveKeys = apiKeys.filter(k => !k.is_test_mode && isApiKey(k))
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ p: 3 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-          <Typography variant="h4">
-            <Person sx={{ mr: 1, verticalAlign: 'middle' }} />
-            내 페이지
-          </Typography>
-          
-          {/* 거래 모드 전환 */}
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+          <Stack direction="row" alignItems="center">
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate('/')}
+              sx={{ mr: 2 }}
+            >
+              메인으로 돌아가기
+            </Button>
+            <Typography variant="h4">
+              <Person sx={{ mr: 1, verticalAlign: 'middle' }} />
+              내 페이지
+            </Typography>
+          </Stack>
+
+          {/* 거래 모드 표시 (변경 불가) */}
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
               현재 거래 모드
             </Typography>
-            <ToggleButtonGroup
-              value={tradingMode}
-              exclusive
-              onChange={handleSwitchMode}
-              size="small"
-            >
-              <ToggleButton value="test" disabled={!modeInfo?.test_ready}>
-                <Science sx={{ mr: 1 }} />
-                모의투자
-                {modeInfo?.test_ready && (
-                  <CheckCircle sx={{ ml: 1, fontSize: 16, color: 'success.main' }} />
-                )}
-              </ToggleButton>
-              <ToggleButton value="live" disabled={!modeInfo?.live_ready}>
-                <TrendingUp sx={{ mr: 1 }} />
-                실전투자
-                {modeInfo?.live_ready && (
-                  <CheckCircle sx={{ ml: 1, fontSize: 16, color: 'success.main' }} />
-                )}
-              </ToggleButton>
-            </ToggleButtonGroup>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Chip
+                icon={tradingMode === 'live' ? <TrendingUp /> : <Science />}
+                label={tradingMode === 'live' ? '실전투자' : '모의투자'}
+                color={tradingMode === 'live' ? 'warning' : 'primary'}
+                variant="outlined"
+              />
+              <Typography variant="caption" color="text.secondary">
+                (변경 시 재로그인 필요)
+              </Typography>
+            </Stack>
           </Box>
         </Stack>
-        
+
         {message && (
-          <Alert 
-            severity={message.type} 
+          <Alert
+            severity={message.type}
             onClose={() => setMessage(null)}
             sx={{ mb: 2 }}
           >
             {message.text}
           </Alert>
         )}
-        
+
         {/* 모드 상태 정보 */}
         {modeInfo && (
-          <Alert 
-            severity={tradingMode === 'live' ? 'warning' : 'info'} 
+          <Alert
+            severity={tradingMode === 'live' ? 'warning' : 'info'}
             sx={{ mb: 2 }}
             icon={tradingMode === 'live' ? <TrendingUp /> : <Science />}
           >
@@ -666,37 +730,37 @@ const MyPageEnhanced: React.FC = () => {
                 <strong>{tradingMode === 'test' ? '모의투자' : '실전투자'} 모드</strong>로 운영 중입니다.
               </Typography>
               <Stack direction="row" spacing={2}>
-                <Chip 
-                  label={`모의 키: ${modeInfo.test_ready ? '준비됨' : '미설정'}`} 
-                  size="small" 
+                <Chip
+                  label={`모의 키: ${modeInfo.test_ready ? '준비됨' : '미설정'}`}
+                  size="small"
                   color={modeInfo.test_ready ? 'success' : 'default'}
                 />
-                <Chip 
-                  label={`실전 키: ${modeInfo.live_ready ? '준비됨' : '미설정'}`} 
-                  size="small" 
+                <Chip
+                  label={`실전 키: ${modeInfo.live_ready ? '준비됨' : '미설정'}`}
+                  size="small"
                   color={modeInfo.live_ready ? 'success' : 'default'}
                 />
               </Stack>
             </Stack>
           </Alert>
         )}
-        
+
         <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
           <Tab label="프로필" icon={<Person />} iconPosition="start" />
-          <Tab 
+          <Tab
             label={
               <Badge badgeContent={apiKeys.length} color="primary">
                 API 키 관리
               </Badge>
-            } 
-            icon={<Key />} 
-            iconPosition="start" 
+            }
+            icon={<Key />}
+            iconPosition="start"
           />
           <Tab label="계좌 연동" icon={<AccountBalance />} iconPosition="start" />
           <Tab label="보안 설정" icon={<Security />} iconPosition="start" />
           <Tab label="알림 설정" icon={<Notifications />} iconPosition="start" />
         </Tabs>
-        
+
         {/* 프로필 탭 */}
         <TabPanel value={tabValue} index={0}>
           <Grid container spacing={3}>
@@ -732,7 +796,7 @@ const MyPageEnhanced: React.FC = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
                 <InputLabel>투자자 유형</InputLabel>
@@ -747,7 +811,7 @@ const MyPageEnhanced: React.FC = () => {
                   <MenuItem value="professional">전문가</MenuItem>
                 </Select>
               </FormControl>
-              
+
               <FormControl fullWidth margin="normal">
                 <InputLabel>위험 성향</InputLabel>
                 <Select
@@ -760,7 +824,7 @@ const MyPageEnhanced: React.FC = () => {
                   <MenuItem value="aggressive">공격형</MenuItem>
                 </Select>
               </FormControl>
-              
+
               <FormControl fullWidth margin="normal">
                 <InputLabel>선호 시장</InputLabel>
                 <Select
@@ -774,7 +838,7 @@ const MyPageEnhanced: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12}>
               <Button
                 variant="contained"
@@ -787,7 +851,7 @@ const MyPageEnhanced: React.FC = () => {
             </Grid>
           </Grid>
         </TabPanel>
-        
+
         {/* API 키 관리 탭 */}
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ mb: 3 }}>
@@ -795,17 +859,9 @@ const MyPageEnhanced: React.FC = () => {
               <Button
                 variant="contained"
                 startIcon={<Add />}
-                onClick={() => setShowApiKeyDialog(true)}
-              >
-                개별 키 추가
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<SwapHoriz />}
                 onClick={() => setShowQuickSetup(true)}
-                color="secondary"
               >
-                키움 빠른 설정
+                API 키 추가
               </Button>
               <Button
                 variant="outlined"
@@ -819,21 +875,21 @@ const MyPageEnhanced: React.FC = () => {
               </Button>
             </Stack>
           </Box>
-          
+
           {/* 디버그 정보 */}
           <Alert severity="info" sx={{ mb: 2 }}>
-            총 {apiKeys.length}개의 API 키가 로드되었습니다. 
-            (모의: {apiKeys.filter(k => k.is_test_mode).length}개, 
+            총 {apiKeys.length}개의 API 키가 로드되었습니다.
+            (모의: {apiKeys.filter(k => k.is_test_mode).length}개,
             실전: {apiKeys.filter(k => !k.is_test_mode).length}개)
           </Alert>
-          
+
           {/* 모의투자 키 섹션 */}
           <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
             <Science sx={{ mr: 1 }} />
             모의투자 API 키
             <Chip label={`${testKeys.length}개`} size="small" sx={{ ml: 1 }} />
           </Typography>
-          
+
           <Grid container spacing={2} sx={{ mb: 4 }}>
             {testKeys.length === 0 ? (
               <Grid item xs={12}>
@@ -882,16 +938,16 @@ const MyPageEnhanced: React.FC = () => {
               ))
             )}
           </Grid>
-          
+
           <Divider sx={{ mb: 3 }} />
-          
+
           {/* 실전투자 키 섹션 */}
           <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
             <TrendingUp sx={{ mr: 1 }} />
             실전투자 API 키
             <Chip label={`${liveKeys.length}개`} size="small" sx={{ ml: 1 }} />
           </Typography>
-          
+
           <Grid container spacing={2}>
             {liveKeys.length === 0 ? (
               <Grid item xs={12}>
@@ -940,17 +996,17 @@ const MyPageEnhanced: React.FC = () => {
               ))
             )}
           </Grid>
-          
-          {/* 키움 빠른 설정 다이얼로그 */}
+
+          {/* API 키 추가 다이얼로그 (통합) */}
           <Dialog open={showQuickSetup} onClose={() => setShowQuickSetup(false)} maxWidth="sm" fullWidth>
             <DialogTitle>
-              키움증권 API 키 빠른 설정
+              API 키 추가
             </DialogTitle>
             <DialogContent>
               <Alert severity="info" sx={{ mb: 2 }}>
                 App Key와 App Secret을 한 번에 등록합니다.
               </Alert>
-              
+
               <FormControlLabel
                 control={
                   <Switch
@@ -961,7 +1017,7 @@ const MyPageEnhanced: React.FC = () => {
                 label={quickSetup.is_test_mode ? "모의투자 모드" : "실전투자 모드"}
                 sx={{ mb: 2 }}
               />
-              
+
               <TextField
                 fullWidth
                 label="App Key"
@@ -970,7 +1026,7 @@ const MyPageEnhanced: React.FC = () => {
                 margin="normal"
                 required
               />
-              
+
               <TextField
                 fullWidth
                 label="App Secret"
@@ -980,15 +1036,9 @@ const MyPageEnhanced: React.FC = () => {
                 margin="normal"
                 required
               />
-              
-              <TextField
-                fullWidth
-                label="계좌번호 (선택)"
-                value={quickSetup.account_number}
-                onChange={(e) => setQuickSetup({ ...quickSetup, account_number: e.target.value })}
-                margin="normal"
-              />
-              
+
+
+
               <TextField
                 fullWidth
                 label="인증서 비밀번호 (선택)"
@@ -1000,8 +1050,8 @@ const MyPageEnhanced: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setShowQuickSetup(false)}>취소</Button>
-              <Button 
-                onClick={handleQuickSetup} 
+              <Button
+                onClick={handleQuickSetup}
                 variant="contained"
                 disabled={loading || !quickSetup.app_key || !quickSetup.app_secret}
               >
@@ -1009,104 +1059,15 @@ const MyPageEnhanced: React.FC = () => {
               </Button>
             </DialogActions>
           </Dialog>
-          
-          {/* API 키 추가 다이얼로그 (기존) */}
-          <Dialog open={showApiKeyDialog} onClose={() => setShowApiKeyDialog(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>API 키 추가</DialogTitle>
-            <DialogContent>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>증권사</InputLabel>
-                <Select
-                  value={newApiKey.provider}
-                  onChange={(e) => setNewApiKey({ ...newApiKey, provider: e.target.value })}
-                  label="증권사"
-                >
-                  <MenuItem value="kiwoom">키움증권</MenuItem>
-                  <MenuItem value="korea_investment">한국투자증권</MenuItem>
-                  <MenuItem value="ebest">eBEST투자증권</MenuItem>
-                  <MenuItem value="nh">NH투자증권</MenuItem>
-                </Select>
-              </FormControl>
-              
-              <FormControl fullWidth margin="normal">
-                <InputLabel>키 유형</InputLabel>
-                <Select
-                  value={newApiKey.key_type}
-                  onChange={(e) => setNewApiKey({ ...newApiKey, key_type: e.target.value })}
-                  label="키 유형"
-                >
-                  <MenuItem value="app_key">App Key</MenuItem>
-                  <MenuItem value="app_secret">App Secret</MenuItem>
-                  <MenuItem value="account_number">계좌번호</MenuItem>
-                  <MenuItem value="cert_password">인증서 비밀번호</MenuItem>
-                </Select>
-              </FormControl>
-              
-              <TextField
-                fullWidth
-                label="키 이름 (선택사항)"
-                value={newApiKey.key_name}
-                onChange={(e) => setNewApiKey({ ...newApiKey, key_name: e.target.value })}
-                margin="normal"
-                helperText="예: 모의투자용, 실전투자용"
-              />
-              
-              <TextField
-                fullWidth
-                label="키 값"
-                type={showApiKeyValue[newApiKey.key_type] ? 'text' : 'password'}
-                value={newApiKey.key_value}
-                onChange={(e) => setNewApiKey({ ...newApiKey, key_value: e.target.value })}
-                margin="normal"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowApiKeyValue({
-                          ...showApiKeyValue,
-                          [newApiKey.key_type]: !showApiKeyValue[newApiKey.key_type]
-                        })}
-                      >
-                        {showApiKeyValue[newApiKey.key_type] ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-              
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={newApiKey.is_test_mode}
-                    onChange={(e) => setNewApiKey({ ...newApiKey, is_test_mode: e.target.checked })}
-                  />
-                }
-                label="테스트 모드 (모의투자)"
-                sx={{ mt: 2 }}
-              />
-              
-              <Alert severity="info" sx={{ mt: 2 }}>
-                API 키는 pgsodium을 통해 안전하게 암호화되어 저장됩니다.
-              </Alert>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setShowApiKeyDialog(false)}>취소</Button>
-              <Button 
-                onClick={handleAddApiKey} 
-                variant="contained"
-                disabled={loading || !newApiKey.key_value}
-              >
-                저장
-              </Button>
-            </DialogActions>
-          </Dialog>
+
+
         </TabPanel>
-        
+
         {/* 계좌 연동 탭 */}
         <TabPanel value={tabValue} index={2}>
           <AccountConnectEnhanced />
         </TabPanel>
-        
+
         {/* 보안 설정 탭 */}
         <TabPanel value={tabValue} index={3}>
           <Grid container spacing={3}>
@@ -1114,7 +1075,7 @@ const MyPageEnhanced: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 비밀번호 변경
               </Typography>
-              
+
               <TextField
                 fullWidth
                 type="password"
@@ -1126,7 +1087,7 @@ const MyPageEnhanced: React.FC = () => {
                 })}
                 margin="normal"
               />
-              
+
               <TextField
                 fullWidth
                 type="password"
@@ -1138,7 +1099,7 @@ const MyPageEnhanced: React.FC = () => {
                 })}
                 margin="normal"
               />
-              
+
               <Button
                 variant="contained"
                 onClick={handlePasswordChange}
@@ -1149,12 +1110,12 @@ const MyPageEnhanced: React.FC = () => {
                 비밀번호 변경
               </Button>
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>
                 2단계 인증
               </Typography>
-              
+
               <FormControlLabel
                 control={
                   <Switch
@@ -1167,14 +1128,14 @@ const MyPageEnhanced: React.FC = () => {
                 }
                 label="2단계 인증 사용"
               />
-              
+
               <Alert severity="warning" sx={{ mt: 2 }}>
                 2단계 인증을 활성화하면 로그인 시 추가 인증이 필요합니다.
               </Alert>
             </Grid>
           </Grid>
         </TabPanel>
-        
+
         {/* 알림 설정 탭 */}
         <TabPanel value={tabValue} index={4}>
           <Grid container spacing={3}>
@@ -1182,7 +1143,7 @@ const MyPageEnhanced: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 알림 수신 설정
               </Typography>
-              
+
               <FormControlLabel
                 control={
                   <Switch
@@ -1195,7 +1156,7 @@ const MyPageEnhanced: React.FC = () => {
                 }
                 label="이메일 알림"
               />
-              
+
               <FormControlLabel
                 control={
                   <Switch
@@ -1208,7 +1169,7 @@ const MyPageEnhanced: React.FC = () => {
                 }
                 label="SMS 알림"
               />
-              
+
               <FormControlLabel
                 control={
                   <Switch
@@ -1221,7 +1182,7 @@ const MyPageEnhanced: React.FC = () => {
                 }
                 label="푸시 알림"
               />
-              
+
               <Box sx={{ mt: 3 }}>
                 <Button
                   variant="contained"

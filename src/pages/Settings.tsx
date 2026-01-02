@@ -3,12 +3,10 @@ import {
   Box,
   Container,
   Typography,
-  Paper,
   TextField,
   Button,
   Switch,
   FormControlLabel,
-  Divider,
   Alert,
   Grid,
   Card,
@@ -22,8 +20,7 @@ import {
   Notifications,
   Security,
   AccountBalance,
-  Save,
-  Cancel
+  Save
 } from '@mui/icons-material'
 import { supabase } from '../lib/supabase'
 
@@ -94,10 +91,25 @@ const Settings: React.FC = () => {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (error) throw error
-      setProfile(data)
+
+      if (data) {
+        setProfile(data)
+      } else {
+        // Fallback for missing profile
+        setProfile({
+          id: user.id,
+          email: user.email || '',
+          name: user.user_metadata?.name || '',
+          kiwoom_account: null,
+          is_approved: false,
+          approval_status: 'pending',
+          created_at: new Date().toISOString(),
+          email_verified: !!user.email_confirmed_at
+        })
+      }
     } catch (error) {
       console.error('Error fetching profile:', error)
       setError('Failed to load profile')
@@ -126,13 +138,13 @@ const Settings: React.FC = () => {
         .from('profiles')
         .update({
           name: profile.name,
-          kiwoom_account: profile.kiwoom_account,
+          // kiwoom_account is now managed via API Keys
           updated_at: new Date().toISOString()
         })
         .eq('id', profile.id)
 
       if (error) throw error
-      
+
       setMessage('Profile updated successfully')
     } catch (error) {
       console.error('Error updating profile:', error)
@@ -145,10 +157,10 @@ const Settings: React.FC = () => {
   const handleSaveSettings = () => {
     setSaving(true)
     setMessage('')
-    
+
     // Save settings to localStorage (or database)
     localStorage.setItem('userSettings', JSON.stringify(settings))
-    
+
     setTimeout(() => {
       setSaving(false)
       setMessage('Settings saved successfully')
@@ -206,7 +218,7 @@ const Settings: React.FC = () => {
                   <Person />
                   Profile Information
                 </Typography>
-                
+
                 {profile && (
                   <>
                     <Box sx={{ mb: 2 }}>
@@ -214,8 +226,8 @@ const Settings: React.FC = () => {
                         Account Status
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                        <Chip 
-                          label={profile.approval_status} 
+                        <Chip
+                          label={profile.approval_status}
                           color={getApprovalStatusColor(profile.approval_status) as any}
                           size="small"
                         />
@@ -232,7 +244,7 @@ const Settings: React.FC = () => {
                       disabled
                       margin="normal"
                     />
-                    
+
                     <TextField
                       fullWidth
                       label="Name"
@@ -240,21 +252,21 @@ const Settings: React.FC = () => {
                       onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                       margin="normal"
                     />
-                    
+
                     <TextField
                       fullWidth
                       label="Kiwoom Account"
                       value={profile.kiwoom_account || ''}
-                      onChange={(e) => setProfile({ ...profile, kiwoom_account: e.target.value })}
+                      disabled
                       margin="normal"
-                      helperText="Enter your Kiwoom securities account number"
+                      helperText="Managed via MyPage > Account Link"
                     />
                   </>
                 )}
               </CardContent>
               <CardActions>
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   startIcon={<Save />}
                   onClick={handleSaveProfile}
                   disabled={saving}
@@ -273,7 +285,7 @@ const Settings: React.FC = () => {
                   <Notifications />
                   Notification Preferences
                 </Typography>
-                
+
                 <FormControlLabel
                   control={
                     <Switch
@@ -286,7 +298,7 @@ const Settings: React.FC = () => {
                   }
                   label="Email Alerts"
                 />
-                
+
                 <FormControlLabel
                   control={
                     <Switch
@@ -299,7 +311,7 @@ const Settings: React.FC = () => {
                   }
                   label="Trading Signals"
                 />
-                
+
                 <FormControlLabel
                   control={
                     <Switch
@@ -324,7 +336,7 @@ const Settings: React.FC = () => {
                   <AccountBalance />
                   Trading Preferences
                 </Typography>
-                
+
                 <FormControlLabel
                   control={
                     <Switch
@@ -337,7 +349,7 @@ const Settings: React.FC = () => {
                   }
                   label="Confirm Before Order"
                 />
-                
+
                 <TextField
                   fullWidth
                   type="number"
@@ -351,8 +363,8 @@ const Settings: React.FC = () => {
                 />
               </CardContent>
               <CardActions>
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   startIcon={<Save />}
                   onClick={handleSaveSettings}
                   disabled={saving}
@@ -371,15 +383,15 @@ const Settings: React.FC = () => {
                   <Security />
                   Security
                 </Typography>
-                
+
                 <Button variant="outlined" fullWidth sx={{ mb: 2 }}>
                   Change Password
                 </Button>
-                
+
                 <Button variant="outlined" fullWidth sx={{ mb: 2 }}>
                   Enable Two-Factor Authentication
                 </Button>
-                
+
                 <Typography variant="body2" color="textSecondary">
                   Last login: {profile?.created_at ? new Date(profile.created_at).toLocaleString() : 'N/A'}
                 </Typography>

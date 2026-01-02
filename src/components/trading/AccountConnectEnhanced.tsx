@@ -58,7 +58,7 @@ const AccountConnectEnhanced: React.FC = () => {
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
-  
+
   // 새 계좌 입력 상태
   const [newAccount, setNewAccount] = useState({
     provider: 'kiwoom',
@@ -146,11 +146,11 @@ const AccountConnectEnhanced: React.FC = () => {
         })
       }
 
-      setMessage({ 
-        type: 'success', 
-        text: `${newAccount.is_test_mode ? '모의투자' : '실전투자'} 계좌가 등록되었습니다.` 
+      setMessage({
+        type: 'success',
+        text: `${newAccount.is_test_mode ? '모의투자' : '실전투자'} 계좌가 등록되었습니다.`
       })
-      
+
       setShowAddDialog(false)
       setNewAccount({
         provider: 'kiwoom',
@@ -159,7 +159,7 @@ const AccountConnectEnhanced: React.FC = () => {
         is_test_mode: true,
         account_password: ''
       })
-      
+
       await loadAccounts(currentUser.id)
     } catch (error: any) {
       console.error('Failed to add account:', error)
@@ -170,17 +170,37 @@ const AccountConnectEnhanced: React.FC = () => {
   }
 
   const handleDeleteAccount = async (accountId: string) => {
-    if (!window.confirm('이 계좌를 삭제하시겠습니까?')) return
+    if (!window.confirm('이 계좌를 삭제하시겠습니까? (관련된 비밀번호도 함께 삭제됩니다)')) return
+
+    const targetAccount = accounts.find(a => a.id === accountId)
+    if (!targetAccount) {
+      setMessage({ type: 'error', text: '삭제할 계좌 정보를 찾을 수 없습니다.' })
+      return
+    }
 
     try {
-      const { error } = await supabase
+      // 1. 해당 계좌명(key_name)을 가진 모든 키(번호, 비밀번호) 조회
+      const { data: relatedKeys, error: searchError } = await supabase
         .from('user_api_keys')
-        .delete()
-        .eq('id', accountId)
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .eq('provider', targetAccount.provider)
+        .eq('key_name', targetAccount.account_name)
 
-      if (error) throw error
+      if (searchError) throw searchError
 
-      setMessage({ type: 'success', text: '계좌가 삭제되었습니다.' })
+      if (relatedKeys && relatedKeys.length > 0) {
+        // 2. 조회된 모든 키 삭제
+        const idsToDelete = relatedKeys.map(k => k.id)
+        const { error: deleteError } = await supabase
+          .from('user_api_keys')
+          .delete()
+          .in('id', idsToDelete)
+
+        if (deleteError) throw deleteError
+      }
+
+      setMessage({ type: 'success', text: '계좌와 관련된 모든 정보가 삭제되었습니다.' })
       await loadAccounts(currentUser.id)
     } catch (error) {
       console.error('Failed to delete account:', error)
@@ -220,8 +240,8 @@ const AccountConnectEnhanced: React.FC = () => {
         </Card>
 
         {message && (
-          <Alert 
-            severity={message.type} 
+          <Alert
+            severity={message.type}
             onClose={() => setMessage(null)}
           >
             {message.text}
@@ -266,8 +286,8 @@ const AccountConnectEnhanced: React.FC = () => {
                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                               {account.account_number}
                             </Typography>
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               onClick={() => copyAccountNumber(account.account_number)}
                             >
                               <ContentCopy fontSize="small" />
@@ -323,8 +343,8 @@ const AccountConnectEnhanced: React.FC = () => {
                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                               {account.account_number}
                             </Typography>
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               onClick={() => copyAccountNumber(account.account_number)}
                             >
                               <ContentCopy fontSize="small" />
@@ -379,7 +399,7 @@ const AccountConnectEnhanced: React.FC = () => {
               label={
                 <Stack direction="row" spacing={1} alignItems="center">
                   {newAccount.is_test_mode ? <Science /> : <TrendingUp />}
-                  <Typography>
+                  <Typography component="span">
                     {newAccount.is_test_mode ? '모의투자 계좌' : '실전투자 계좌'}
                   </Typography>
                 </Stack>
@@ -427,7 +447,7 @@ const AccountConnectEnhanced: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowAddDialog(false)}>취소</Button>
-          <Button 
+          <Button
             variant="contained"
             onClick={handleAddAccount}
             disabled={loading || !newAccount.account_number || !newAccount.account_name}

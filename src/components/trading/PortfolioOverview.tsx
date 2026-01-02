@@ -137,13 +137,13 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
         <Grid item xs={12} md={3}>
           <Box p={2} border="1px solid #000000" bgcolor="background.paper" borderRadius={0}>
             <Typography variant="caption" color="text.secondary" gutterBottom display="block">
-              총 할당 자금
+              총 보유 자산
             </Typography>
             <Typography variant="h5" fontWeight="bold" fontFamily="serif">
-              {formatCurrency(safeStats.totalAllocated)}원
+              {formatCurrency(safeStats.totalCapital)}원
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              활성 전략 {safeStats.activeStrategiesCount || 0}개
+              가용 현금: {formatCurrency(safeStats.realCash)}원
             </Typography>
           </Box>
         </Grid>
@@ -213,30 +213,41 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
               <Typography variant="h6" gutterBottom fontWeight="bold" display="flex" alignItems="center" fontFamily="serif">
                 <PieChartIcon sx={{ mr: 1, color: 'text.primary' }} /> 자산 배분
               </Typography>
-              <Box height={250}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={assetAllocationData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      fill="#212121"
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={renderCustomizedLabel}
-                      labelLine={false}
-                    >
-                      {assetAllocationData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => `₩${formatCurrency(value)}`} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Box>
+              {assetAllocationData.some(d => d.value > 0) ? (
+                <Box height={250}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={assetAllocationData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        fill="#212121"
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={renderCustomizedLabel}
+                        labelLine={false}
+                      >
+                        {assetAllocationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => `₩${formatCurrency(value)}`} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
+              ) : (
+                <Box height={250} display="flex" flexDirection="column" alignItems="center" justifyContent="center">
+                  <Typography color="text.secondary" align="center" gutterBottom>
+                    자금이 전략에 할당되었습니다.
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" align="center">
+                    (현재 보유 주식 없음)
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -311,14 +322,19 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                   </ResponsiveContainer>
                 </Box>
               ) : (
-                <Box height={250} display="flex" alignItems="center" justifyContent="center">
-                  <Typography color="text.secondary">보유 중인 종목이 없습니다.</Typography>
+                <Box height={250} display="flex" flexDirection="column" alignItems="center" justifyContent="center">
+                  <Typography color="text.secondary" align="center" gutterBottom>
+                    보유 중인 종목이 없습니다.
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" align="center">
+                    (전략 실행 대기 중)
+                  </Typography>
                 </Box>
               )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-    </Paper>
+    </Paper >
   )
 }

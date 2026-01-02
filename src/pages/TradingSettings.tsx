@@ -45,7 +45,8 @@ import {
   CompareArrows,
   FilterList,
   Business,
-  Shield
+  MoneyOff,
+  ManageAccounts
 } from '@mui/icons-material'
 
 interface TabPanelProps {
@@ -70,7 +71,7 @@ function TabPanel(props: TabPanelProps) {
 
 const TradingSettings: React.FC = () => {
   const [tabValue, setTabValue] = useState(0)
-  
+
   // 투자유니버스 설정
   const [universe, setUniverse] = useState({
     marketCap: [100, 50000], // 억원
@@ -82,7 +83,7 @@ const TradingSettings: React.FC = () => {
     sectors: ['IT/소프트웨어', '반도체', '2차전지', '바이오/헬스케어'],
     excludeSectors: ['건설/부동산', '조선/기계']
   })
-  
+
   // 매매 조건 설정
   const [tradingConditions, setTradingConditions] = useState({
     timeframe: '일봉',
@@ -92,8 +93,8 @@ const TradingSettings: React.FC = () => {
       macd: { enabled: true, crossover: true },
       ichimoku: { enabled: true, condition: '구름대 상단 돌파' },
       volume: { enabled: true, multiplier: 1.5 },
-      sectorIndex: { 
-        enabled: false, 
+      sectorIndex: {
+        enabled: false,
         comparison: 'outperform', // outperform, underperform, correlation
         threshold: 5, // %
         sectors: ['KOSPI', 'KOSDAQ']
@@ -111,7 +112,7 @@ const TradingSettings: React.FC = () => {
       }
     }
   })
-  
+
   // 업종 지표 설정
   const [sectorIndices, setSectorIndices] = useState({
     mainIndices: [
@@ -139,7 +140,7 @@ const TradingSettings: React.FC = () => {
     useRelativeStrength: true,
     strengthPeriod: 60 // days
   })
-  
+
   // 포트폴리오 설정
   const [portfolio, setPortfolio] = useState({
     maxPositions: 20,
@@ -151,7 +152,7 @@ const TradingSettings: React.FC = () => {
     rebalancePeriod: 'monthly', // daily, weekly, monthly, quarterly
     rebalanceThreshold: 5 // %
   })
-  
+
   // 분할매매 설정
   const [splitTrading, setSplitTrading] = useState({
     enabled: true,
@@ -166,7 +167,7 @@ const TradingSettings: React.FC = () => {
       { level: 3, percentage: 30, trigger: 10 }
     ]
   })
-  
+
   // 위험관리 설정
   const [riskManagement, setRiskManagement] = useState({
     maxDrawdown: 20, // %
@@ -188,6 +189,46 @@ const TradingSettings: React.FC = () => {
     positionSizing: 'fixed', // fixed, kelly, volatility
     leverage: 1
   })
+
+  // 계좌 설정
+  const [accountSettings, setAccountSettings] = useState({
+    accountNumber: '',
+    accountType: 'REAL', // REAL, MOCK
+    appKey: '',
+    appSecret: ''
+  })
+
+  // 계좌 설정 저장
+  const handleSaveAccount = async () => {
+    if (!accountSettings.accountNumber || !accountSettings.appKey || !accountSettings.appSecret) {
+      alert('모든 필드를 입력해주세요.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/account/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: "admin-user", // TODO: Auth Context에서 가져오기
+          account_no: accountSettings.accountNumber,
+          account_type: accountSettings.accountType,
+          app_key: accountSettings.appKey,
+          app_secret: accountSettings.appSecret
+        })
+      });
+
+      if (response.ok) {
+        alert('계좌 정보가 성공적으로 등록되었습니다.');
+      } else {
+        const err = await response.text();
+        alert('등록 실패: ' + err);
+      }
+    } catch (e) {
+      alert('서버 통신 오류가 발생했습니다.');
+      console.error(e);
+    }
+  }
 
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -280,6 +321,9 @@ const TradingSettings: React.FC = () => {
               <Tab icon={<Business />} label="포트폴리오" />
               <Tab icon={<Analytics />} label="분할매매" />
               <Tab icon={<Security />} label="위험관리" />
+              <Tab icon={<Analytics />} label="분할매매" />
+              <Tab icon={<Security />} label="위험관리" />
+              <Tab icon={<ManageAccounts />} label="계좌설정" />
             </Tabs>
           </Box>
 
@@ -288,7 +332,7 @@ const TradingSettings: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               투자유니버스 선정 기준
             </Typography>
-            
+
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Card>
@@ -298,7 +342,7 @@ const TradingSettings: React.FC = () => {
                     </Typography>
                     <Slider
                       value={universe.marketCap}
-                      onChange={(e, v) => setUniverse({...universe, marketCap: v as number[]})}
+                      onChange={(e, v) => setUniverse({ ...universe, marketCap: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={100000}
@@ -312,7 +356,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -321,7 +365,7 @@ const TradingSettings: React.FC = () => {
                     </Typography>
                     <Slider
                       value={universe.per}
-                      onChange={(e, v) => setUniverse({...universe, per: v as number[]})}
+                      onChange={(e, v) => setUniverse({ ...universe, per: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={50}
@@ -335,7 +379,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -344,7 +388,7 @@ const TradingSettings: React.FC = () => {
                     </Typography>
                     <Slider
                       value={universe.pbr}
-                      onChange={(e, v) => setUniverse({...universe, pbr: v as number[]})}
+                      onChange={(e, v) => setUniverse({ ...universe, pbr: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={10}
@@ -359,7 +403,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -368,7 +412,7 @@ const TradingSettings: React.FC = () => {
                     </Typography>
                     <Slider
                       value={universe.roe}
-                      onChange={(e, v) => setUniverse({...universe, roe: v as number[]})}
+                      onChange={(e, v) => setUniverse({ ...universe, roe: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={100}
@@ -382,7 +426,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -391,7 +435,7 @@ const TradingSettings: React.FC = () => {
                     </Typography>
                     <Slider
                       value={universe.debtRatio}
-                      onChange={(e, v) => setUniverse({...universe, debtRatio: v as number[]})}
+                      onChange={(e, v) => setUniverse({ ...universe, debtRatio: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={200}
@@ -405,7 +449,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -414,7 +458,7 @@ const TradingSettings: React.FC = () => {
                     </Typography>
                     <Slider
                       value={universe.tradingVolume}
-                      onChange={(e, v) => setUniverse({...universe, tradingVolume: v as number[]})}
+                      onChange={(e, v) => setUniverse({ ...universe, tradingVolume: v as number[] })}
                       valueLabelDisplay="auto"
                       min={0}
                       max={50000}
@@ -428,7 +472,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12}>
                 <Card>
                   <CardContent>
@@ -458,7 +502,7 @@ const TradingSettings: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               매매 조건 설정
             </Typography>
-            
+
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <FormControl component="fieldset">
@@ -479,7 +523,7 @@ const TradingSettings: React.FC = () => {
                   </RadioGroup>
                 </FormControl>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -489,7 +533,7 @@ const TradingSettings: React.FC = () => {
                     <FormGroup>
                       <FormControlLabel
                         control={
-                          <Checkbox 
+                          <Checkbox
                             checked={tradingConditions.buyConditions.rsi.enabled}
                             onChange={(e) => setTradingConditions({
                               ...tradingConditions,
@@ -504,7 +548,7 @@ const TradingSettings: React.FC = () => {
                       />
                       <FormControlLabel
                         control={
-                          <Checkbox 
+                          <Checkbox
                             checked={tradingConditions.buyConditions.macd.enabled}
                           />
                         }
@@ -512,7 +556,7 @@ const TradingSettings: React.FC = () => {
                       />
                       <FormControlLabel
                         control={
-                          <Checkbox 
+                          <Checkbox
                             checked={tradingConditions.buyConditions.ichimoku.enabled}
                           />
                         }
@@ -520,7 +564,7 @@ const TradingSettings: React.FC = () => {
                       />
                       <FormControlLabel
                         control={
-                          <Checkbox 
+                          <Checkbox
                             checked={tradingConditions.buyConditions.volume.enabled}
                           />
                         }
@@ -530,7 +574,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -540,7 +584,7 @@ const TradingSettings: React.FC = () => {
                     <Stack spacing={2}>
                       <FormControlLabel
                         control={
-                          <Switch 
+                          <Switch
                             checked={tradingConditions.sellConditions.profitTarget.enabled}
                           />
                         }
@@ -548,7 +592,7 @@ const TradingSettings: React.FC = () => {
                       />
                       <FormControlLabel
                         control={
-                          <Switch 
+                          <Switch
                             checked={tradingConditions.sellConditions.stopLoss.enabled}
                           />
                         }
@@ -556,7 +600,7 @@ const TradingSettings: React.FC = () => {
                       />
                       <FormControlLabel
                         control={
-                          <Switch 
+                          <Switch
                             checked={tradingConditions.sellConditions.trailingStop.enabled}
                           />
                         }
@@ -564,7 +608,7 @@ const TradingSettings: React.FC = () => {
                       />
                       <FormControlLabel
                         control={
-                          <Switch 
+                          <Switch
                             checked={tradingConditions.sellConditions.timeStop.enabled}
                           />
                         }
@@ -582,7 +626,7 @@ const TradingSettings: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               업종지표 활용 설정
             </Typography>
-            
+
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Card>
@@ -593,7 +637,7 @@ const TradingSettings: React.FC = () => {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                       활성화된 업종 지수를 기준으로 개별 종목의 상대 강도를 평가합니다.
                     </Typography>
-                    
+
                     <Grid container spacing={2}>
                       {sectorIndices.sectorIndices.map(sector => (
                         <Grid item xs={12} sm={6} md={4} key={sector.code}>
@@ -603,10 +647,10 @@ const TradingSettings: React.FC = () => {
                                 <Switch
                                   checked={sector.enabled}
                                   onChange={(e) => {
-                                    const updated = sectorIndices.sectorIndices.map(s => 
-                                      s.code === sector.code ? {...s, enabled: e.target.checked} : s
+                                    const updated = sectorIndices.sectorIndices.map(s =>
+                                      s.code === sector.code ? { ...s, enabled: e.target.checked } : s
                                     )
-                                    setSectorIndices({...sectorIndices, sectorIndices: updated})
+                                    setSectorIndices({ ...sectorIndices, sectorIndices: updated })
                                   }}
                                   color={sector.enabled ? 'primary' : 'default'}
                                 />
@@ -621,10 +665,10 @@ const TradingSettings: React.FC = () => {
                                 <Slider
                                   value={sector.weight}
                                   onChange={(e, value) => {
-                                    const updated = sectorIndices.sectorIndices.map(s => 
-                                      s.code === sector.code ? {...s, weight: value as number} : s
+                                    const updated = sectorIndices.sectorIndices.map(s =>
+                                      s.code === sector.code ? { ...s, weight: value as number } : s
                                     )
-                                    setSectorIndices({...sectorIndices, sectorIndices: updated})
+                                    setSectorIndices({ ...sectorIndices, sectorIndices: updated })
                                   }}
                                   min={0.1}
                                   max={2.0}
@@ -649,7 +693,7 @@ const TradingSettings: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               포트폴리오 관리
             </Typography>
-            
+
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Card>
@@ -662,20 +706,20 @@ const TradingSettings: React.FC = () => {
                         label="최대 보유 종목수"
                         type="number"
                         value={portfolio.maxPositions}
-                        onChange={(e) => setPortfolio({...portfolio, maxPositions: Number(e.target.value)})}
+                        onChange={(e) => setPortfolio({ ...portfolio, maxPositions: Number(e.target.value) })}
                         fullWidth
                       />
                       <TextField
                         label="최소 보유 종목수"
                         type="number"
                         value={portfolio.minPositions}
-                        onChange={(e) => setPortfolio({...portfolio, minPositions: Number(e.target.value)})}
+                        onChange={(e) => setPortfolio({ ...portfolio, minPositions: Number(e.target.value) })}
                         fullWidth
                       />
                       <TextField
                         label="최대 종목당 비중"
                         value={portfolio.maxPositionSize}
-                        onChange={(e) => setPortfolio({...portfolio, maxPositionSize: Number(e.target.value)})}
+                        onChange={(e) => setPortfolio({ ...portfolio, maxPositionSize: Number(e.target.value) })}
                         InputProps={{
                           endAdornment: <InputAdornment position="end">%</InputAdornment>,
                         }}
@@ -684,7 +728,7 @@ const TradingSettings: React.FC = () => {
                       <TextField
                         label="최소 종목당 비중"
                         value={portfolio.minPositionSize}
-                        onChange={(e) => setPortfolio({...portfolio, minPositionSize: Number(e.target.value)})}
+                        onChange={(e) => setPortfolio({ ...portfolio, minPositionSize: Number(e.target.value) })}
                         InputProps={{
                           endAdornment: <InputAdornment position="end">%</InputAdornment>,
                         }}
@@ -693,7 +737,7 @@ const TradingSettings: React.FC = () => {
                       <TextField
                         label="현금 보유 비율"
                         value={portfolio.cashBuffer}
-                        onChange={(e) => setPortfolio({...portfolio, cashBuffer: Number(e.target.value)})}
+                        onChange={(e) => setPortfolio({ ...portfolio, cashBuffer: Number(e.target.value) })}
                         InputProps={{
                           endAdornment: <InputAdornment position="end">%</InputAdornment>,
                         }}
@@ -703,7 +747,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -715,7 +759,7 @@ const TradingSettings: React.FC = () => {
                         <InputLabel>포지션 사이징 방법</InputLabel>
                         <Select
                           value={portfolio.positionSizeMethod}
-                          onChange={(e) => setPortfolio({...portfolio, positionSizeMethod: e.target.value as any})}
+                          onChange={(e) => setPortfolio({ ...portfolio, positionSizeMethod: e.target.value as any })}
                           label="포지션 사이징 방법"
                         >
                           <MenuItem value="equal">동일 가중</MenuItem>
@@ -728,7 +772,7 @@ const TradingSettings: React.FC = () => {
                         <InputLabel>리밸런싱 주기</InputLabel>
                         <Select
                           value={portfolio.rebalancePeriod}
-                          onChange={(e) => setPortfolio({...portfolio, rebalancePeriod: e.target.value as any})}
+                          onChange={(e) => setPortfolio({ ...portfolio, rebalancePeriod: e.target.value as any })}
                           label="리밸런싱 주기"
                         >
                           <MenuItem value="daily">일별</MenuItem>
@@ -740,7 +784,7 @@ const TradingSettings: React.FC = () => {
                       <TextField
                         label="리밸런싱 임계값"
                         value={portfolio.rebalanceThreshold}
-                        onChange={(e) => setPortfolio({...portfolio, rebalanceThreshold: Number(e.target.value)})}
+                        onChange={(e) => setPortfolio({ ...portfolio, rebalanceThreshold: Number(e.target.value) })}
                         InputProps={{
                           endAdornment: <InputAdornment position="end">%</InputAdornment>,
                         }}
@@ -759,18 +803,18 @@ const TradingSettings: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               분할매매 전략
             </Typography>
-            
+
             <FormControlLabel
               control={
-                <Switch 
+                <Switch
                   checked={splitTrading.enabled}
-                  onChange={(e) => setSplitTrading({...splitTrading, enabled: e.target.checked})}
+                  onChange={(e) => setSplitTrading({ ...splitTrading, enabled: e.target.checked })}
                 />
               }
               label="분할매매 활성화"
               sx={{ mb: 3 }}
             />
-            
+
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Card>
@@ -790,7 +834,7 @@ const TradingSettings: React.FC = () => {
                             onChange={(e) => {
                               const updated = [...splitTrading.buyLevels]
                               updated[index].percentage = Number(e.target.value)
-                              setSplitTrading({...splitTrading, buyLevels: updated})
+                              setSplitTrading({ ...splitTrading, buyLevels: updated })
                             }}
                             InputProps={{
                               endAdornment: <InputAdornment position="end">%</InputAdornment>,
@@ -804,7 +848,7 @@ const TradingSettings: React.FC = () => {
                             onChange={(e) => {
                               const updated = [...splitTrading.buyLevels]
                               updated[index].trigger = Number(e.target.value)
-                              setSplitTrading({...splitTrading, buyLevels: updated})
+                              setSplitTrading({ ...splitTrading, buyLevels: updated })
                             }}
                             InputProps={{
                               endAdornment: <InputAdornment position="end">%</InputAdornment>,
@@ -818,7 +862,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -837,7 +881,7 @@ const TradingSettings: React.FC = () => {
                             onChange={(e) => {
                               const updated = [...splitTrading.sellLevels]
                               updated[index].percentage = Number(e.target.value)
-                              setSplitTrading({...splitTrading, sellLevels: updated})
+                              setSplitTrading({ ...splitTrading, sellLevels: updated })
                             }}
                             InputProps={{
                               endAdornment: <InputAdornment position="end">%</InputAdornment>,
@@ -851,7 +895,7 @@ const TradingSettings: React.FC = () => {
                             onChange={(e) => {
                               const updated = [...splitTrading.sellLevels]
                               updated[index].trigger = Number(e.target.value)
-                              setSplitTrading({...splitTrading, sellLevels: updated})
+                              setSplitTrading({ ...splitTrading, sellLevels: updated })
                             }}
                             InputProps={{
                               endAdornment: <InputAdornment position="end">%</InputAdornment>,
@@ -873,7 +917,7 @@ const TradingSettings: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               위험관리 시스템
             </Typography>
-            
+
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Card>
@@ -948,7 +992,7 @@ const TradingSettings: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Card>
                   <CardContent>
@@ -957,7 +1001,7 @@ const TradingSettings: React.FC = () => {
                     </Typography>
                     <FormControlLabel
                       control={
-                        <Switch 
+                        <Switch
                           checked={riskManagement.systemCut.enabled}
                           onChange={(e) => setRiskManagement({
                             ...riskManagement,
@@ -968,7 +1012,7 @@ const TradingSettings: React.FC = () => {
                       label="시스템 CUT 활성화"
                       sx={{ mb: 2 }}
                     />
-                    
+
                     {riskManagement.systemCut.enabled && (
                       <Stack spacing={2}>
                         <TextField
@@ -976,8 +1020,8 @@ const TradingSettings: React.FC = () => {
                           value={riskManagement.systemCut.consecutiveLosses}
                           onChange={(e) => setRiskManagement({
                             ...riskManagement,
-                            systemCut: { 
-                              ...riskManagement.systemCut, 
+                            systemCut: {
+                              ...riskManagement.systemCut,
                               consecutiveLosses: Number(e.target.value)
                             }
                           })}
@@ -989,8 +1033,8 @@ const TradingSettings: React.FC = () => {
                           value={riskManagement.systemCut.dailyLossLimit}
                           onChange={(e) => setRiskManagement({
                             ...riskManagement,
-                            systemCut: { 
-                              ...riskManagement.systemCut, 
+                            systemCut: {
+                              ...riskManagement.systemCut,
                               dailyLossLimit: Number(e.target.value)
                             }
                           })}
@@ -1005,8 +1049,8 @@ const TradingSettings: React.FC = () => {
                             value={riskManagement.systemCut.action}
                             onChange={(e) => setRiskManagement({
                               ...riskManagement,
-                              systemCut: { 
-                                ...riskManagement.systemCut, 
+                              systemCut: {
+                                ...riskManagement.systemCut,
                                 action: e.target.value as 'pause' | 'stop' | 'reduce'
                               }
                             })}
@@ -1019,7 +1063,7 @@ const TradingSettings: React.FC = () => {
                         </FormControl>
                       </Stack>
                     )}
-                    
+
                     <Alert severity="warning" sx={{ mt: 2 }}>
                       시스템 CUT이 발동되면 설정된 액션에 따라 자동으로 매매가 제한됩니다.
                     </Alert>

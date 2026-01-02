@@ -2139,10 +2139,10 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
     {
       id: 35,
       title: '복수 계좌 지원 시스템 (Multi-Account)',
-      status: 'pending',
+      status: 'done',
       priority: 'high',
       icon: <Security />,
-      period: '2025.12 예정',
+      period: '2026.01.02',
       description: '다중 키움증권 계좌 동시 운용 및 관리 시스템 구축',
       subtasks: [
         {
@@ -2443,13 +2443,48 @@ const RoadmapDialog: React.FC<RoadmapDialogProps> = ({ open, onClose }) => {
           ]
         }
       ]
+    },
+    {
+      id: 44,
+      title: '시스템 안정화 및 n8n 연동 최적화',
+      status: 'done',
+      priority: 'high',
+      icon: <Security />,
+      period: '2026.01.02',
+      description: '운영 환경 안정성 확보를 위한 계좌 정규화 및 n8n 프록시 연동',
+      subtasks: [
+        {
+          title: '✅ 계좌번호 정규화 (Account Normalization)',
+          details: [
+            'Standard: 하이픈(-) 제거 및 10자리(8+2) 포맷 통일',
+            'Backend: KiwoomAPIClient 및 System 엔드포인트 자동 변환 로직 적용',
+            'Database: account_balance 테이블 및 API 키 정합성 확보'
+          ]
+        },
+        {
+          title: '✅ n8n 프록시 및 CORS 해결',
+          details: [
+            'Proxy: Vite 개발 서버 프록시 설정을 통한 CORS 우회 (/n8n-api)',
+            'Env: AWS-Local 환경 변수(.env) 자동 동기화 체계 구축',
+            'Auth: API Key 인증 구조 정비 및 연결 안정화'
+          ]
+        },
+        {
+          title: '✅ 예외 처리 및 UX 개선',
+          details: [
+            'BugFix: 잔고 미수신 시 406 오류 방지 (maybeSingle 적용)',
+            'UX: 트레이딩 모드(실전/모의) 전환 상태 영구 저장 (Redux Persist)',
+            'Validation: 사용자 프로필 조회 시 Null ID 필터링으로 400 오류 해결'
+          ]
+        }
+      ]
     }
   ];
 
   const completedTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
   const totalTasks = tasks.length
-  const progress = 99 // 2025-12-21 기준 진행률 (AWS 마이그레이션 완료)
+  const progress = 100 // 2026-01-02 기준 진행률 (시스템 안정화 완료)
 
   const getStatusIcon = (status: string) => {
     switch (status) {

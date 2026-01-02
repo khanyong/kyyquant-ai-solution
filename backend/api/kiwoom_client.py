@@ -13,33 +13,78 @@ import json
 class KiwoomAPIClient:
     """키움증권 REST API 클라이언트"""
 
-    def __init__(self):
-        self.app_key = os.getenv('KIWOOM_APP_KEY')
-        self.app_secret = os.getenv('KIWOOM_APP_SECRET')
-        self.account_no = os.getenv('KIWOOM_ACCOUNT_NO', '')
-        self.is_demo = os.getenv('KIWOOM_IS_DEMO', 'true').lower() == 'true'
-
-        # 환경 변수 확인
-        if not self.app_key or not self.app_secret:
-            print(f"[KiwoomAPI] WARNING: Missing credentials - APP_KEY: {bool(self.app_key)}, APP_SECRET: {bool(self.app_secret)}")
+    def __init__(self, context: Optional[Dict[str, Any]] = None):
+        """
+        Initialize Client.
+        :param context: Dict containing 'app_key', 'app_secret', 'account_no', 'is_demo' (optional)
+        """
+        self.context = context or {}
+        
+        # 1. Determine demo mode first (Context takes precedence, then env, default True)
+        if 'is_demo' in self.context:
+            self.is_demo = self.context['is_demo']
         else:
-            print(f"[KiwoomAPI] Credentials loaded - APP_KEY: {self.app_key[:10]}..., MODE: {'DEMO' if self.is_demo else 'REAL'}")
+            self.is_demo = os.getenv('KIWOOM_IS_DEMO', 'true').lower() == 'true'
 
-        # API URL 설정 (모의투자/실전투자 구분)
+        # 2. Select Credentials based on mode
+        # Priority: Context -> Specific ENV (TEST/LIVE) -> Generic ENV
+        if self.is_demo:
+             env_key = os.getenv('KIWOOM_TEST_APP_KEY')
+             env_secret = os.getenv('KIWOOM_TEST_APP_SECRET')
+             env_acc = os.getenv('KIWOOM_TEST_ACCOUNT_NO')
+        else:
+             env_key = os.getenv('KIWOOM_LIVE_APP_KEY')
+             env_secret = os.getenv('KIWOOM_LIVE_APP_SECRET')
+             env_acc = os.getenv('KIWOOM_LIVE_ACCOUNT_NO')
+
+        self.app_key = self.context.get('app_key') or env_key or os.getenv('KIWOOM_APP_KEY')
+        self.app_secret = self.context.get('app_secret') or env_secret or os.getenv('KIWOOM_APP_SECRET')
+        
+        # [FIX] Account Number Normalization
+        # 1. Remove hyphens
+        # 2. If 8 digits, append '10' (Stock Account Suffix)
+        raw_acc = self.context.get('account_no') or env_acc or os.getenv('KIWOOM_ACCOUNT_NO', '')
+        if raw_acc:
+            clean_acc = raw_acc.replace('-', '')
+            if len(clean_acc) == 8:
+                clean_acc += '10'
+            self.account_no = clean_acc
+        else:
+            self.account_no = ''
+        
+        # Validation
+        if not self.app_key or not self.app_secret:
+             # Just warning, simple initialization might be for utilities
+             print(f"[KiwoomAPI] Warning: Missing App Credentials in context/env for mode={'DEMO' if self.is_demo else 'LIVE'}.")
+
+        # API URL
         if self.is_demo:
             self.base_url = "https://mockapi.kiwoom.com"
         else:
             self.base_url = "https://api.kiwoom.com"
             
-        print(f"[KiwoomAPI] Base URL set to: {self.base_url}")
+        # print(f"[KiwoomAPI] Initialized. Account: {self.account_no}, Demo: {self.is_demo}")
 
         self.access_token = None
-        self.token_expires_at = None
 
     def _get_access_token(self) -> str:
         """OAuth 2.0 액세스 토큰 발급 (TokenManager 사용)"""
         from .token_manager import get_token_manager
-        return get_token_manager(self.is_demo).get_token()
+        
+        # New TokenManager supports get_token(app_key, app_secret, is_demo)
+        manager = get_token_manager(self.is_demo)
+        
+        # Check if manager has new signature or legacy
+        # To be safe during transition, check usage. 
+        # But we just updated TokenManager to have get_token(key, secret, is_demo).
+        # Wait, get_token_manager returns the singleton instance now.
+        
+        try:
+             return manager.get_token(self.app_key, self.app_secret, self.is_demo)
+        except TypeError:
+             # Fallback if update didn't apply or signature mismatch
+             return manager.get_token_legacy(self.is_demo)
+
 
     def get_current_price(self, stock_code: str) -> Optional[Dict[str, Any]]:
         """실시간 현재가 조회 (ka10001)"""
@@ -114,9 +159,8 @@ class KiwoomAPIClient:
                 res_sum = requests.post(url, headers=headers, data=json.dumps(data_summary), timeout=10)
                 # Note: Kiwoom might return 200 even with error, so checks below are key
                 if res_sum.status_code == 401 or res_sum.status_code == 400:
-                     if attempt == 0:
                          print(f"[KiwoomAPI] HTTP {res_sum.status_code}. Invalidating token...")
-                         get_token_manager(self.is_demo).invalidate_token()
+                         get_token_manager(self.is_demo).invalidate_token(self.app_key, self.is_demo)
                          continue
 
                 result_sum = res_sum.json()
@@ -125,7 +169,7 @@ class KiwoomAPIClient:
                 if '8005' in str(result_sum.get('return_msg', '')):
                      if attempt == 0:
                          print(f"[KiwoomAPI] Token Error 8005 detected. Refreshing token...")
-                         get_token_manager(self.is_demo).invalidate_token()
+                         get_token_manager(self.is_demo).invalidate_token(self.app_key, self.is_demo)
                          continue
 
                 if result_sum.get('return_code') == 0 or result_sum.get('return_code') == '0':
@@ -138,6 +182,13 @@ class KiwoomAPIClient:
                         'deposit': float(result_sum.get('dnca_tot_amt', 0)),
                         'withdrawable_amount': float(result_sum.get('pchs_psbl_amt', 0)) or float(result_sum.get('dnca_tot_amt', 0)) 
                     }
+                    
+                    # [PATCH] Fallback for different field names (e.g. prsm_dpst_aset_amt)
+                    if summary['total_assets'] == 0 and result_sum.get('prsm_dpst_aset_amt'):
+                        val = float(result_sum.get('prsm_dpst_aset_amt'))
+                        summary['total_assets'] = val
+                        if summary['deposit'] == 0: summary['deposit'] = val
+                        if summary['withdrawable_amount'] == 0: summary['withdrawable_amount'] = val
                 else:
                     return_msg = str(result_sum.get('return_msg', ''))
                     print(f"[KiwoomAPI] Balance Summary Error: {return_msg}")
@@ -146,7 +197,7 @@ class KiwoomAPIClient:
                     if 'Appkey' in return_msg or '접속서버' in return_msg:
                          if attempt == 0:
                              print(f"[KiwoomAPI] Server/Key Mismatch detected. Refreshing token...")
-                             get_token_manager(self.is_demo).invalidate_token()
+                             get_token_manager(self.is_demo).invalidate_token(self.app_key, self.is_demo)
                              continue
 
                 # Step 2: Fetch Holdings (qry_tp=2)
@@ -161,7 +212,7 @@ class KiwoomAPIClient:
                 if res_det.status_code == 401 or res_det.status_code == 400:
                      if attempt == 0:
                          print(f"[KiwoomAPI] HTTP {res_det.status_code}. Invalidating token...")
-                         get_token_manager(self.is_demo).invalidate_token()
+                         get_token_manager(self.is_demo).invalidate_token(self.app_key, self.is_demo)
                          continue
                          
                 result_det = res_det.json()
@@ -169,7 +220,7 @@ class KiwoomAPIClient:
                 if '8005' in str(result_det.get('return_msg', '')):
                      if attempt == 0:
                          print(f"[KiwoomAPI] Token Error 8005 detected in Detail. Refreshing token...")
-                         get_token_manager(self.is_demo).invalidate_token()
+                         get_token_manager(self.is_demo).invalidate_token(self.app_key, self.is_demo)
                          continue
 
                 if result_det.get('return_code') == 0 or result_det.get('return_code') == '0':
@@ -213,7 +264,7 @@ class KiwoomAPIClient:
             except Exception as e:
                 if attempt == 0:
                     print(f"[KiwoomAPI] Exception {e}. Retrying with fresh token...")
-                    get_token_manager(self.is_demo).invalidate_token()
+                    get_token_manager(self.is_demo).invalidate_token(self.app_key, self.is_demo)
                     import time
                     time.sleep(1)
                     continue

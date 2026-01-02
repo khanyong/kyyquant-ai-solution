@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import {
+  ToggleButton,
+  ToggleButtonGroup,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -29,6 +31,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
 import { loginSuccess } from '../../store/authSlice'
 import { authService } from '../../services/auth'
+import { supabase } from '../../lib/supabase'
 
 interface LoginDialogProps {
   open: boolean
@@ -61,6 +64,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [tradingMode, setTradingMode] = useState<'test' | 'live'>('test')
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
@@ -104,6 +108,18 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
       if (user) {
         console.log('✅ User authenticated:', user.id)
 
+        // 1. Set Trading Mode (Important: Do this before dispatching login success)
+        try {
+          await supabase.rpc('switch_trading_mode', {
+            p_user_id: user.id,
+            p_new_mode: tradingMode
+          })
+          console.log(`✅ Trading mode set to: ${tradingMode}`)
+        } catch (modeError) {
+          console.error('⚠️ Failed to set trading mode:', modeError)
+          // Non-fatal, proceed with login
+        }
+
         // 프로필 조회는 백그라운드에서 처리하고 즉시 로그인 완료
         dispatch(loginSuccess({
           user: {
@@ -112,6 +128,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
             accounts: ['DEMO'],
           },
           accounts: ['DEMO'],
+          tradingMode: tradingMode // [NEW] Pass selected mode
         }))
 
         console.log('✅ Redux state updated')
@@ -133,6 +150,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
                   accounts: [profile.kiwoom_account || 'DEMO'],
                 },
                 accounts: [profile.kiwoom_account || 'DEMO'],
+                tradingMode: tradingMode // [NEW] Pass selected mode
               }))
             }
           })
@@ -178,9 +196,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
     try {
       const { user, error } = await authService.signUpWithEmail(email, password, name, kiwoomId)
-      
+
       console.log('📥 UI: Received signup response:', { user: !!user, error: !!error })
-      
+
       if (error) {
         console.error('❌ UI: Signup error received:', error)
         if (error.message.includes('already registered')) {
@@ -188,7 +206,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
         } else if (error.message.includes('Database error')) {
           setError('데이터베이스 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
         } else {
-          setError(`회원가입 실패: ${error.message}`)
+          setError(`회원가입 실패: ${error.message} `)
         }
         return
       }
@@ -233,7 +251,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
           </Typography>
         </Box>
       </DialogTitle>
-      
+
       <DialogContent>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tabValue} onChange={handleTabChange} variant="fullWidth">
@@ -247,7 +265,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
             {error}
           </Alert>
         )}
-        
+
         {successMessage && (
           <Alert severity="success" sx={{ mt: 2 }}>
             {successMessage}
@@ -296,6 +314,25 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
                 }}
               />
 
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="subtitle2" gutterBottom>
+                접속 모드 선택
+              </Typography>
+              <ToggleButtonGroup
+                color="primary"
+                value={tradingMode}
+                exclusive
+                onChange={(e, newMode) => {
+                  if (newMode !== null) setTradingMode(newMode)
+                }}
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                <ToggleButton value="test">모의투자</ToggleButton>
+                <ToggleButton value="live">실전투자</ToggleButton>
+              </ToggleButtonGroup>
+
               <Button
                 fullWidth
                 variant="contained"
@@ -303,7 +340,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
                 disabled={loading || !email || !password}
                 startIcon={loading ? <CircularProgress size={20} /> : <Email />}
               >
-                이메일로 로그인
+                {tradingMode === 'test' ? '모의투자로 로그인' : '실전투자로 로그인'}
               </Button>
               <Divider sx={{ mt: 1 }}>또는</Divider>
 

@@ -137,26 +137,50 @@ function MainApp() {
   useEffect(() => {
     if (authUser) {
       // User is logged in via AuthContext
-      authService.getProfile(authUser.id).then(({ profile }) => {
-        dispatch(loginSuccess({
-          user: {
-            id: authUser.id,
-            name: profile?.name || authUser.email || 'User',
-            accounts: [profile?.kiwoom_account || 'DEMO'],
-          },
-          accounts: [profile?.kiwoom_account || 'DEMO'],
-        }))
-      }).catch(error => {
-        console.warn('Profile fetch error:', error)
-        dispatch(loginSuccess({
-          user: {
-            id: authUser.id,
-            name: authUser.email || 'User',
+      const loadUserData = async () => {
+        try {
+          // Parallel fetch for profile and accounts
+          // Parallel fetch for profile, accounts, and TRADING MODE
+          const [profileResult, accountsResult, modeResult] = await Promise.all([
+            authService.getProfile(authUser.id),
+            supabase
+              .from('user_api_keys')
+              .select('encrypted_value')
+              .eq('user_id', authUser.id)
+              .eq('key_type', 'account_number'),
+            supabase.rpc('get_current_mode_info', { p_user_id: authUser.id })
+          ])
+
+          const profile = profileResult.profile
+          const accounts = accountsResult.data?.map(k => k.encrypted_value) || []
+          const tradingMode = modeResult.data?.current_mode || 'live' // Default to live if null
+
+          // Fallback to DEMO if no accounts found
+          const finalAccounts = accounts.length > 0 ? accounts : ['DEMO']
+
+          dispatch(loginSuccess({
+            user: {
+              id: authUser.id,
+              name: profile?.display_name || profile?.name || authUser.email || 'User',
+              accounts: finalAccounts,
+            },
+            accounts: finalAccounts,
+            tradingMode: tradingMode as 'live' | 'test' // [FIX] Persist Mode
+          }))
+        } catch (error) {
+          console.warn('User data load error:', error)
+          dispatch(loginSuccess({
+            user: {
+              id: authUser.id,
+              name: authUser.email || 'User',
+              accounts: ['DEMO'],
+            },
             accounts: ['DEMO'],
-          },
-          accounts: ['DEMO'],
-        }))
-      })
+          }))
+        }
+      }
+
+      loadUserData()
     } else {
       // User is logged out
       dispatch(logout())

@@ -111,4 +111,8 @@ backend/backend_log.txt
 # Large files
 back_end_sync/n8n/data/
 backend/database.sqlite
-backend/bash.journal
+token_cache*.json
+sync_log*.txt
+supabase/backups/*.sql
+
+

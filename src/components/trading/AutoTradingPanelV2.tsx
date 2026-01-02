@@ -15,7 +15,9 @@ import {
   Work,
   ShowChart
 } from '@mui/icons-material'
+import { useAppSelector } from '../../hooks/redux'
 import { supabase } from '../../lib/supabase'
+import { systemService, SystemStatus } from '../../services/systemService'
 import PortfolioOverview from './PortfolioOverview'
 import PortfolioHoldingsTable from './PortfolioHoldingsTable'
 import StrategyCard from './StrategyCard'
@@ -38,6 +40,7 @@ interface ActiveStrategy {
 }
 
 export default function AutoTradingPanelV2() {
+  const { user, tradingMode } = useAppSelector(state => state.auth)
   const [loading, setLoading] = useState(false)
   const [activeStrategies, setActiveStrategies] = useState<ActiveStrategy[]>([])
   const [portfolioStats, setPortfolioStats] = useState<any>({})
@@ -45,54 +48,9 @@ export default function AutoTradingPanelV2() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editingStrategy, setEditingStrategy] = useState<ActiveStrategy | null>(null)
+
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    try {
-      setLoading(true)
-      await Promise.all([
-        loadActiveStrategies(),
-        loadPortfolioStats()
-      ])
-      setLastUpdated(new Date())
-    } catch (error) {
-      console.error('데이터 로드 실패:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ... (rest of code)
-
-  const handleSyncAccount = async () => {
-    try {
-      setLoading(true)
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001'
-      alert('동기화 시작: 요청을 보낼 주소는 [' + apiUrl + '] 입니다.') // Debugging
-
-      const response = await fetch(`${apiUrl}/api/sync/account`, {
-        method: 'POST'
-      })
-
-      if (!response.ok) {
-        throw new Error('Sync failed')
-      }
-
-      const result = await response.json()
-      alert(`동기화 완료!\n종목수: ${result.holdings_updated}\n잔고성공여부: ${result.balance_updated}\n\n[디버그 정보]\n재계산됨: ${result.debug?.recalc_triggered}\n보유종목수(서버): ${result.debug?.holdings_count}\n사용자ID: ${result.debug?.user_id}`)
-
-      await loadData()
-    } catch (error) {
-      console.error('계좌 동기화 실패:', error)
-      alert('계좌 동기화에 실패했습니다. 백엔드 로그를 확인해주세요.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [tradingContext, setTradingContext] = useState<SystemStatus['trading_context'] | null>(null)
 
   const loadActiveStrategies = async () => {
     try {
@@ -127,7 +85,7 @@ export default function AutoTradingPanelV2() {
     }
   }
 
-  const loadPortfolioStats = async () => {
+  const loadPortfolioStats = async (targetAccountNo: string) => {
     try {
       // 1. 활성 전략의 총 할당 자금 계산
       const { data: strategyData } = await supabase
@@ -157,16 +115,24 @@ export default function AutoTradingPanelV2() {
       console.log('Total allocated:', totalAllocated)
       console.log('Active strategies count:', activeStrategiesCount)
 
-      // 1.5 Fetch Real Account Balance
-      const { data: balanceData } = await supabase
-        .from('account_balance')
-        .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single()
+      // 1.5 Fetch Real Account Balance (Filtered by Session Context)
+      let realTotalAssets = 0
+      let realCash = 0
 
-      const realTotalAssets = parseFloat(balanceData?.total_assets) || 0
-      const realCash = parseFloat(balanceData?.available_cash) || 0
+      if (targetAccountNo) {
+        const { data: balanceData } = await supabase
+          .from('account_balance')
+          .select('*')
+          .eq('account_no', targetAccountNo) // <--- CRITICAL FIX: Bind to Session Account
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        realTotalAssets = parseFloat(balanceData?.total_assets) || 0
+        realCash = parseFloat(balanceData?.available_cash) || 0
+      } else {
+        console.warn("No active account number in context. Skipping balance fetch.")
+      }
 
       // 2. 전체 포지션 조회
       const { data: positions, error: posError } = await supabase
@@ -227,7 +193,7 @@ export default function AutoTradingPanelV2() {
       const totalProfitRate = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0
 
       const newStats = {
-        totalCapital: realTotalAssets || totalAllocated,
+        totalCapital: realTotalAssets,
         totalAllocated,
         totalInvested,
         totalValue,
@@ -244,6 +210,104 @@ export default function AutoTradingPanelV2() {
       console.error('포트폴리오 통계 로드 실패:', error)
     }
   }
+
+  // 1. Init: Fetch Trading Context
+  useEffect(() => {
+    const initContext = async () => {
+      try {
+        const status = await systemService.getStatus()
+        setTradingContext(status.trading_context)
+      } catch (err) {
+        console.error("Failed to load trading context:", err)
+      }
+    }
+    initContext()
+  }, [])
+
+  // 2. Main Data Fetch (Only after Context is ready)
+  useEffect(() => {
+    if (user && tradingContext) {
+      // Determine Account Number based on Redux Mode
+      const targetAccount = tradingMode === 'test'
+        ? tradingContext.accounts?.MOCK || tradingContext.active_account_no
+        : tradingContext.accounts?.LIVE || tradingContext.active_account_no
+
+      fetchPortfolioStats(targetAccount)
+      const interval = setInterval(() => fetchPortfolioStats(targetAccount), 30000) // 30s refresh
+      return () => clearInterval(interval)
+    }
+  }, [user, tradingContext, tradingMode])
+
+  // Combined Loader (Renamed from loadData)
+  const fetchPortfolioStats = async (targetAccountNo: string) => {
+    try {
+      setLoading(true)
+
+      await Promise.all([
+        loadActiveStrategies(),
+        loadPortfolioStats(targetAccountNo)
+      ])
+      setLastUpdated(new Date())
+    } catch (error) {
+      console.error('데이터 로드 실패:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Helper for manual refreshes
+  const refreshData = () => {
+    if (tradingContext) {
+      const targetAccount = tradingMode === 'test'
+        ? tradingContext.accounts?.MOCK || tradingContext.active_account_no
+        : tradingContext.accounts?.LIVE || tradingContext.active_account_no
+
+      fetchPortfolioStats(targetAccount)
+    }
+  }
+
+  // ... (rest of code)
+
+  const handleSyncAccount = async () => {
+    try {
+      setLoading(true)
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+      alert('동기화 시작: 요청을 보낼 주소는 [' + apiUrl + '] 입니다.') // Debugging
+
+      const response = await fetch(`${apiUrl}/api/sync/account`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_id: user?.id })
+      })
+
+      if (!response.ok) {
+        throw new Error('Sync failed')
+      }
+
+      const result = await response.json()
+      // alert(`동기화 완료!\n종목수: ${result.holdings_updated}\n잔고성공여부: ${result.balance_updated}\n\n[디버그 정보]\n재계산됨: ${result.debug?.recalc_triggered}\n보유종목수(서버): ${result.debug?.holdings_count}\n사용자ID: ${result.debug?.user_id}`)
+
+      const debugInfo = result.debug || {}
+      alert(`[동기화 결과]\n` +
+        `모드: ${debugInfo.mode || 'UNKNOWN'} (URL: ${debugInfo.url})\n` +
+        `AppKey: ${debugInfo.key_prefix}\n` +
+        `계좌번호: ${debugInfo.account_no}\n` +
+        `에러상세: ${debugInfo.error_detail || '없음'}\n` +
+        `잔고갱신: ${result.balance_updated ? '성공' : '실패/스킵'}\n` +
+        `보유종목변경: ${result.holdings_updated}건`)
+
+      await refreshData()
+    } catch (error) {
+      console.error('계좌 동기화 실패:', error)
+      alert('계좌 동기화에 실패했습니다. 백엔드 로그를 확인해주세요.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
 
   // ... (Strategies handlers same as before)
   const handleStopStrategy = async (strategyId: string) => {
@@ -304,7 +368,7 @@ export default function AutoTradingPanelV2() {
 
       if (universeError) throw universeError
 
-      loadData()
+      refreshData()
     } catch (error: any) {
       console.error('전략 중지 실패:', error)
       alert(`전략 중지 실패: ${error.message}`)
@@ -369,7 +433,7 @@ export default function AutoTradingPanelV2() {
 
       if (universeError) throw universeError
 
-      loadData()
+      refreshData()
     } catch (error: any) {
       console.error('전략 삭제 실패:', error)
       alert(`전략 삭제 실패: ${error.message}`)
@@ -409,9 +473,17 @@ export default function AutoTradingPanelV2() {
           >
             계좌 동기화
           </Button>
+
+          <Chip
+            label={tradingMode === 'live' ? "실전투자" : "모의투자"}
+            color={tradingMode === 'live' ? "error" : "default"}
+            variant="filled"
+            sx={{ fontWeight: 'bold', height: 30 }}
+          />
+
           <Button
             startIcon={<Refresh />}
-            onClick={loadData}
+            onClick={refreshData}
             variant="outlined"
             size="small"
             sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content', color: 'text.secondary', borderColor: 'rgba(0,0,0,0.23)' }}
@@ -487,7 +559,7 @@ export default function AutoTradingPanelV2() {
 
       {/* 긴급 대응 센터 (Emergency Control) */}
       <Box sx={{ mb: 3 }}>
-        <EmergencyControlPanel onOpComplete={loadData} />
+        <EmergencyControlPanel onOpComplete={refreshData} />
       </Box>
 
       {/* 자동매매 추가 다이얼로그 */}
@@ -495,7 +567,7 @@ export default function AutoTradingPanelV2() {
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onSuccess={() => {
-          loadData()
+          refreshData()
         }}
       />
 
@@ -513,7 +585,7 @@ export default function AutoTradingPanelV2() {
               setEditingStrategy(null)
             }}
             onSuccess={() => {
-              loadData()
+              refreshData()
             }}
           />
         )

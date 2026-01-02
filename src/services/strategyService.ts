@@ -145,7 +145,7 @@ class StrategyService {
       if (!strategies || strategies.length === 0) return []
 
       // 2. 작성자 정보 조회 (user_id 기반)
-      const userIds = Array.from(new Set(strategies.map(s => s.user_id)))
+      const userIds = Array.from(new Set(strategies.map(s => s.user_id).filter(id => id)))
 
       let profileMap = new Map<string, { name: string }>()
       if (userIds.length > 0) {
