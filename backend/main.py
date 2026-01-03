@@ -155,6 +155,16 @@ except ImportError as e:
     import_status["system"] = "error"
     import_status["errors"]["system"] = str(e)
 
+try:
+    from api.notification import router as notification_router
+    app.include_router(notification_router, prefix="/api/notify", tags=["notify"])
+    import_status["notification"] = "ok"
+    print("[OK] Notification router registered")
+except ImportError as e:
+    print(f"[ERROR] Failed to import notification router: {e}")
+    import_status["notification"] = "error"
+    import_status["errors"]["notification"] = str(e)
+
 @app.get("/")
 async def root():
     """헬스체크 엔드포인트"""
@@ -206,6 +216,13 @@ try:
         ws_client = get_websocket_client(on_balance_update=on_balance_update)
         # 백그라운드 태스크로 실행
         asyncio.create_task(ws_client.run())
+
+    # [Scheduler] Initialize and Start
+    try:
+        from services.scheduler_service import scheduler_service
+        scheduler_service.start()
+    except Exception as e:
+        print(f"[ERROR] Failed to start Scheduler: {e}")
         
 except ImportError as e:
     print(f"[ERROR] Failed to setup WebSocket: {e}")

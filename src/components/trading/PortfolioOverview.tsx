@@ -228,6 +228,7 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                         dataKey="value"
                         label={renderCustomizedLabel}
                         labelLine={false}
+                        isAnimationActive={false}
                       >
                         {assetAllocationData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -274,6 +275,7 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                         dataKey="value"
                         label={renderCustomizedLabel}
                         labelLine={false}
+                        isAnimationActive={false}
                       >
                         {strategyAllocationData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
@@ -312,7 +314,7 @@ export default function PortfolioOverview({ stats, activeStrategies, positions, 
                       <XAxis type="number" hide />
                       <YAxis type="category" dataKey="name" width={60} fontSize={12} />
                       <Tooltip formatter={(value: number) => `₩${formatCurrency(value)}`} contentStyle={{ backgroundColor: '#fff', border: '1px solid #000' }} />
-                      <Bar dataKey="value" fill="#212121" radius={[0, 0, 0, 0]}>
+                      <Bar dataKey="value" fill="#212121" radius={[0, 0, 0, 0]} isAnimationActive={false}>
                         <LabelList dataKey="label" position="insideLeft" fill="white" fontSize={11} fontWeight="bold" />
                         {topHoldingsData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

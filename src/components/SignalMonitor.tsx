@@ -233,7 +233,6 @@ export default function SignalMonitor() {
         .from('strategies')
         .select('id')
         .eq('is_active', true)
-        .eq('auto_trade_enabled', true)
 
       if (!activeStrategyIds || activeStrategyIds.length === 0) {
         setSignals([])
@@ -268,7 +267,6 @@ export default function SignalMonitor() {
         .from('strategies')
         .select('id, name')
         .eq('is_active', true)
-        .eq('auto_trade_enabled', true)
 
       if (error) throw error
       setStrategies(data || [])
@@ -364,7 +362,6 @@ export default function SignalMonitor() {
         .from('strategies')
         .select('id')
         .eq('is_active', true)
-        .eq('auto_trade_enabled', true)
 
       if (!activeStrategyIds || activeStrategyIds.length === 0) {
         setPendingStocks([])
@@ -400,7 +397,6 @@ export default function SignalMonitor() {
         .from('strategies')
         .select('id')
         .eq('is_active', true)
-        .eq('auto_trade_enabled', true)
 
       if (!activeStrategyIds || activeStrategyIds.length === 0) {
         setPendingSellStocks([])

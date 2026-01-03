@@ -61,6 +61,7 @@ interface AddStrategyDialogProps {
   open: boolean
   onClose: () => void
   onSuccess: () => void
+  accountNo?: string // [NEW] Optional Account Number for filtering
 }
 
 const ITEMS_PER_PAGE = 10
@@ -72,7 +73,7 @@ const ORDER_PRICE_LABELS: Record<string, string> = {
   market: '시장가'
 }
 
-export default function AddStrategyDialog({ open, onClose, onSuccess }: AddStrategyDialogProps) {
+export default function AddStrategyDialog({ open, onClose, onSuccess, accountNo }: AddStrategyDialogProps) {
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [filters, setFilters] = useState<InvestmentFilter[]>([])
 
@@ -102,16 +103,21 @@ export default function AddStrategyDialog({ open, onClose, onSuccess }: AddStrat
       loadFilters()
       loadAccountBalance()
     }
-  }, [open])
+  }, [open, accountNo]) // triggered when open or accountNo changes
 
   const loadAccountBalance = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('kw_account_balance')
         .select('deposit')
         .order('updated_at', { ascending: false })
         .limit(1)
-        .single()
+
+      if (accountNo) {
+        query = query.eq('account_no', accountNo)
+      }
+
+      const { data, error } = await query.single()
 
       if (error) {
         console.error('계좌 잔고 조회 실패:', error)
@@ -177,8 +183,10 @@ export default function AddStrategyDialog({ open, onClose, onSuccess }: AddStrat
       return
     }
 
-    if (allocatedPercent <= 0) {
-      setError('할당 비율을 입력해주세요 (0보다 커야 합니다)')
+    // [FIX] Allow if Capital is set OR Percent is set.
+    // Use || allocatedCapital > 0 to allow proceeding even if balance is 0 (percent=0).
+    if (allocatedPercent <= 0 && allocatedCapital <= 0) {
+      setError('할당 자금 또는 비율을 입력해주세요')
       return
     }
 
@@ -563,7 +571,7 @@ export default function AddStrategyDialog({ open, onClose, onSuccess }: AddStrat
         <Button
           onClick={handleSave}
           variant="contained"
-          disabled={loading || !selectedStrategyId || selectedFilterIds.length === 0 || allocatedPercent <= 0}
+          disabled={loading || !selectedStrategyId || selectedFilterIds.length === 0 || (allocatedPercent <= 0 && allocatedCapital <= 0)}
         >
           {loading ? '저장 중...' : '자동매매 시작'}
         </Button>

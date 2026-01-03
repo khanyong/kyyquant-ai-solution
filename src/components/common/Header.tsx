@@ -15,12 +15,14 @@ import {
   Settings,
   Map,
   Person,
-  Science
+  Science,
+  Timeline
 } from '@mui/icons-material'
 import { useAppSelector, useAppDispatch } from '../../hooks/redux'
 import { logout } from '../../store/authSlice'
 import { authService } from '../../services/auth'
 import RoadmapDialog from './RoadmapDialog'
+import RoadmapDialogV2 from './RoadmapDialogV2'
 
 interface HeaderProps {
   onLoginClick: () => void
@@ -30,6 +32,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
   const dispatch = useAppDispatch()
   const { isConnected, user, tradingMode } = useAppSelector(state => state.auth)
   const [roadmapOpen, setRoadmapOpen] = useState(false)
+  const [roadmapV2Open, setRoadmapV2Open] = useState(false)
 
   const handleLogout = async () => {
     await authService.signOut()
@@ -58,15 +61,28 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
             </Typography>
           </Box>
 
-          {/* 개발 로드맵 버튼 */}
+          {/* 개발 로드맵 버튼 (Phase 1 - 완료) */}
           <Button
-            color="warning"
+            color="inherit"
             variant="outlined"
+            size="small"
             startIcon={<Map />}
             onClick={() => setRoadmapOpen(true)}
+            sx={{ mr: 1, borderColor: 'divider', color: 'text.secondary' }}
+          >
+            로드맵 (완료)
+          </Button>
+
+          {/* 개발 로드맵 버튼 (Phase 2 - 진행중) */}
+          <Button
+            color="secondary"
+            variant="contained"
+            size="small"
+            startIcon={<Timeline />}
+            onClick={() => setRoadmapV2Open(true)}
             sx={{ mr: 2 }}
           >
-            개발진행 로드맵
+            로드맵 Phase 2
           </Button>
 
           {isConnected ? (
@@ -122,10 +138,16 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
         </Toolbar>
       </AppBar>
 
-      {/* 로드맵 다이얼로그 */}
+      {/* 로드맵 다이얼로그 (Phase 1) */}
       <RoadmapDialog
         open={roadmapOpen}
         onClose={() => setRoadmapOpen(false)}
+      />
+
+      {/* 로드맵 다이얼로그 (Phase 2) */}
+      <RoadmapDialogV2
+        open={roadmapV2Open}
+        onClose={() => setRoadmapV2Open(false)}
       />
     </>
   )

@@ -7,7 +7,8 @@ import {
   Collapse,
   Alert,
   CircularProgress,
-  Chip
+  Chip,
+  Paper
 } from '@mui/material'
 import {
   Add,
@@ -24,7 +25,7 @@ import StrategyCard from './StrategyCard'
 import EmergencyControlPanel from './EmergencyControlPanel'
 import StrategyVerificationPanel from '../StrategyVerificationPanel'
 import AddStrategyDialog from './AddStrategyDialog'
-import EditStrategyDialog from './EditStrategyDialog'
+import MyStrategyConfig from '../strategy/MyStrategyConfig'
 
 interface ActiveStrategy {
   strategy_id: string
@@ -52,6 +53,13 @@ export default function AutoTradingPanelV2() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [tradingContext, setTradingContext] = useState<SystemStatus['trading_context'] | null>(null)
 
+  // Derived Accessor for Current Account Number
+  const currentAccountNo = tradingContext
+    ? (tradingMode === 'test'
+      ? tradingContext.accounts?.MOCK || tradingContext.active_account_no
+      : tradingContext.accounts?.LIVE || tradingContext.active_account_no)
+    : undefined
+
   const loadActiveStrategies = async () => {
     try {
       const { data, error } = await supabase
@@ -59,27 +67,22 @@ export default function AutoTradingPanelV2() {
 
       if (error) throw error
 
-      // 전략별로 그룹화
-      const grouped = (data || []).reduce((acc: any, item: any) => {
-        if (!acc[item.strategy_id]) {
-          acc[item.strategy_id] = {
-            strategy_id: item.strategy_id,
-            strategy_name: item.strategy_name,
-            entry_conditions: item.entry_conditions,
-            exit_conditions: item.exit_conditions,
-            allocated_capital: parseFloat(item.allocated_capital) || 0,
-            allocated_percent: parseFloat(item.allocated_percent) || 0,
-            universes: []
-          }
-        }
-        acc[item.strategy_id].universes.push({
-          filter_id: item.filter_id,
-          filter_name: item.filter_name
-        })
-        return acc
-      }, {})
+      // [NEW] RPC now returns unique strategies with 'universes' JSONB array
+      // No need to reduce/group manualy anymore.
+      const formatted: ActiveStrategy[] = (data || []).map((item: any) => ({
+        strategy_id: item.strategy_id,
+        strategy_name: item.strategy_name,
+        entry_conditions: item.entry_conditions,
+        exit_conditions: item.exit_conditions,
+        allocated_capital: parseFloat(item.allocated_capital) || 0,
+        allocated_percent: parseFloat(item.allocated_percent) || 0,
+        universes: (item.universes || []).map((u: any) => ({
+          filter_id: u.universe_id,
+          filter_name: u.universe_name
+        }))
+      }))
 
-      setActiveStrategies(Object.values(grouped))
+      setActiveStrategies(formatted)
     } catch (error) {
       console.error('활성 전략 로드 실패:', error)
     }
@@ -91,26 +94,12 @@ export default function AutoTradingPanelV2() {
       const { data: strategyData } = await supabase
         .rpc('get_active_strategies_with_universe')
 
-      console.log('=== Portfolio Stats Debug ===')
-      console.log('RPC strategyData:', strategyData)
+      // [NEW] Strategy data is already unique per strategy
+      const totalAllocated = (strategyData || []).reduce((sum: number, item: any) => {
+        return sum + (parseFloat(item.allocated_capital) || 0)
+      }, 0)
 
-      // 중복 제거: 전략별로 한 번만 계산 (RPC는 전략-유니버스 조합마다 row를 반환)
-      const uniqueStrategies = new Map<string, number>()
-      strategyData?.forEach((item: any) => {
-        console.log(`Strategy ${item.strategy_id}:`, {
-          name: item.strategy_name,
-          allocated_capital: item.allocated_capital,
-          allocated_percent: item.allocated_percent
-        })
-        if (!uniqueStrategies.has(item.strategy_id)) {
-          uniqueStrategies.set(item.strategy_id, parseFloat(item.allocated_capital) || 0)
-        }
-      })
-
-      console.log('Unique strategies map:', Array.from(uniqueStrategies.entries()))
-
-      const totalAllocated = Array.from(uniqueStrategies.values()).reduce((sum, val) => sum + val, 0)
-      const activeStrategiesCount = uniqueStrategies.size
+      const activeStrategiesCount = (strategyData || []).length
 
       console.log('Total allocated:', totalAllocated)
       console.log('Active strategies count:', activeStrategiesCount)
@@ -233,15 +222,15 @@ export default function AutoTradingPanelV2() {
         : tradingContext.accounts?.LIVE || tradingContext.active_account_no
 
       fetchPortfolioStats(targetAccount)
-      const interval = setInterval(() => fetchPortfolioStats(targetAccount), 30000) // 30s refresh
+      const interval = setInterval(() => fetchPortfolioStats(targetAccount, true), 30000) // 30s refresh (Silent)
       return () => clearInterval(interval)
     }
   }, [user, tradingContext, tradingMode])
 
   // Combined Loader (Renamed from loadData)
-  const fetchPortfolioStats = async (targetAccountNo: string) => {
+  const fetchPortfolioStats = async (targetAccountNo: string, silent = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
 
       await Promise.all([
         loadActiveStrategies(),
@@ -251,7 +240,7 @@ export default function AutoTradingPanelV2() {
     } catch (error) {
       console.error('데이터 로드 실패:', error)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -434,9 +423,17 @@ export default function AutoTradingPanelV2() {
       if (universeError) throw universeError
 
       refreshData()
+      refreshData()
     } catch (error: any) {
       console.error('전략 삭제 실패:', error)
-      alert(`전략 삭제 실패: ${error.message}`)
+
+      // [NEW] Handle Session/Auth Errors explicitly
+      if (error.message?.includes('JWT') || error.code === 'PGRST301' || error.status === 401) {
+        alert('세션이 만료되었습니다. 페이지를 새로고침하여 다시 로그인해주세요.')
+        window.location.reload()
+      } else {
+        alert(`전략 삭제 실패: ${error.message}`)
+      }
     }
   }
 
@@ -444,8 +441,19 @@ export default function AutoTradingPanelV2() {
     const strategy = activeStrategies.find(s => s.strategy_id === strategyId)
     if (strategy) {
       setEditingStrategy(strategy)
+      // setShowEditDialog(true) // OLD
+      // Use Config Dialog instead
+      // We need to map ActiveStrategy (RPC result) to Strategy (Table row) structure roughly
+      // But MyStrategyConfig just needs { id: ... } to fetch details.
+      // So let's reuse editingStrategy state but open the new dialog.
       setShowEditDialog(true)
     }
+  }
+
+  // Wrapper for Config Dialog Close
+  const handleConfigClose = () => {
+    setShowEditDialog(false)
+    setEditingStrategy(null)
   }
 
   if (loading) {
@@ -501,6 +509,51 @@ export default function AutoTradingPanelV2() {
         lastUpdated={lastUpdated}
       />
 
+      {/* 새 자동매매 시작 (Top Banner) */}
+      <Box sx={{ mb: 4, mt: 1 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            // Professional Gradient matching page tone (Dark Slate/Blue)
+            background: 'linear-gradient(90deg, #263238 0%, #37474F 100%)',
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            // borderLeft: '6px solid #4CAF50', // REMOVED per user request
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+        >
+          <Box>
+            <Typography variant="h6" fontWeight="bold" sx={{ color: 'white', mb: 0.5 }}>
+              새로운 자동매매 전략 시작하기
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+              검증된 알고리즘을 선택하고 자금을 할당하여 자동으로 수익을 창출하세요.
+            </Typography>
+          </Box>
+
+          <Button
+            variant="contained"
+            onClick={() => setShowAddDialog(true)}
+            sx={{
+              bgcolor: 'white',
+              color: '#37474F',
+              fontWeight: 'bold',
+              px: 3,
+              py: 1,
+              '&:hover': {
+                bgcolor: '#f5f5f5',
+                transform: 'translateY(-1px)'
+              }
+            }}
+          >
+            전략 생성
+          </Button>
+        </Paper>
+      </Box>
+
       {/* 보유 종목 현황 리스트 (NEW) */}
       <PortfolioHoldingsTable positions={positions} />
 
@@ -543,19 +596,7 @@ export default function AutoTradingPanelV2() {
       <StrategyVerificationPanel />
 
 
-      {/* 새 자동매매 시작 */}
-      <Box sx={{ mb: 3 }}>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => setShowAddDialog(true)}
-          fullWidth
-          size="large"
-          sx={{ bgcolor: '#424242', '&:hover': { bgcolor: '#212121' } }}
-        >
-          ➕ 새 자동매매 시작
-        </Button>
-      </Box>
+
 
       {/* 긴급 대응 센터 (Emergency Control) */}
       <Box sx={{ mb: 3 }}>
@@ -565,6 +606,7 @@ export default function AutoTradingPanelV2() {
       {/* 자동매매 추가 다이얼로그 */}
       <AddStrategyDialog
         open={showAddDialog}
+        accountNo={currentAccountNo}
         onClose={() => setShowAddDialog(false)}
         onSuccess={() => {
           refreshData()
@@ -572,24 +614,30 @@ export default function AutoTradingPanelV2() {
       />
 
       {/* 자동매매 수정 다이얼로그 */}
-      {
-        editingStrategy && (
-          <EditStrategyDialog
-            open={showEditDialog}
-            strategyId={editingStrategy.strategy_id}
-            strategyName={editingStrategy.strategy_name}
-            currentAllocatedCapital={editingStrategy.allocated_capital}
-            currentAllocatedPercent={editingStrategy.allocated_percent}
-            onClose={() => {
-              setShowEditDialog(false)
-              setEditingStrategy(null)
-            }}
-            onSuccess={() => {
-              refreshData()
-            }}
-          />
-        )
-      }
+
+
+      {/* 전략 설정 (MyStrategyConfig) - Replaces EditStrategyDialog */}
+      {editingStrategy && (
+        <MyStrategyConfig
+          open={showEditDialog}
+          onClose={() => {
+            setShowEditDialog(false)
+            setEditingStrategy(null)
+          }}
+          // Adapt ActiveStrategy to Strategy interface expectation (min { id, name })
+          strategy={{
+            id: editingStrategy.strategy_id,
+            name: editingStrategy.strategy_name,
+            is_active: true, // Default assumption, dialog will fetch real status
+            allocated_capital: editingStrategy.allocated_capital
+            // Other fields not strictly needed for fetch
+          } as any}
+          onSave={() => {
+            refreshData()
+          }}
+        />
+      )}
+
     </Box >
   )
 }
