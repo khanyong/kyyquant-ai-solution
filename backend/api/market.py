@@ -329,34 +329,69 @@ import os
 DATA_FILE_PATH = "logs/market_data_cache.json"
 
 def get_mock_indices():
-    """Fallback mock data to prevent empty UI"""
+    """Fallback mock data to prevent empty UI (Matches 4x4 Layout)"""
     return [
+        # Row 1: Core
+        {"index_code": "S&P500", "current_value": 4780.25, "change_value": 30.10, "change_rate": 0.63},
+        {"index_code": "NASDAQ", "current_value": 15050.60, "change_value": 120.40, "change_rate": 0.81},
         {"index_code": "KOSPI", "current_value": 2600.00, "change_value": 15.50, "change_rate": 0.60},
         {"index_code": "KOSDAQ", "current_value": 850.20, "change_value": -5.20, "change_rate": -0.61},
-        {"index_code": "USD_KRW", "current_value": 1320.50, "change_value": 2.50, "change_rate": 0.19},
-        {"index_code": "SPX", "current_value": 4780.25, "change_value": 30.10, "change_rate": 0.63},
-        {"index_code": "COMP", "current_value": 15050.60, "change_value": 120.40, "change_rate": 0.81},
-        {"index_code": "IEF", "current_value": 95.40, "change_value": 0.15, "change_rate": 0.16},
-        {"index_code": "TLT", "current_value": 98.20, "change_value": 0.50, "change_rate": 0.51},
-        {"index_code": "LQD", "current_value": 109.80, "change_value": 0.30, "change_rate": 0.27}
+        
+        # Row 2: Global
+        {"index_code": "Nikkei225", "current_value": 33400.50, "change_value": 150.00, "change_rate": 0.45},
+        {"index_code": "EuroStoxx50", "current_value": 4450.20, "change_value": -10.50, "change_rate": -0.23},
+        {"index_code": "DowJones", "current_value": 37600.10, "change_value": 45.30, "change_rate": 0.12},
+        {"index_code": "Russell2000", "current_value": 1950.40, "change_value": 12.10, "change_rate": 0.62},
+
+        # Row 3: Money
+        {"index_code": "WTI_Oil", "current_value": 72.50, "change_value": -0.80, "change_rate": -1.09},
+        {"index_code": "Gold", "current_value": 2045.30, "change_value": 15.20, "change_rate": 0.75},
+        {"index_code": "USD/KRW", "current_value": 1320.50, "change_value": 2.50, "change_rate": 0.19},
+        {"index_code": "Bitcoin", "current_value": 65000000, "change_value": 1500000, "change_rate": 2.36},
+
+        # Row 4: Risk
+        {"index_code": "US10Y", "current_value": 3.95, "change_value": 0.05, "change_rate": 1.28},
+        {"index_code": "US2Y_ETF", "current_value": 82.50, "change_value": -0.10, "change_rate": -0.12},
+        {"index_code": "VIX", "current_value": 13.50, "change_value": -0.40, "change_rate": -2.88},
+        {"index_code": "TLT", "current_value": 98.20, "change_value": 0.50, "change_rate": 0.51}
     ]
 
 def load_cache_from_disk():
-    """Load cached data from JSON file on server start"""
+    """
+    Load cached data from JSON file on server start.
+    Performs 'Smart Merge': If disk cache lacks new items (e.g. only 8 items),
+    it automatically fills the gaps with Mock Data (16 items).
+    """
+    loaded_data = []
     if os.path.exists(DATA_FILE_PATH):
         try:
             with open(DATA_FILE_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                print(f"[System] Disk Cache Loaded: {len(data)} items")
-                return data
+                loaded_data = json.load(f)
+                print(f"[System] Disk Cache Loaded: {len(loaded_data)} items")
         except Exception as e:
             print(f"[Error] Failed to load disk cache: {e}")
     
-    print("[System] No disk cache found. Using Mock data.")
-    return get_mock_indices()
+    # Smart Merge Logic
+    # 1. Get full desired list (Mock has all 16 keys)
+    full_template = get_mock_indices() # List of dicts
+    
+    # 2. Convert loaded data to dict for easy lookup
+    loaded_map = {item['index_code']: item for item in loaded_data}
+    
+    # 3. Merge: Prefer loaded data, fall back to mock if missing
+    final_cache = []
+    for mock_item in full_template:
+        code = mock_item['index_code']
+        if code in loaded_map:
+            final_cache.append(loaded_map[code]) # Keep real/cached data
+        else:
+            final_cache.append(mock_item) # Fill gap with mock
+            print(f"[System] Augmented missing index '{code}' with mock data.")
+            
+    return final_cache
 
 # --- [Scheduler & Cache Configuration] ---
-# In-memory Cache (Initialized from Disk or Mock)
+# In-memory Cache (Initialized from Disk + Smart Merge)
 GLOBAL_INDICES_CACHE = load_cache_from_disk()
 LAST_UPDATED_TIME = datetime.datetime.now()
 
@@ -489,39 +524,46 @@ class MarketDataPayload(BaseModel):
 # ... existing code ...
 
 @router.post("/update-data")
-async def receive_market_data(payload: MarketDataPayload):
+def update_global_indices(payload: dict):
     """
-    Receives market data from NAS Fetcher (Home IP) and updates cache.
-    Authentication via simple key check header could be added here.
+    Receive data from NAS (Python Fetcher).
+    Uses 'Smart Merge': Updates only the items provided, keeping existing data for others.
     """
     global GLOBAL_INDICES_CACHE, LAST_UPDATED_TIME
     
     try:
-        new_data = payload.data
-        if not new_data:
-            return {"status": "ignored", "message": "Empty data received"}
+        new_data_list = payload.get("data", [])
+        if not new_data_list:
+            return {"status": "ignored", "msg": "No data received"}
 
-        # Update Memory Cache
-        current_map = {item['index_code']: item for item in GLOBAL_INDICES_CACHE}
-        for item in new_data:
-            # Ensure proper format
-             if 'updated_at' not in item:
-                 item['updated_at'] = datetime.now().isoformat()
-             current_map[item['index_code']] = item
+        # 1. Convert current cache to Dict {code: item}
+        cache_map = {item['index_code']: item for item in GLOBAL_INDICES_CACHE}
         
-        GLOBAL_INDICES_CACHE = list(current_map.values())
-        LAST_UPDATED_TIME = datetime.now()
-
+        # 2. Update with new data
+        updated_count = 0
+        for new_item in new_data_list:
+            code = new_item['index_code']
+            # Ensure updated_at exists
+            if 'updated_at' not in new_item:
+                 new_item['updated_at'] = datetime.datetime.now().isoformat() # Changed datetime.now() to datetime.datetime.now()
+            
+            cache_map[code] = new_item
+            updated_count += 1
+            
+        # 3. Convert back to List and Save
+        GLOBAL_INDICES_CACHE = list(cache_map.values())
+        LAST_UPDATED_TIME = datetime.datetime.now() # Changed datetime.now() to datetime.datetime.now()
+        
         # Save to Disk
         try:
-            with open(DATA_FILE_PATH, 'w', encoding='utf-8') as f:
+            with open(DATA_FILE_PATH, "w", encoding="utf-8") as f:
                 json.dump(GLOBAL_INDICES_CACHE, f, ensure_ascii=False, indent=2)
-            print(f"[Market Receiver] Successfully updated {len(new_data)} items from NAS.")
+            print(f"[Market Receiver] Successfully saved {len(GLOBAL_INDICES_CACHE)} items to disk.")
         except Exception as e:
             print(f"[Market Receiver] Failed to save to disk: {e}")
-            
-        return {"status": "success", "count": len(new_data)}
-        
+
+        return {"status": "success", "updated_items": updated_count, "total_items": len(GLOBAL_INDICES_CACHE)}
+
     except Exception as e:
         print(f"[Market Receiver] Error processing data: {e}")
         raise HTTPException(status_code=500, detail=str(e))

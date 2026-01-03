@@ -181,6 +181,32 @@ const RoadmapDialogV2: React.FC<RoadmapDialogV2Props> = ({ open, onClose }) => {
                     ]
                 }
             ]
+        },
+        {
+            id: 6,
+            title: '시스템 안정성 및 마켓 데이터 고도화',
+            status: 'done',
+            priority: 'medium',
+            icon: <Security />,
+            period: 'Phase 2-6 (완료)',
+            description: '글로벌 시장 데이터 정합성 확보 및 시스템 예외처리 강화',
+            subtasks: [
+                {
+                    title: '✅ 마켓 데이터 안정화 (Smart Merge)',
+                    details: [
+                        'NAS 데이터 수집 이중화 (Primary/Backup)',
+                        'Partial Update 시 캐시 보존 로직(Smart Merge) 적용',
+                        '스켈레톤 UI 발생 원인(Partial Failure) 차단'
+                    ]
+                },
+                {
+                    title: '✅ AWS 백엔드/NAS 동기화',
+                    details: [
+                        'Docker 컨테이너 Hot-Patching 적용',
+                        '서버 간 데이터 파이프라인(Push Model) 최적화'
+                    ]
+                }
+            ]
         }
     ]
 
