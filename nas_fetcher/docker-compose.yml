@@ -6,10 +6,14 @@ services:
     container_name: auto_stock_fetcher
     image: auto_stock_fetcher:latest
     restart: always
+    tty: true # Synology 로그 표시용
+    stdin_open: true # Synology 로그 표시용
     environment:
       - PYTHONUNBUFFERED=1 # 로그 즉시 출력 (버퍼링 해제)
       - TZ=Asia/Seoul
       - AWS_API_URL=http://13.209.204.159:8001/api/market/update-data
+    volumes:
+      - ./logs:/app/logs
     logging:
       driver: "json-file"
       options:

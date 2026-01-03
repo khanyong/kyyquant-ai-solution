@@ -7,11 +7,26 @@ from datetime import datetime, timedelta
 
 import os
 
+import logging
+from logging.handlers import RotatingFileHandler
+
 # AWS Backend Endpoint (Default if not set in env)
 AWS_API_URL = os.getenv("AWS_API_URL", "http://13.209.204.159:8001/api/market/update-data")
 
+# Setup Logging
+os.makedirs("logs", exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        RotatingFileHandler("logs/nas_fetcher.log", maxBytes=10*1024*1024, backupCount=5, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger()
+
 def fetch_data():
-    print(f"[{datetime.now()}] Starting fetch (16 items)...")
+    logger.info("Starting fetch (16 items)...")
     new_data = []
 
     # 4x4 Grid Definition
@@ -137,39 +152,49 @@ def fetch_data():
         "TLT":         ("YF", "TLT", "FDR", "TLT"),
     }
     
-    session = requests.Session()
-    session.headers['User-Agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36"
+    # Remove shared session usage for YFinance as it conflicts with newer versions requiring curl_cffi
+    # session = requests.Session()
+    # session.headers['User-Agent'] = "Mozilla/5.0..." 
 
     for name, (src1, tick1, src2, tick2) in tasks.items():
         val, chg, rate = None, None, None
         
         # Try Primary
         try:
-            val, chg, rate = fetch_single_item(name, src1, tick1, session)
+            # Pass None for session to let libraries handle it
+            val, chg, rate = fetch_single_item(name, src1, tick1, None)
         except Exception as e:
-            print(f"  [Warn] Primary {name} ({tick1}) failed: {e}. Trying backup...")
+            logger.warning(f"  [Warn] Primary {name} ({tick1}) failed: {e}. Trying backup...")
         
         # Try Backup if Primary failed
         if val is None:
             try:
-                val, chg, rate = fetch_single_item(name, src2, tick2, session)
+                val, chg, rate = fetch_single_item(name, src2, tick2, None)
             except Exception as e:
-                print(f"  [Error] Backup {name} ({tick2}) failed: {e}")
+                logger.error(f"  [Error] Backup {name} ({tick2}) failed: {e}")
         
         # Determine Success/Fail
         if val is not None:
              new_data.append({
                 "index_code": name,
-                "current_value": round(val, 2),
-                "change_value": round(chg, 2),
-                "change_rate": round(rate, 2),
+                "current_value": sanitize_float(val),
+                "change_value": sanitize_float(chg),
+                "change_rate": sanitize_float(rate),
                 "updated_at": pd.Timestamp.now().isoformat()
             })
-             print(f"  [Fetched] {name}: {val}")
+             logger.info(f"  [Fetched] {name}: {val}")
         else:
-             print(f"  [Fail] All sources failed for {name}")
+             logger.error(f"  [Fail] All sources failed for {name}")
 
     return new_data
+
+def sanitize_float(val):
+    if val is None: return 0.0
+    if pd.isna(val) or val != val: # check for nan
+        return 0.0
+    if val == float('inf') or val == float('-inf'):
+        return 0.0
+    return round(float(val), 2)
 
 def fetch_single_item(name, source, ticker, session):
     """Helper to fetch from specific source"""
@@ -188,7 +213,9 @@ def fetch_single_item(name, source, ticker, session):
         change_rate = (change / prev_close * 100) if prev_close != 0 else 0.0
 
     elif source == 'YF':
-        tick = yf.Ticker(ticker, session=session)
+        # Do NOT use external session for YF 0.2.50+
+        tick = yf.Ticker(ticker) 
+        
         # fast_info often faster/more reliable for current price than history
         # but history needed for change comparison if market closed?
         # Let's stick to history for consistency
@@ -205,28 +232,29 @@ def fetch_single_item(name, source, ticker, session):
 
 def push_to_aws(data):
     if not data:
-        print("No data to push.")
+        logger.warning("No data to push.")
         return
 
+    # Payload is already sanitized
     payload = {"data": data}
     try:
         response = requests.post(AWS_API_URL, json=payload, timeout=10)
         if response.status_code == 200:
-            print(f"  [Success] Pushed {len(data)} items to AWS. code={response.status_code}")
+            logger.info(f"  [Success] Pushed {len(data)} items to AWS. code={response.status_code}")
         else:
-             print(f"  [Fail] Push failed. code={response.status_code} msg={response.text}")
+             logger.error(f"  [Fail] Push failed. code={response.status_code} msg={response.text}")
     except Exception as e:
-        print(f"  [Error] Push connection failed: {e}")
+        logger.error(f"  [Error] Push connection failed: {e}")
 
 if __name__ == "__main__":
-    print(f"NAS Fetcher Started. Target: {AWS_API_URL}")
+    logger.info(f"NAS Fetcher Started. Target: {AWS_API_URL}")
     while True:
         try:
             market_data = fetch_data()
             push_to_aws(market_data)
         except Exception as e:
-            print(f"Job Error: {e}")
+            logger.critical(f"Job Error: {e}")
         
         # Sleep 10 minutes
-        print("Sleeping 10 minutes...")
+        logger.info("Sleeping 10 minutes...")
         time.sleep(600)
